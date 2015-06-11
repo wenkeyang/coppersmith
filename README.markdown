@@ -14,7 +14,8 @@ customer needs, and develop new capabilities.
 
 We're a distributed team, currently with:
 
- * [Andrew Cowie](https://github.com/afcowie)
+ * [Jaminda Wimalasiri](https://github.com/jamindaw) (Product Owner)
+ * [Andrew Cowie](https://github.com/afcowie) (Squad Lead)
  * [Kristian Domagala](https://github.com/dkristian), based in Melbourne
  * [Tin Pavlinic](https://github.com/triggerNZ)
  * [Todd Owen](https://github.com/toddmowen)

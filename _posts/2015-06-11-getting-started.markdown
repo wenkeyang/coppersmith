@@ -22,7 +22,7 @@ Next week we will be concentrating on the question of schema evolution, both as 
 Kudos
 -----
 
-Thanks to [Laurence](https://github.com/laurencer) for the inspiration to use a more story based style to convey our activities, and to do so on GitHub.
+Thanks to [Laurence](https://github.com/laurencer) for the inspiration to use a story-based style to convey our activities, and to do so on GitHub.
 
 And much appreciation goes to [Sujesh](https://github.com/sujeshce) and [Hendra](https://github.com/hendrasuryanto), under whose tutelage we're learning the ropes.
 
