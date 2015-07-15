@@ -42,6 +42,15 @@ object build extends Build {
       )
   )
 
+  lazy val examples = Project(
+    id = "examples"
+  , base = file("examples")
+  , settings =
+      standardSettings
+    ++ uniform.project("features-examples", "au.com.omnia.dataproducts.features.examples")
+    ++ uniformThriftSettings
+  ).dependsOn(core)
+
   lazy val test = Project(
     id = "test"
   , base = file("test")
