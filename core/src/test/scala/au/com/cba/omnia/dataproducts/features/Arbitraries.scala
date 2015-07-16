@@ -1,14 +1,12 @@
 package au.com.cba.omnia.dataproducts.features
 
-import scala.reflect.runtime.universe.TypeTag
-
 import org.scalacheck.{Arbitrary,Gen}, Arbitrary._, Gen._
 
 import au.com.cba.omnia.maestro.api.{Field, Maestro}, Maestro.Fields
 
 import Feature._, Value._, Type._
 
-import au.com.cba.omnia.dataproducts.features.test.thrift._
+import au.com.cba.omnia.dataproducts.features.test.thrift.Customer
 
 object Arbitraries {
   implicit val arbFeatureType: Arbitrary[Type] = Arbitrary(oneOf(Categorical, Continuous))

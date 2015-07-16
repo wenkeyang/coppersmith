@@ -1,7 +1,5 @@
 package au.com.cba.omnia.dataproducts.features
 
-import scala.reflect.runtime.universe.TypeTag
-
 import org.scalacheck.Prop.forAll
 
 import org.specs2._
@@ -15,8 +13,55 @@ import Arbitraries._
 
 import au.com.cba.omnia.dataproducts.features.test.thrift.Customer
 
+/* More of an integration test based on a semi-realistic example. Individual feature components
+ * are tested in PivotFeatureSpec that follows.
+ */
+object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2"""
+  PivotFeatureSet - Test an example set of features based on pivoting a record
+  ===========
+  An example feature set
+    must generate expected metadata       $generateMetadata
+    must generate expected feature values $generateFeatureValues
+"""
+
+  import Type.{Categorical, Continuous}
+
+  object CustomerFeatureSet extends PivotFeatureSet[Customer] {
+    val namespace = "test.namespace"
+
+    def entity(c: Customer) = c.id
+    def time(c: Customer)   = c.time
+
+    val name:   Feature[Customer, Str]      = pivot(Fields[Customer].Name,   Categorical)
+    val age:    Feature[Customer, Integral] = pivot(Fields[Customer].Age,    Categorical)
+    val height: Feature[Customer, Decimal]  = pivot(Fields[Customer].Height, Continuous)
+
+    def features = List(name, age, height)
+  }
+
+  def generateMetadata = {
+    val metadata = CustomerFeatureSet.generateMetadata
+
+    metadata must_== List(
+      FeatureMetadata[Str]     (CustomerFeatureSet.namespace, Fields[Customer].Name.name,   Categorical),
+      FeatureMetadata[Integral](CustomerFeatureSet.namespace, Fields[Customer].Age.name,    Categorical),
+      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, Fields[Customer].Height.name, Continuous)
+    )
+  }
+
+  def generateFeatureValues = forAll { (c: Customer) => {
+    val featureValues = CustomerFeatureSet.generate(c)
+
+    featureValues must_== List(
+      FeatureValue[Customer, Str]     (CustomerFeatureSet.name,   c.id, c.name,   c.time),
+      FeatureValue[Customer, Integral](CustomerFeatureSet.age,    c.id, c.age,    c.time),
+      FeatureValue[Customer, Decimal] (CustomerFeatureSet.height, c.id, c.height, c.time)
+    )
+  }}
+}
+
 object PivotFeatureSpec extends Specification with ScalaCheck { def is = s2"""
-  Pivot Features
+  Pivot Features - Test individual pivot feature components
   ===========
   Creating pivot feature metadata
     must pass namespace through         $metadataNamespace

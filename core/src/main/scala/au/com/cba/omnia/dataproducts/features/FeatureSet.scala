@@ -2,8 +2,6 @@ package au.com.cba.omnia.dataproducts.features
 
 import scala.reflect.runtime.universe.TypeTag
 
-import scalaz.{Name => _, Value => _, _}, Scalaz._
-
 import au.com.cba.omnia.maestro.api.Field
 
 import Feature._
