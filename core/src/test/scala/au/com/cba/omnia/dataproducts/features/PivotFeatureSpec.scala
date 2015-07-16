@@ -63,6 +63,13 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     macroMetadata must containAllOf(metadata.toSeq)
   }
 
+  def generateFeatureValuesCompareMacro = forAll { (c:Customer) =>
+    val values = CustomerFeatureSet.generate(c)
+    val macroValues = PivotMacro.pivotThrift[Customer](CustomerFeatureSet.namespace, CustomerFeatureSet.entity, CustomerFeatureSet.time).generate(c)
+
+    macroValues must containAllOf(values.toSeq)
+  }
+
   def generateFeatureValues = forAll { (c: Customer) => {
     val featureValues = CustomerFeatureSet.generate(c)
 
