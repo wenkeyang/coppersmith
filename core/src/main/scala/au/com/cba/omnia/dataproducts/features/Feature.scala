@@ -6,7 +6,7 @@ object Feature {
   type Namespace = String
   type Name      = String
   type EntityId  = String
-  type Time      = String
+  type Time      = Long
 
   sealed trait Type
   object Type {
@@ -19,6 +19,15 @@ object Feature {
     case class Integral(value: Option[Long])  extends Value
     case class Decimal(value: Option[Double]) extends Value
     case class Str(value: Option[String])     extends Value
+
+    implicit def fromInt(i: Int):                Integral = Option(i)
+    implicit def fromLong(l: Long):              Integral = Option(l)
+    implicit def fromDouble(d: Double):          Decimal  = Option(d)
+    implicit def fromString(s: String):          Str      = Option(s)
+    implicit def fromOInt(i: Option[Int]):       Integral = Integral(i.map(_.toLong))
+    implicit def fromOLong(l: Option[Long]):     Integral = Integral(l)
+    implicit def fromODouble(d: Option[Double]): Decimal  = Decimal(d)
+    implicit def fromOString(s: Option[String]): Str      = Str(s)
   }
 }
 
