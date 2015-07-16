@@ -22,32 +22,41 @@ object Pivot {
     val features = entries.map({
       case (method, field) =>
         val returnType = method.returnType
-        val featureType = typeToFeatureType(c)(returnType)
-        val valueType = typeToValueType(c)(returnType)
+        val featureValueType = typeToFeatureValueType(c)(returnType)
 
-        val feature = q"""new au.com.cba.omnia.dataproducts.features.Feature[$typ] {
-         type V = $returnType
-         def namespace = $namespace
-         def name = $field
-         def generate(source:$typ):Option[au.com.cba.omnia.dataproducts.features.FeatureValue[$typ, $returnType]] = ???
-         def featureType = $featureType
-         def valueType = $valueType
-         }"""
+        val feature =
+          q"""
+              import au.com.cba.omnia.dataproducts.features._
 
-        q"""val ${TermName(field)} = $feature"""
+              val featureMetadata = FeatureMetadata($namespace, $field, Feature.Type.Categorical)
+
+              new Feature[$typ, $featureValueType](featureMetadata) { self =>
+
+                def generate(source: $typ):Option[FeatureValue[$typ, $featureValueType]] = {
+                  val v = source.$method
+                  Some(FeatureValue(self, "", Feature.Value(v), ""))
+                }
+
+
+             }"""
+
+        q"""val ${TermName(field)} : Feature[$typ, $featureValueType] = $feature"""
 
     })
     val r =q"class FeaturesWrapper { ..$features }; new FeaturesWrapper {}"
-      println(r)
+//      println(r)
     c.Expr(r)
   }
 
-  def typeToFeatureType(c:Context)(typ: c.universe.Type) = {
+  def typeToFeatureValueType(c:Context)(t: c.universe.Type)= {
     import c.universe._
-    q"au.com.cba.omnia.dataproducts.features.Feature.Type.Categorical"
+    if (t =:= typeOf[String] || t =:= typeOf[Option[String]]) {
+      typeOf[Feature.Value.Str]
+    } else if (t =:= typeOf[Int] || t =:= typeOf[Option[Int]]) {
+      typeOf[Feature.Value.Integral]
+    } else {
+     throw new RuntimeException(s"no value type for $t" )
+    }
   }
-  def typeToValueType(c:Context)(typ: c.universe.Type) = {
-    import c.universe._
-    q"au.com.cba.omnia.dataproducts.features.Feature.ValueType.Str"
-  }
+
 }

@@ -19,6 +19,11 @@ object Feature {
     case class Integral(value: Option[Long])  extends Value
     case class Decimal(value: Option[Double]) extends Value
     case class Str(value: Option[String])     extends Value
+
+    def apply(value:String) = Str(Some(value))
+    def apply(value:Option[String]) = Str(value)
+    def apply(value:Int) = Integral(Some(value))
+    def apply(value:Option[Int]) = Integral(value.map(_.toLong))
   }
 }
 
