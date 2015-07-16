@@ -11,8 +11,5 @@ object Example1 {
   val acct: Feature[Customer, Value.Str] = pivoted.Acct
   val cat: Feature[Customer, Value.Str] = pivoted.Cat
   val balance: Feature[Customer, Value.Integral] = pivoted.Balance
-
-  def main(args:Array[String]) = {
-    println(pivoted)
-  }
+  
 }
