@@ -6,6 +6,7 @@ import au.com.cba.omnia.uniform.core.standard.StandardProjectPlugin._
 import au.com.cba.omnia.uniform.core.version.UniqueVersionPlugin._
 import au.com.cba.omnia.uniform.dependency.UniformDependencyPlugin._
 import au.com.cba.omnia.uniform.thrift.UniformThriftPlugin._
+import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
   val etlUtilVersion = "1.14.1-20150703071108-fb2a434"
@@ -53,6 +54,7 @@ object build extends Build {
       standardSettings
     ++ uniform.project("features-examples", "au.com.omnia.dataproducts.features.examples")
     ++ uniformThriftSettings
+    ++ uniformAssemblySettings
     ++ Seq(
         libraryDependencies ++=  depend.omnia("etl-util", etlUtilVersion),
         libraryDependencies ++= depend.hadoopClasspath,
