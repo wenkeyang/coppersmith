@@ -1,3 +1,4 @@
+import au.com.cba.omnia.uniform.dependency.UniformDependencyPlugin.depend.versions
 import sbt._
 import sbt.Keys._
 
@@ -36,8 +37,11 @@ object build extends Build {
    ++ Seq(
         libraryDependencies := depend.omnia("etl-util", etlUtilVersion)
           ++ Seq(
-             "au.com.cba.omnia" %% "etl-test" % etlUtilVersion % "test"
-           )
+             "au.com.cba.omnia" %% "etl-test" % etlUtilVersion % "test",
+             "org.specs2" %% "specs2-matcher-extra" % versions.specs
+
+
+        )
         , parallelExecution in Test := false
       )
   )

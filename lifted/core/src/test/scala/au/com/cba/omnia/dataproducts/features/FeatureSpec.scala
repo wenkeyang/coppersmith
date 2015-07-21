@@ -1,14 +1,16 @@
 package au.com.cba.omnia.dataproducts.features
 
 import au.com.cba.omnia.dataproducts.features.test.thrift.Customer
-import org.scalacheck.Prop.forAll
-
-import org.specs2._
 
 import Feature._, Value._
 import FeatureMetadata.ValueType._
 import Arbitraries._
-import shapeless.test.illTyped
+
+import org.scalacheck.Prop.forAll
+
+import org.specs2._
+import org.specs2.execute._, Typecheck._
+import org.specs2.matcher.TypecheckMatchers._
 
 object FeatureMetadataSpec extends Specification with ScalaCheck { def is = s2"""
   FeatureMetadata
@@ -60,7 +62,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def stringConversions = {
     val feature = Patterns.general[Customer, Value.Str, Value.Str]("ns", "name", Type.Categorical, (c:Customer) => c._1, (c:Customer) => Some(c._1), (c:Customer) => 0)
-    illTyped("feature.asContinuous")
     feature.metadata.featureType === Type.Categorical
+    typecheck("feature.asContinuous") must not succeed
   }
 }
