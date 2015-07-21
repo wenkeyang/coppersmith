@@ -44,7 +44,7 @@ object PivotMacro {
 
              }"""
 
-        q"""val ${TermName(field)} : Feature[$typ, $featureValueType] = $feature"""
+        q"val ${TermName(field)} : Feature[$typ, $featureValueType] = $feature"
 
     })
 
@@ -77,17 +77,13 @@ object PivotMacro {
 
     if (t =:= typeOf[String]) {
       TermName("fromString")
-    }
-    else if (t =:= typeOf[Int]) {
+    } else if (t =:= typeOf[Int]) {
       TermName("fromInt")
-    }
-    else if (t =:= typeOf[Double]) {
+    } else if (t =:= typeOf[Double]) {
       TermName("fromDouble")
-    }
-    else if (t =:= typeOf[Long]) {
+    } else if (t =:= typeOf[Long]) {
       TermName("fromLong")
-    }
-    else {
+    } else {
       throw new RuntimeException(s"no type mapper for $t" )
     }
   }
