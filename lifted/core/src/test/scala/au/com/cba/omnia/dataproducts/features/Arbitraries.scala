@@ -1,10 +1,13 @@
 package au.com.cba.omnia.dataproducts.features
 
+import scalaz.{Value => _, _}, Scalaz._
+import scalaz.scalacheck.ScalaCheckBinding._
+
 import org.scalacheck.{Arbitrary,Gen}, Arbitrary._, Gen._
 
 import au.com.cba.omnia.maestro.api.{Field, Maestro}, Maestro.Fields
 
-import Feature._, Value._, Type._
+import Feature.{Value, Type}, Value._, Type._
 
 import au.com.cba.omnia.dataproducts.features.test.thrift.Customer
 
@@ -16,8 +19,9 @@ object Arbitraries {
   implicit val strValueGen: Gen[Str] = arbitrary[Option[String]].map(Str(_))
   implicit val arbValue: Arbitrary[Value] = Arbitrary(oneOf(integralValueGen, decimalValueGen, strValueGen))
 
+  def ageGen: Gen[Int] = Gen.chooseNum(0, 150, 17, 18, 19, 64, 65, 66)
   implicit val arbCustomer: Arbitrary[Customer] = Arbitrary(
-    Gen.resultOf[String, String, Int, Double, Long, Customer](Customer.apply)
+    (arbitrary[String] |@| arbitrary[String] |@| ageGen |@| arbitrary[Double] |@| arbitrary[Long])(Customer.apply)
   )
 
   implicit val arbCustomerField: Arbitrary[Field[Customer, _]] = Arbitrary(
