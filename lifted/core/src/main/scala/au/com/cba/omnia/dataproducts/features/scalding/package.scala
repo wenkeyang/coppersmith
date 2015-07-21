@@ -11,4 +11,6 @@ package object scalding {
     val pipe = liftToTypedPipe(f)(src)
     pipe.writeExecution(sink)
   }
+
+
 }

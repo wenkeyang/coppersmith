@@ -34,7 +34,7 @@ object build extends Build {
    ++ uniform.project("features", "au.com.cba.omnia.dataproducts.features")
    ++ uniformThriftSettings
    ++ Seq(
-        libraryDependencies := depend.omnia("etl-util", etlUtilVersion)
+        libraryDependencies ++= depend.omnia("etl-util", etlUtilVersion)
           ++ Seq(
              "au.com.cba.omnia" %% "etl-test" % etlUtilVersion % "test"
            )
@@ -49,6 +49,10 @@ object build extends Build {
       standardSettings
     ++ uniform.project("features-examples", "au.com.omnia.dataproducts.features.examples")
     ++ uniformThriftSettings
+    ++ Seq(
+        libraryDependencies ++=  depend.omnia("etl-util", etlUtilVersion),
+        libraryDependencies ++= depend.hadoop()
+      )
   ).dependsOn(core)
 
   lazy val test = Project(

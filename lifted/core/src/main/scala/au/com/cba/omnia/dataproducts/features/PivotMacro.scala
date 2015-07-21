@@ -77,6 +77,8 @@ object PivotMacro {
 
     if (t =:= typeOf[String]) {
       TermName("fromString")
+    } else if (t =:= typeOf[Option[String]]) {
+      TermName("fromOString")
     } else if (t =:= typeOf[Int]) {
       TermName("fromInt")
     } else if (t =:= typeOf[Double]) {
