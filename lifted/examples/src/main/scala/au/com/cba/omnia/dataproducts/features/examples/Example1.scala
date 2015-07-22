@@ -7,7 +7,7 @@ import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
 import au.com.cba.omnia.dataproducts.features.scalding._
 import au.com.cba.omnia.etl.util.{ParseUtils, SimpleMaestroJob}
 import au.com.cba.omnia.maestro.scalding.JobStatus
-import com.twitter.scalding.{Config, MultipleTextLineFiles, Execution}
+import com.twitter.scalding.{TypedPsv, Config, MultipleTextLineFiles, Execution}
 import org.joda.time.DateTime
 
 import au.com.cba.omnia.maestro.api._, Maestro._
@@ -28,15 +28,19 @@ object Example1 {
     val hdfsInputPath = args("input-dir")
     val queryDate     = args.optional("query-date").cata(new DateTime(_),DateTime.now().minusMonths(1))
     val yearMonth     = queryDate.toString("yyyyMM")
+    val env           = args("hdfs-root")
+    val hivePath      = s"${env}/view/warehouse/features/customers"
+    val year          = queryDate.toString("yyyy")
+    val month         = queryDate.toString("MM")
   }
 
   def job:Execution[JobStatus] = {
-    materialise(acct) _
       for {
       conf          <- Execution.getConfig.map(ExampleConfig)
       inputPipe     <- Execution.from(ParseUtils.decodeHiveTextTable[Customer](
         MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
-    } yield (???)
+      _             <- materialise(acct)(inputPipe.rows, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
+    } yield (JobFinished)
   }
 
   def main(args:Array[String]) = {

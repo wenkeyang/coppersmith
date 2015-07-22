@@ -55,7 +55,8 @@ object build extends Build {
     ++ uniformThriftSettings
     ++ Seq(
         libraryDependencies ++=  depend.omnia("etl-util", etlUtilVersion),
-        libraryDependencies ++= depend.hadoop()
+        libraryDependencies ++= depend.hadoopClasspath,
+        libraryDependencies ++= depend.scalding()
       )
   ).dependsOn(core)
 
