@@ -1,39 +1,18 @@
 package au.com.cba.omnia.dataproducts.features.examples
 
-import org.apache.hadoop
-
 import com.twitter.scalding._
 
 import cascading.tuple.{ Tuple => CTuple }
 
-/**
-  * To run the job, provide class name and args "input", "output", and "error". Eg:
-  *
-  *     hadoop jar examples-assembly.jar au.com.cba.omnia.dataproducts.features.examples.ScaldingCsvJob \
-  *       --hdfs \
-  *       --input /user/name/wide1 \
-  *       --output /user/name/ScaldingCsv_output \
-  *       --error /user/name/ScaldingCsv_error
-  */
-object Main {
-  def main(args: Array[String]): Unit = {
-    System.exit(hadoop.util.ToolRunner.run(new hadoop.conf.Configuration, new Tool, args))
-  }
-}
-
-class ScaldingCsvJob(args: Args) extends Job(args) {
+class ScaldingFieldsCsvJob(args: Args) extends Job(args) {
   val fields = (1 to 431).map(n => Symbol(s"f$n"))
   val input = Csv(args("input"), fields=fields, skipHeader=true)
   val output = Csv(args("output"), writeHeader=true)
   val error = Csv(args("error"), writeHeader=true)
 
-  implicit object BigDecimalGetter extends TupleGetter[BigDecimal] {
-    override def get(tup: CTuple, i: Int) = BigDecimal(tup.getString(i))
-  }
-
   input
     .read
-    .filter('f2){ v: Int => Array(43, 69, 70, 94, 123, 130, 222, 244, 434, 695, 767).contains(v) }
+    .filter('f2)(predicate)
     .map(('f351, 'f361) -> 'g1)(g1)
     .map(('f356, 'f357) -> 'g2)(g2)
     .map(('f84, 'f83) -> 'g3)(g3)
@@ -43,6 +22,8 @@ class ScaldingCsvJob(args: Args) extends Job(args) {
     .write(output)
 
   def round(x: BigDecimal): BigDecimal = x.setScale(2, BigDecimal.RoundingMode.HALF_UP)
+
+  def predicate(v: Int): Boolean = Array(43, 69, 70, 94, 123, 130, 222, 244, 434, 695, 767).contains(v)
 
   def g1: ((BigDecimal, BigDecimal)) => Int = { case (x, y) =>
     val percentage: BigDecimal = if (y == 0) 0 else round(x / y * 100)
@@ -59,8 +40,8 @@ class ScaldingCsvJob(args: Args) extends Job(args) {
   }
 
   def g2: ((Int, Int)) => Int = { case (x, y) =>
-    if (x != 0 && y == 0) 1
-    else if (x == 0 && y != 0) 2
+    if ( y == 0) 1
+    else if (x == 0) 2
     else {
       val percentage = round(BigDecimal(x) / y * 100)
       if (percentage < 26) 3
@@ -82,5 +63,9 @@ class ScaldingCsvJob(args: Args) extends Job(args) {
     (if (g1 == 5) 49 else if (g1 == 3) 36 else 0) +
     (if (g2 == 1 || g2 == 5) 0 else if (g2 == 4) -30 else if (g2 == 3) -63 else if (g2 == 2) -70 else sys.error("Unknown value of g2")) +
     (if (g3 == 1) 0 else if (g3 == 3) -13 else if (g3 == 2) -40 else sys.error("Unknown value of g3"))
+  }
+
+  implicit object BigDecimalGetter extends TupleGetter[BigDecimal] {
+    override def get(tup: CTuple, i: Int) = BigDecimal(tup.getString(i))
   }
 }
