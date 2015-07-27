@@ -37,7 +37,7 @@ object Example1 {
     val month         = queryDate.toString("MM")
   }
 
-  def acountFeatureJob:Execution[JobStatus] = {
+  def accountFeatureJob: Execution[JobStatus] = {
     for {
       conf          <- Execution.getConfig.map(ExampleConfig)
       inputPipe     <- Execution.from(ParseUtils.decodeHiveTextTable[Customer](
@@ -46,7 +46,7 @@ object Example1 {
     } yield (JobFinished)
   }
 
-  def allFEaturesJob:Execution[JobStatus] = {
+  def allFeaturesJob: Execution[JobStatus] = {
     for {
       conf          <- Execution.getConfig.map(ExampleConfig)
       inputPipe     <- Execution.from(ParseUtils.decodeHiveTextTable[Customer](

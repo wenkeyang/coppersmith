@@ -9,8 +9,8 @@ package object scalding {
     s.flatMap(s => f.generate(s))
   }
 
-  def liftToTypedPipe[S](f:FeatureSet[S])(s: TypedPipe[S]): TypedPipe[FeatureValue[S, _]] = {
-    s.flatMap(s => f.generate(s).toList)
+  def liftToTypedPipe[S](fs: FeatureSet[S])(s: TypedPipe[S]): TypedPipe[FeatureValue[S, _]] = {
+    s.flatMap(s => fs.generate(s))
   }
 
   def materialise[S,V <: Value](f:Feature[S,V])(src:TypedPipe[S], sink: TypedSink[FeatureValue[S, V]]): Execution[Unit] = {
