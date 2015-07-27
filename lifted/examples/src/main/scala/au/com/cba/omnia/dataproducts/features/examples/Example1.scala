@@ -2,19 +2,22 @@ package au.com.cba.omnia.dataproducts.features.examples
 
 import au.com.cba.omnia.dataproducts.features.Feature._
 import au.com.cba.omnia.dataproducts.features._
-import PivotMacro._
 import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
 import au.com.cba.omnia.dataproducts.features.scalding._
-import au.com.cba.omnia.etl.util.{ParseUtils, SimpleMaestroJob}
-import au.com.cba.omnia.maestro.scalding.JobStatus
-import com.twitter.scalding.{TypedPsv, Config, MultipleTextLineFiles, Execution}
-import org.joda.time.DateTime
 
+import au.com.cba.omnia.etl.util.{ParseUtils, SimpleMaestroJob}
+
+import au.com.cba.omnia.maestro.scalding.JobStatus
 import au.com.cba.omnia.maestro.api._, Maestro._
 
-import scalaz.{Value => _, _}
-import Scalaz._
+import com.twitter.scalding.{TypedPsv, Config, MultipleTextLineFiles, Execution}
 
+import org.joda.time.DateTime
+
+
+import scalaz.{Value => _, _}, Scalaz._
+
+import PivotMacro._
 
 object Example1 {
   val pivoted = pivotThrift[Customer]("namespace", _.id, c => DateTime.parse(c.effectiveDate).getMillis())
@@ -26,7 +29,7 @@ object Example1 {
   case class ExampleConfig(config:Config) {
     val args          = config.getArgs
     val hdfsInputPath = args("input-dir")
-    val queryDate     = args.optional("query-date").cata(new DateTime(_),DateTime.now().minusMonths(1))
+    val queryDate     = args.optional("query-date").cata(new DateTime(_), DateTime.now().minusMonths(1))
     val yearMonth     = queryDate.toString("yyyyMM")
     val env           = args("hdfs-root")
     val hivePath      = s"${env}/view/warehouse/features/customers"
@@ -35,15 +38,11 @@ object Example1 {
   }
 
   def job:Execution[JobStatus] = {
-      for {
+    for {
       conf          <- Execution.getConfig.map(ExampleConfig)
       inputPipe     <- Execution.from(ParseUtils.decodeHiveTextTable[Customer](
-        MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
+                         MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
       _             <- materialise(acct)(inputPipe.rows, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
-  }
-
-  def main(args:Array[String]) = {
-
   }
 }

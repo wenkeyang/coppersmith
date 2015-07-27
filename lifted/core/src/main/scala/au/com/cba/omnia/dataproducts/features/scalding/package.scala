@@ -1,6 +1,7 @@
 package au.com.cba.omnia.dataproducts.features
 
 import au.com.cba.omnia.dataproducts.features.Feature.Value
+
 import com.twitter.scalding._
 
 package object scalding {
