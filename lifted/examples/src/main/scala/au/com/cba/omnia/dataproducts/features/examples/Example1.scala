@@ -37,12 +37,21 @@ object Example1 {
     val month         = queryDate.toString("MM")
   }
 
-  def job:Execution[JobStatus] = {
+  def acountFeatureJob:Execution[JobStatus] = {
     for {
       conf          <- Execution.getConfig.map(ExampleConfig)
       inputPipe     <- Execution.from(ParseUtils.decodeHiveTextTable[Customer](
                          MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
       _             <- materialise(acct)(inputPipe.rows, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
+    } yield (JobFinished)
+  }
+
+  def allFEaturesJob:Execution[JobStatus] = {
+    for {
+      conf          <- Execution.getConfig.map(ExampleConfig)
+      inputPipe     <- Execution.from(ParseUtils.decodeHiveTextTable[Customer](
+        MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
+      _             <- materialise(pivotedAsFeatureSet)(inputPipe.rows, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
   }
 }
