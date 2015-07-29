@@ -25,6 +25,7 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
 
   Macro feature set
     must generate same metadata as test example $generateMetadataCompareMacro
+    must generate same values as test example $generateFeatureValuesCompareMacro
 """
 
   import Type.{Categorical, Continuous}
@@ -67,7 +68,7 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     val values = CustomerFeatureSet.generate(c)
     val macroValues = PivotMacro.pivotThrift[Customer](CustomerFeatureSet.namespace, CustomerFeatureSet.entity, CustomerFeatureSet.time).generate(c)
 
-    macroValues must containAllOf(values.toSeq)
+    macroValues.map(_.value) must containAllOf(values.toSeq.map(_.value))
   }
 
   def generateFeatureValues = forAll { (c: Customer) => {
