@@ -47,58 +47,73 @@ import scalaz.syntax.foldable1.ToFoldable1Ops
 import scalaz.syntax.std.list.ToListOpsFromList
 import scalaz.syntax.std.option.ToOptionIdOps
 
-import com.twitter.algebird.{Aggregator, Semigroup}
+import com.twitter.algebird.{Aggregator, AveragedValue, Monoid, Semigroup}
 
-case class AggregationFeature[S, V <: Value](
-  metadata:   FeatureMetadata[V],
-  aggregator: Aggregator[S, V, V],
-  andWhere:   Option[S => Boolean] = None
-)
-
-trait AggregatorQueryFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
-  type Filter = S => Boolean
-
-  def featureType:  Feature.Type
-
-  def groupBy(s: S): EntityId
-  def where(s: S):   Boolean
-  def time(s: S):    Time
-
-  def feature[V <: Value : TypeTag](name:       Feature.Name,
-                                    aggregator: Aggregator[S, V, V],
-                                    andWhere:   Option[Filter] = None) =
-    AggregationFeature(FeatureMetadata(namespace, name, featureType), aggregator, andWhere)
-
-  implicit class FeatureBuilder[V <: Value : TypeTag](aggregator: Aggregator[S, V, V]) {
-    def withName(featureName: Feature.Name) = feature(featureName, aggregator)
+case class AggregationFeature[S, U, +V <: Value : TypeTag](
+  name:        Name,
+  aggregator:  Aggregator[S, U, V],
+  featureType: Type = Type.Continuous,
+  where:       Option[S => Boolean] = None
+) {
+  import AggregationFeature.AlgebirdSemigroup
+  // Note: Implementation here to satisfty feature signature. Framework should take advantage of
+  // the fact that aggregators should be able to be run natively on the underlying plumbing
+  def toFeature(namespace: Namespace, time: S => Time) =
+      new Feature[(EntityId, Iterable[S]), Value](FeatureMetadata(namespace, name, featureType)) {
+    def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[(EntityId, Iterable[S]), Value]] = {
+      val source = s._2.filter(where.getOrElse(_ => true)).toList.toNel
+      source.map(nonEmptySource => {
+        val value = aggregator.present(
+          nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
+        )
+        FeatureValue(this, s._1, value, time(nonEmptySource.head))
+      })
+    }
   }
+}
 
-  implicit class WhereExtender[V <: Value](af: AggregationFeature[S, V]) {
-    def andWhere(where: Filter) = AggregationFeature(
-      af.metadata,
-      af.aggregator,
-      af.andWhere.map(existing => (s: S) => existing(s) && where(s)).orElse(where.some))
-  }
+trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
+  def entity(s: S): EntityId
+  def time(s: S):   Time
+
+  def aggregationFeatures: Iterable[AggregationFeature[S, _, Value]]
+
+  def features = aggregationFeatures.map(_.toFeature(namespace, time))
+
+  // These allow aggregators to be created without specifying type args that
+  // would otherwise be required if calling the delegated methods directly
+  def size: Aggregator[S, Long, Long] = Aggregator.size
+  def count(where: S => Boolean = _ => true): Aggregator[S, Long, Long] = Aggregator.count(where)
+  def avg[V](v: S => Double): Aggregator[S, AveragedValue, Double] = AggregationFeature.avg[S](v)
+  def max[V : Ordering](v: S => V): Aggregator[S, V, V] = AggregationFeature.max[S, V](v)
+  def min[V : Ordering](v: S => V): Aggregator[S, V, V] = AggregationFeature.min[S, V](v)
+  def sum[V : Monoid]  (v: S => V): Aggregator[S, V, V] = Aggregator.prepareMonoid(v)
+
+}
+
+object AggregationFeature {
+  def avg[T](t: T => Double): Aggregator[T, AveragedValue, Double] =
+    AveragedValue.aggregator.composePrepare[T](t)
+
+  def max[T, V : Ordering](v: T => V): Aggregator[T, V, V] = Aggregator.max[V].composePrepare[T](v)
+  def min[T, V : Ordering](v: T => V): Aggregator[T, V, V] = Aggregator.min[V].composePrepare[T](v)
+
 
   // TODO: Would be surprised if this doesn't exist elsewhere
   implicit class AlgebirdSemigroup[T](s: Semigroup[T]) {
     def toScalaz = new scalaz.Semigroup[T] { def append(t1: T, t2: =>T): T = s.plus(t1, t2) }
   }
 
-  def aggregationFeatures: Iterable[AggregationFeature[S, Value]]
+  implicit class FeatureBuilder[S, T, U <% V, V <: Value : TypeTag](aggregator: Aggregator[S, T, U]) {
+    def asFeature(featureName: Feature.Name) =
+      AggregationFeature(featureName, aggregator.andThenPresent(u => u: V))
+  }
 
-  // Note: Implementation here to satisfty feature signature. Framework should take advantage of
-  // the fact that aggregators should be able to be run natively on the underlying plumbing
-  def features = aggregationFeatures.map(af =>
-    new Feature[(EntityId, Iterable[S]), Value](af.metadata) {
-      def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[(EntityId, Iterable[S]), Value]] = {
-        // FIXME: first where filter should be applied around the whole set
-        val source = s._2.filter(where).filter(af.andWhere.getOrElse(_ => true)).toList.toNel
-        source.map(nonEmptySource => {
-          val value = nonEmptySource.foldMap1(af.aggregator.prepare)(af.aggregator.semigroup.toScalaz)
-          FeatureValue(this, groupBy(nonEmptySource.head), value, time(nonEmptySource.head))
-        })
-      }
-    }
-  )
+  implicit class WhereExtender[S, U, V <: Value : TypeTag](af: AggregationFeature[S, U, V]) {
+    def andWhere(where: S => Boolean) = AggregationFeature(
+      af.name,
+      af.aggregator,
+      af.featureType,
+      af.where.map(existing => (s: S) => existing(s) && where(s)).orElse(where.some))
+  }
 }

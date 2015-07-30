@@ -77,4 +77,6 @@ case class FeatureValue[S, +V <: Value](
   entity:  EntityId,
   value:   V,
   time:    Time
-)
+) {
+  def toEavt = (entity, feature.metadata.name, value, time)
+}
