@@ -12,6 +12,9 @@ Working in the Data Products portfolio, the Feature Engineering squad is working
 to advance the platform, ensure data integrity, improve responsiveness to
 customer needs, and develop new capabilities.
 
+Review the [Product Vision](http://knowit.cba/display/OMNIA/Product+Vision+-+Data+Products)
+(handed down by the business).
+
 We're a distributed team, currently with:
 
  * [Jaminda Wimalasiri](https://github.com/jamindaw) (Product Owner)
