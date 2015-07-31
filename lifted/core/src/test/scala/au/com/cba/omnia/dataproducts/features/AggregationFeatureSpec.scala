@@ -58,7 +58,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
   }
 
   def generateFeatureValues = forAll { (cs: NonEmptyList[Customer]) => {
-    val featureValues = CustomerFeatureSet.generate((cs.head.id, cs.list)).map(_.toEavt).toList
+    val featureValues = CustomerFeatureSet.generate((cs.head.id, cs.list)).map(_.asEavt).toList
 
     val c = cs.head
     val heights = cs.map(_.height).list

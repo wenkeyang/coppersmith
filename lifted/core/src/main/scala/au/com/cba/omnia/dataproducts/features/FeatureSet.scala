@@ -110,10 +110,8 @@ object AggregationFeature {
   }
 
   implicit class WhereExtender[S, U, V <: Value : TypeTag](af: AggregationFeature[S, U, V]) {
-    def andWhere(where: S => Boolean) = AggregationFeature(
-      af.name,
-      af.aggregator,
-      af.featureType,
-      af.where.map(existing => (s: S) => existing(s) && where(s)).orElse(where.some))
+    def andWhere(where: S => Boolean) = af.copy(
+      where = af.where.map(existing => (s: S) => existing(s) && where(s)).orElse(where.some)
+    )
   }
 }
