@@ -13,7 +13,12 @@ object build extends Build {
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
     uniformDependencySettings ++
-    strictDependencySettings
+    strictDependencySettings ++
+    Seq(
+      scalacOptions += "-Xfatal-warnings",
+      scalacOptions in (Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
+      scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value
+    )
 
   lazy val all = Project(
     id = "all"
@@ -39,9 +44,7 @@ object build extends Build {
           ++ Seq(
              "au.com.cba.omnia" %% "etl-test" % etlUtilVersion % "test",
              "org.specs2" %% "specs2-matcher-extra" % versions.specs
-
-
-        )
+          )
         , parallelExecution in Test := false
       )
   )
@@ -54,7 +57,7 @@ object build extends Build {
     ++ uniform.project("features-examples", "au.com.omnia.dataproducts.features.examples")
     ++ uniformThriftSettings
     ++ Seq(
-        libraryDependencies ++=  depend.omnia("etl-util", etlUtilVersion),
+        libraryDependencies ++= depend.omnia("etl-util", etlUtilVersion),
         libraryDependencies ++= depend.hadoopClasspath,
         libraryDependencies ++= depend.scalding()
       )

@@ -29,5 +29,5 @@ object Patterns {
     entity:    S => EntityId,
     time:      S => Time,
     field:     Field[S, FV]
-  ) = general[S, V, FV](namespace, field.name, fType, entity, (s: S) => Option(field.get(s)), time)
+  ) = general[S, V, FV](namespace, field.name, fType, entity, (s: S) => Option(field.get(s): V), time)
 }
