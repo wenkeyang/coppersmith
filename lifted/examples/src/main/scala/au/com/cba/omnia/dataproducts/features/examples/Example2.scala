@@ -3,7 +3,6 @@ package au.com.cba.omnia.dataproducts.features.examples
 import au.com.cba.omnia.dataproducts.features.Feature._
 import au.com.cba.omnia.dataproducts.features._
 import au.com.cba.omnia.dataproducts.features.example.thrift._
-import au.com.cba.omnia.dataproducts.features.scalding._
 
 import au.com.cba.omnia.etl.util.{ParseUtils, SimpleMaestroJob}
 
@@ -14,6 +13,7 @@ import com.twitter.scalding.{TypedPsv, Config, MultipleTextLineFiles, Execution}
 
 import org.joda.time.DateTime
 
+import lift.scalding._
 
 import scalaz.{Value => _, _}, Scalaz._
 
