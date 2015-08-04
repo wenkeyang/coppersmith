@@ -34,12 +34,12 @@ object Example2 {
     val month            = queryDate.toString("MM")
   }
 
-  def accountFeatureJob: Execution[JobStatus] = {
+  def featureJob: Execution[JobStatus] = {
     for {
       conf          <- Execution.getConfig.map(ExampleConfig)
       customers     <- Execution.from(ParseUtils.decodeHiveTextTable[Customer](MultipleTextLineFiles(s"${conf.hdfsInputPath}/cust/efft_yr_month=${conf.yearMonth}")))
       accounts      <- Execution.from(ParseUtils.decodeHiveTextTable[Account](MultipleTextLineFiles(s"${conf.hdfsInputPath}/acct/efft_yr_month=${conf.yearMonth}")))
-      _             <- materialiseJoin(customerJoinAccount, feature)(customers.rows, accounts.rows, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
+      _             <- materialiseJoinFeature(customerJoinAccount, feature)(customers.rows, accounts.rows, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
   }
 }

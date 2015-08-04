@@ -19,7 +19,7 @@ package object scalding {
     a.groupBy(joined.left).join(b.groupBy(joined.right)).values
   }
 
-  def materialiseJoin[A, B, J : Ordering, V <: Value]
+  def materialiseJoinFeature[A, B, J : Ordering, V <: Value]
     (joined: Joined[A, B, J], feature: Feature[(A,B),V])
     (leftSrc:TypedPipe[A], rightSrc:TypedPipe[B], sink: TypedSink[FeatureValue[(A,B),V]]) =
     materialise[(A,B), V](feature)(liftJoin(joined)(leftSrc, rightSrc), sink)
