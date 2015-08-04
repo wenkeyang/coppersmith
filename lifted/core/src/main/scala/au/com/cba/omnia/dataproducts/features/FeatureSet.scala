@@ -106,12 +106,19 @@ object AggregationFeature {
 
   implicit class FeatureBuilder[S, T, U <% V, V <: Value : TypeTag](aggregator: Aggregator[S, T, U]) {
     def asFeature(featureName: Feature.Name) =
-      AggregationFeature(featureName, aggregator.andThenPresent(u => u: V))
+      FeatureWhereBuilder((aggregator, None)).asFeature(featureName)
   }
 
-  implicit class WhereExtender[S, U, V <: Value : TypeTag](af: AggregationFeature[S, U, V]) {
-    def andWhere(where: S => Boolean) = af.copy(
-      where = af.where.map(existing => (s: S) => existing(s) && where(s)).orElse(where.some)
-    )
+  implicit class FeatureWhereBuilder[S, T, U <% V, V <: Value : TypeTag](
+    aggregatorWhere: (Aggregator[S, T, U], Option[S => Boolean])
+  ) {
+    def asFeature(featureName: Feature.Name) =
+      AggregationFeature(featureName,
+                         aggregatorWhere._1.andThenPresent(u => u: V),
+                         where = aggregatorWhere._2)
+  }
+
+  implicit class WhereExtender[S, T, U <% V, V <: Value : TypeTag](aggregator: Aggregator[S, T, U]) {
+    def where(where: S => Boolean) = (aggregator, where.some)
   }
 }
