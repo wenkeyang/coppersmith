@@ -78,3 +78,9 @@ case class FeatureValue[S, +V <: Value](
   value:   V,
   time:    Time
 )
+
+object FeatureValue {
+  implicit class AsEavt[S, V <: Value](fv: FeatureValue[S, V]) {
+    def asEavt: (EntityId, Name, V, Time) = (fv.entity, fv.feature.metadata.name, fv.value, fv.time)
+  }
+}
