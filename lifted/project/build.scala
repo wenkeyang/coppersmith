@@ -17,6 +17,7 @@ object build extends Build {
     Seq(
       scalacOptions += "-Xfatal-warnings",
       scalacOptions in (Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
+      scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
       scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value
     )
 
