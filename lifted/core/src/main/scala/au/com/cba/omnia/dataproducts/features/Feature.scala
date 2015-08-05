@@ -19,7 +19,7 @@ object Feature {
     case class Integral(value: Option[Long])  extends Value
     case class Decimal(value: Option[Double]) extends Value
     case class Str(value: Option[String])     extends Value
-    
+
     implicit def fromInt(i: Int):                Integral = Option(i)
     implicit def fromLong(l: Long):              Integral = Option(l)
     implicit def fromDouble(d: Double):          Decimal  = Option(d)
@@ -29,6 +29,14 @@ object Feature {
     implicit def fromODouble(d: Option[Double]): Decimal  = Decimal(d)
     implicit def fromOString(s: Option[String]): Str      = Str(s)
   }
+
+  // Legal type/value combinations
+  sealed trait Conforms[T <: Type, V <: Value]
+  implicit object CategoricalStr      extends Conforms[Type.Categorical.type, Value.Str]
+  implicit object CategoricalIntegral extends Conforms[Type.Categorical.type, Value.Integral]
+  implicit object CategoricalDecimal  extends Conforms[Type.Categorical.type, Value.Decimal]
+  implicit object ContinuousIntegral  extends Conforms[Type.Continuous.type,  Value.Integral]
+  implicit object ContinuousDecimal   extends Conforms[Type.Continuous.type,  Value.Decimal]
 
   sealed trait ContinuousOrCategoricalFeature[S, V <: Value] {
     def feat: Feature[S,V]
