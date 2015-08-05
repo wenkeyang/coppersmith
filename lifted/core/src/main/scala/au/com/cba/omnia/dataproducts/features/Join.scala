@@ -33,7 +33,6 @@ object Join {
 
 object JoinDemo {
   import Join._
-  import scalaz._, Scalaz._
 
   case class Customer(id:Long)
   case class Account(id: Long, customerId:Long)
