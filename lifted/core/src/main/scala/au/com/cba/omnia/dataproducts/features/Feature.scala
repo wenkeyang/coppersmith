@@ -38,19 +38,12 @@ object Feature {
   implicit object ContinuousIntegral  extends Conforms[Type.Continuous.type,  Value.Integral]
   implicit object ContinuousDecimal   extends Conforms[Type.Continuous.type,  Value.Decimal]
 
-  sealed trait ContinuousOrCategoricalFeature[S, V <: Value] {
-    def feat: Feature[S,V]
-    def asContinuous: Feature[S, V] = new Feature[S, V](feat.metadata.copy(featureType = Type.Continuous)) {
-      def generate(source:S) = feat.generate(source)
-    }
-    def asCategorical: Feature[S, V] = new Feature[S, V](feat.metadata.copy(featureType = Type.Categorical)) {
-      def generate(source:S) = feat.generate(source)
-    }
+  implicit class RichFeature[S, V <: Value](f: Feature[S, V]) {
+    def as[T <: Feature.Type](t: T)(implicit ev: Conforms[T, V]) =
+      new Feature[S, V](f.metadata.copy(featureType = t)) {
+        def generate(source: S) = f.generate(source)
+      }
   }
-
-  implicit class RichIntegralFeature[S](val feat: Feature[S, Value.Integral]) extends ContinuousOrCategoricalFeature[S, Value.Integral]
-  implicit class RichDecimalFeature[S](val feat: Feature[S, Value.Decimal]) extends ContinuousOrCategoricalFeature[S, Value.Decimal]
-
 }
 
 import Feature._
