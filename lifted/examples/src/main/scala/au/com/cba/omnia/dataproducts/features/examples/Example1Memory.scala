@@ -17,28 +17,31 @@ import scalaz.{Value => _, _}
 
 object Example1Memory {
   val pivoted = pivotThrift[Customer]("namespace", _.id, c => DateTime.parse(c.effectiveDate).getMillis())
-  val pivotedAsFeatureSet:PivotFeatureSet[Customer] = pivoted
+  val pivotedAsFeatureSet: PivotFeatureSet[Customer] = pivoted
   val acct: Feature[Customer, Value.Str] = pivoted.Acct
   val cat: Feature[Customer, Value.Str] = pivoted.Cat
   val balance: Feature[Customer, Value.Integral] = pivoted.Balance
 
+  def main(args: Array[String]) = {
+    val customers = List(
+      Customer(
+        id = "",
+        acct = "123",
+        cat = "333",
+        subCat = "444",
+        balance = 100,
+        effectiveDate = "01022001"),
+      Customer(
+        id = "",
+        acct = "124",
+        cat = "333",
+        subCat = "444",
+        balance = 100,
+        effectiveDate = "01022001")
 
-
-  def accountFeatureJob: Execution[JobStatus] = {
-    for {
-      conf          <- Execution.getConfig.map(ExampleConfig)
-      inputPipe     <- Execution.from(ParseUtils.decodeHiveTextTable[Customer](
-                         MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
-      _             <- materialise(acct)(inputPipe.rows, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
-    } yield (JobFinished)
+    )
+    materialise(acct)(customers, it => println(it.value))()
   }
 
-  def allFeaturesJob: Execution[JobStatus] = {
-    for {
-      conf          <- Execution.getConfig.map(ExampleConfig)
-      inputPipe     <- Execution.from(ParseUtils.decodeHiveTextTable[Customer](
-        MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
-      _             <- materialise(pivotedAsFeatureSet)(inputPipe.rows, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
-    } yield (JobFinished)
-  }
 }
+
