@@ -4,7 +4,6 @@ import au.com.cba.omnia.dataproducts.features.Feature.Value
 import au.com.cba.omnia.dataproducts.features.Join.Joined
 
 trait Lift[P[_]] {
-  type PAlias[A] = P[A]
   def liftToTypedPipe[S,V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[S, V]]
 
   def liftToTypedPipe[S](fs: FeatureSet[S])(s: P[S]): P[FeatureValue[S, _]]
