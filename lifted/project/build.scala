@@ -42,6 +42,7 @@ object build extends Build {
    ++ uniform.project("features", "au.com.cba.omnia.dataproducts.features")
    ++ uniformThriftSettings
    ++ Seq(
+        libraryDependencies ++= depend.hadoopClasspath,
         libraryDependencies ++= depend.omnia("etl-util", etlUtilVersion)
           ++ Seq(
              "au.com.cba.omnia" %% "etl-test" % etlUtilVersion % "test",
