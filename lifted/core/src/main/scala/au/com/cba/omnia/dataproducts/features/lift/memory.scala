@@ -19,13 +19,12 @@ trait MemoryLift extends Lift[List] with Materialise[List, ({type λ[-α] = α =
     val aMap: Map[J, List[A]] = a.groupBy(joined.left)
     val bMap: Map[J, List[B]] = b.groupBy(joined.right)
 
-    aMap.flatMap { case (k, as) =>
-      if (bMap.contains(k)) {
-        as zip bMap(k)
-      } else {
-        List()
-      }
-    }.toList
+    for {
+      (k1,v1) <- aMap.toList
+      (k2,v2) <- bMap.toList if k2 == k1
+      a <- v1
+      b <-v2
+    } yield (a, b)
   }
 
   def materialiseJoinFeature[A, B, J : Ordering, V <: Value]
