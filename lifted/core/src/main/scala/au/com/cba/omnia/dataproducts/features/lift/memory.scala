@@ -6,11 +6,11 @@ import au.com.cba.omnia.dataproducts.features._
 import au.com.cba.omnia.dataproducts.features.Feature.Value
 
 trait MemoryLift extends Lift[List] with Materialise[List, ({type λ[-α] = α => Unit})#λ, ({type λ[α] = Unit => α})#λ]{
-  def liftToTypedPipe[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[S, V]] = {
+  def lift[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[S, V]] = {
     s.flatMap(s => f.generate(s))
   }
 
-  def liftToTypedPipe[S](fs: FeatureSet[S])(s: List[S]): List[FeatureValue[S, _]] = {
+  def lift[S](fs: FeatureSet[S])(s: List[S]): List[FeatureValue[S, _]] = {
     s.flatMap(s => fs.generate(s))
   }
 
@@ -33,11 +33,11 @@ trait MemoryLift extends Lift[List] with Materialise[List, ({type λ[-α] = α =
     materialise[(A,B), V](feature)(liftJoin(joined)(leftSrc, rightSrc), sink)
 
   def materialise[S,V <: Value](f:Feature[S,V])(src:List[S], sink: FeatureValue[S,V] => Unit): Unit => Unit = _ => {
-    liftToTypedPipe(f)(src).foreach(sink)
+    lift(f)(src).foreach(sink)
   }
 
   def materialise[S](featureSet: FeatureSet[S])(src:List[S], sink: FeatureValue[S,_] => Unit): Unit => Unit = _ => {
-    liftToTypedPipe(featureSet)(src).foreach(sink)
+    lift(featureSet)(src).foreach(sink)
   }
 }
 object memory extends MemoryLift

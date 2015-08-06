@@ -4,9 +4,9 @@ import au.com.cba.omnia.dataproducts.features.Feature.Value
 import au.com.cba.omnia.dataproducts.features.Join.Joined
 
 trait Lift[P[_]] {
-  def liftToTypedPipe[S,V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[S, V]]
+  def lift[S,V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[S, V]]
 
-  def liftToTypedPipe[S](fs: FeatureSet[S])(s: P[S]): P[FeatureValue[S, _]]
+  def lift[S](fs: FeatureSet[S])(s: P[S]): P[FeatureValue[S, _]]
 
 
   def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J])(a:P[A], b: P[B]): P[(A, B)]
