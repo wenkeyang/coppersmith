@@ -72,3 +72,26 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
     typecheck("feature.as(Continuous)") must not succeed
   }
 }
+
+object HydroMetadataSpec extends Specification with ScalaCheck { def is = s2"""
+  FeatureMetadata.asHydroPsv creates expected Hydro metadata $hydroPsv
+"""
+
+  def hydroPsv = forAll { (namespace: Namespace, name: Name, fType: Type, value: Value) => {
+    val (metadata, expectedValueType) = value match {
+      case Integral(_) => (FeatureMetadata[Integral](namespace, name, fType), "int")
+      case Decimal(_)  => (FeatureMetadata[Decimal] (namespace, name, fType), "double")
+      case Str(_)      => (FeatureMetadata[Str]     (namespace, name, fType), "string")
+    }
+
+    val expectedFeatureType = fType match {
+      case Continuous  => "continuous"
+      case Categorical => "categorical"
+    }
+
+    val hydroMetadata = metadata.asHydroPsv
+
+    hydroMetadata must_==
+      s"${namespace.toLowerCase}.${name.toLowerCase}|$expectedValueType|$expectedFeatureType"
+  }}
+}
