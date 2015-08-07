@@ -14,7 +14,8 @@ import lift.scalding._
 import Join.Joined
 
 trait FeatureJobConfig {
-  def sourcePath: Path
+  def sourcePath:  Path
+  def featureSink: FeatureSink
 }
 
 object SimpleFeatureJob {
@@ -46,12 +47,11 @@ abstract class SimpleFeatureJob extends SimpleMaestroJob {
   def generate[S1, S2, J](
     cfg:      Config => FeatureJobConfig,
     source:   FeatureSource[(J, (S1, S2))],
-    features: AggregationFeatureSet[(S1, S2)],
-    target:   FeatureJobConfig => FeatureSink
+    features: AggregationFeatureSet[(S1, S2)]
   ) = for {
       conf     <- Execution.getConfig.map(cfg)
       input    <- source.load(conf)
       features <- Execution.from { sys.error(""): TypedPipe[FeatureValue[_, _]] }
-      _        <- target(conf).write(features)
+      _        <- conf.featureSink.write(features, conf)
     } yield JobFinished
 }
