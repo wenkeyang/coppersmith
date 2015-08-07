@@ -1,16 +1,16 @@
 package au.com.cba.omnia.dataproducts.features
 
-import au.com.cba.omnia.dataproducts.features.test.thrift.Customer
-
-import Feature._, Value._
-import FeatureMetadata.ValueType._
-import Arbitraries._
-
 import org.scalacheck.Prop.forAll
 
 import org.specs2._
 import org.specs2.execute._, Typecheck._
 import org.specs2.matcher.TypecheckMatchers._
+
+import Feature._, Value._, Type._
+import FeatureMetadata.ValueType._
+import Arbitraries._
+
+import au.com.cba.omnia.dataproducts.features.test.thrift.Customer
 
 object FeatureMetadataSpec extends Specification with ScalaCheck { def is = s2"""
   FeatureMetadata
@@ -41,28 +41,34 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 """
 
   def integralConversions = {
-    val feature = Patterns.general[Customer, Value.Integral, Value.Integral]("ns", "name", Type.Categorical, (c:Customer) => c._1, (c:Customer) => Some(c.age), (c:Customer) => 0)
+    val feature = Patterns.general[Customer, Value.Integral, Value.Integral](
+      "ns", "name", Type.Categorical, _.id, c => Some(c.age), _.time
+    )
     Seq(
       feature.metadata.featureType === Type.Categorical,
-      feature.asContinuous.metadata.featureType === Type.Continuous,
-      feature.asCategorical.metadata.featureType === Type.Categorical,
-      feature.asCategorical.asContinuous.metadata.featureType === Type.Continuous
+      feature.as(Continuous).metadata.featureType === Type.Continuous,
+      feature.as(Categorical).metadata.featureType === Type.Categorical,
+      feature.as(Categorical).as(Continuous).metadata.featureType === Type.Continuous
     )
   }
 
   def decimalConversions = {
-    val feature = Patterns.general[Customer, Value.Decimal, Value.Decimal]("ns", "name", Type.Categorical, (c:Customer) => c._1, (c:Customer) => Some(c.age.toDouble), (c:Customer) => 0)
+    val feature = Patterns.general[Customer, Value.Decimal, Value.Decimal](
+      "ns", "name", Type.Categorical, _.id, c => Some(c.age.toDouble), _.time
+    )
     Seq(
       feature.metadata.featureType === Type.Categorical,
-      feature.asContinuous.metadata.featureType === Type.Continuous,
-      feature.asCategorical.metadata.featureType === Type.Categorical,
-      feature.asCategorical.asContinuous.metadata.featureType === Type.Continuous
+      feature.as(Continuous).metadata.featureType === Type.Continuous,
+      feature.as(Categorical).metadata.featureType === Type.Categorical,
+      feature.as(Categorical).as(Continuous).metadata.featureType === Type.Continuous
     )
   }
 
   def stringConversions = {
-    val feature = Patterns.general[Customer, Value.Str, Value.Str]("ns", "name", Type.Categorical, (c:Customer) => c._1, (c:Customer) => Some(c._1), (c:Customer) => 0)
+    val feature = Patterns.general[Customer, Value.Str, Value.Str](
+      "ns", "name", Type.Categorical, _.id, c => Some(c.name), _.time
+    )
     feature.metadata.featureType === Type.Categorical
-    typecheck("feature.asContinuous") must not succeed
+    typecheck("feature.as(Continuous)") must not succeed
   }
 }
