@@ -9,6 +9,8 @@ import au.com.cba.omnia.maestro.api._
 
 import au.com.cba.omnia.etl.util.SimpleMaestroJob
 
+import lift.scalding._
+
 import Join.Joined
 
 trait FeatureJobConfig {
@@ -16,8 +18,27 @@ trait FeatureJobConfig {
 }
 
 object SimpleFeatureJob {
-  implicit class RichJoined[L, R, J : Ordering](j: Joined[L, R, J]) {
-    def asSource(fmt: (FeatureSource[L], FeatureSource[R])): FeatureSource[(J, (L, R))] = ???
+
+  case class JoinedFeatureSource[L, R, J : Ordering](
+                                           j: Joined[L, R, J],
+                                           fmt: (FeatureSource[L], FeatureSource[R]),
+                                           filter: ((L, R)) => Boolean =  (in: (L, R)) => true) extends FeatureSource[(L, R)] {
+    def filter(p: ((L, R)) => Boolean): FeatureSource[(L, R)] = copy(filter = s => filter(s) && p(s))
+
+    def load(conf: FeatureJobConfig): Execution[TypedPipe[(L, R)]] = {
+      val (leftSrc, rightSrc) = fmt
+      for {
+        leftPipe <- leftSrc.load(conf)
+        rightPipe <- rightSrc.load(conf)
+        joinedPipe = liftJoin(j)(leftPipe, rightPipe)
+      } yield joinedPipe.filter(filter)
+    }
+  }
+
+  implicit class RichJoined[L, R, J: Ordering](j: Joined[L, R, J]) {
+    def asSource(fmt: (FeatureSource[L], FeatureSource[R]),
+                 filter: ((L, R)) => Boolean = (in: (L, R)) => true): FeatureSource[(L, R)] =
+      JoinedFeatureSource(j, fmt, filter)
   }
 }
 
