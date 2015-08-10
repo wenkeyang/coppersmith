@@ -46,7 +46,7 @@ object SimpleFeatureJob {
 abstract class SimpleFeatureJob extends SimpleMaestroJob {
   def generate[S1, S2, J](
     cfg:      Config => FeatureJobConfig,
-    source:   FeatureSource[(J, (S1, S2))],
+    source:   FeatureSource[(Feature.EntityId, Iterable[(S1, S2)])],
     features: AggregationFeatureSet[(S1, S2)]
   ) = for {
       conf     <- Execution.getConfig.map(cfg)

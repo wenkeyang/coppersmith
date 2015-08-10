@@ -12,6 +12,7 @@ import au.com.cba.omnia.etl.util.{ParseUtils, SimpleMaestroJob}
 trait FeatureSource[S] {
   def filter(p: S => Boolean): FeatureSource[S]
   def load(conf: FeatureJobConfig): Execution[TypedPipe[S]]
+  def groupBy[T](f: S => T): FeatureSource[(T, Iterable[S])] = ???
 }
 
 
