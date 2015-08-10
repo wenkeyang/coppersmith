@@ -25,6 +25,6 @@ case class HiveTextSource[S <: ThriftStruct : Decode, P](
     // FIXME: This implementation completely ignores errors
     ParseUtils.decodeHiveTextTable[S](
       MultipleTextLineFiles(conf.sourcePath.toString + tableName /* + partition...*/)
-    ).rows
+    ).rows.filter(filter)
   }
 }
