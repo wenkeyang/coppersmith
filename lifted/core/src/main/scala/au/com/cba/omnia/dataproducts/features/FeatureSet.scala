@@ -105,16 +105,19 @@ object AggregationFeature {
   }
 
   implicit class FeatureBuilder[S, T, U <% V, V <: Value : TypeTag](aggregator: Aggregator[S, T, U]) {
-    def asFeature(featureName: Feature.Name) =
-      FeatureWhereBuilder((aggregator, None)).asFeature(featureName)
+    def asFeature[FT <: Feature.Type](featureName: Feature.Name,
+                                      featureType: FT)(implicit ev: Conforms[FT, V]) =
+      FeatureWhereBuilder((aggregator, None)).asFeature(featureName, featureType)
   }
 
   implicit class FeatureWhereBuilder[S, T, U <% V, V <: Value : TypeTag](
     aggregatorWhere: (Aggregator[S, T, U], Option[S => Boolean])
   ) {
-    def asFeature(featureName: Feature.Name) =
+    def asFeature[FT <: Feature.Type](featureName: Feature.Name,
+                                      featureType: FT)(implicit ev: Conforms[FT, V]) =
       AggregationFeature(featureName,
                          aggregatorWhere._1.andThenPresent(u => u: V),
+                         featureType,
                          where = aggregatorWhere._2)
   }
 

@@ -3,14 +3,13 @@ package au.com.cba.omnia.dataproducts.features.examples
 import au.com.cba.omnia.dataproducts.features.Feature._
 import au.com.cba.omnia.dataproducts.features._
 import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
-import au.com.cba.omnia.dataproducts.features.scalding._
 
 import au.com.cba.omnia.etl.util.{ParseUtils, SimpleMaestroJob}
 
 import au.com.cba.omnia.maestro.scalding.JobStatus
 import au.com.cba.omnia.maestro.api._, Maestro._
 
-import com.twitter.scalding.{TypedPsv, Config, MultipleTextLineFiles, Execution}
+import com.twitter.scalding._
 
 import org.joda.time.DateTime
 
@@ -18,6 +17,7 @@ import org.joda.time.DateTime
 import scalaz.{Value => _, _}, Scalaz._
 
 import PivotMacro._
+import lift.scalding._
 
 object Example1 {
   val pivoted = pivotThrift[Customer]("namespace", _.id, c => DateTime.parse(c.effectiveDate).getMillis())
