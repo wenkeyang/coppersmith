@@ -2,6 +2,8 @@ import au.com.cba.omnia.uniform.dependency.UniformDependencyPlugin.depend.versio
 import sbt._
 import sbt.Keys._
 
+import au.com.cba.omnia.humbug.HumbugSBT.humbugSettings
+
 import au.com.cba.omnia.uniform.core.standard.StandardProjectPlugin._
 import au.com.cba.omnia.uniform.core.version.UniqueVersionPlugin._
 import au.com.cba.omnia.uniform.dependency.UniformDependencyPlugin._
@@ -10,6 +12,7 @@ import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
   val etlUtilVersion = "1.14.1-20150703071108-fb2a434"
+  val humbugVersion  = "0.6.1-20150513010955-5eb6297"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
@@ -57,13 +60,14 @@ object build extends Build {
   , settings =
       standardSettings
     ++ uniform.project("features-examples", "au.com.omnia.dataproducts.features.examples")
-    ++ uniformThriftSettings
     ++ uniformAssemblySettings
     ++ Seq(
         libraryDependencies ++= depend.omnia("etl-util", etlUtilVersion),
         libraryDependencies ++= depend.hadoopClasspath,
-        libraryDependencies ++= depend.scalding()
-      )
+        libraryDependencies ++= depend.scalding(),
+        libraryDependencies ++= depend.omnia("humbug-core", humbugVersion)
+       )
+    ++ humbugSettings
   ).dependsOn(core)
 
   lazy val test = Project(
