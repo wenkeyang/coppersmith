@@ -1,5 +1,7 @@
 package au.com.cba.omnia.dataproducts.features.examples
 
+import scala.collection.immutable.BitSet
+
 import com.twitter.scalding._
 
 import cascading.tuple.{ Tuple => CTuple }
@@ -9,6 +11,8 @@ class ScaldingFieldsCsvJob(args: Args) extends Job(args) {
   val input = Csv(args("input"), fields=fields, skipHeader=true)
   val output = Csv(args("output"), writeHeader=true)
   val error = Csv(args("error"), writeHeader=true)
+
+  val predicate: Int => Boolean = BitSet(43, 69, 70, 94, 123, 130, 222, 244, 434, 695, 767).contains
 
   input
     .read
@@ -23,8 +27,6 @@ class ScaldingFieldsCsvJob(args: Args) extends Job(args) {
 
   def round(x: BigDecimal): BigDecimal = x.setScale(2, BigDecimal.RoundingMode.HALF_UP)
 
-  def predicate(v: Int): Boolean = Array(43, 69, 70, 94, 123, 130, 222, 244, 434, 695, 767).contains(v)
-
   def g1: ((BigDecimal, BigDecimal)) => Int = { case (x, y) =>
     val percentage: BigDecimal = if (y == 0) 0 else round(x / y * 100)
 
@@ -32,15 +34,14 @@ class ScaldingFieldsCsvJob(args: Args) extends Job(args) {
       if (percentage <= 0) 1
       else if (percentage <= 100) 2
       else 3
-    }
-    else {
+    } else {
       if (percentage <= 100) 4
       else 5
     }
   }
 
   def g2: ((Int, Int)) => Int = { case (x, y) =>
-    if ( y == 0) 1
+    if (y == 0) 1
     else if (x == 0) 2
     else {
       val percentage = round(BigDecimal(x) / y * 100)

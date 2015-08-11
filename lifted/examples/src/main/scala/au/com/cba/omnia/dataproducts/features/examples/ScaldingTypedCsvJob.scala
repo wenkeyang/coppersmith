@@ -1,5 +1,7 @@
 package au.com.cba.omnia.dataproducts.features.examples
 
+import scala.collection.immutable.BitSet
+
 import com.twitter.scalding._
 
 import au.com.cba.omnia.maestro.api.Macros
@@ -23,7 +25,7 @@ class ScaldingTypedCsvJob(args: Args) extends Job(args) {
 
   def round(x: BigDecimal): BigDecimal = x.setScale(2, BigDecimal.RoundingMode.HALF_UP)
 
-  def predicate(v: Int): Boolean = Array(43, 69, 70, 94, 123, 130, 222, 244, 434, 695, 767).contains(v)
+  val predicate: Int => Boolean = BitSet(43, 69, 70, 94, 123, 130, 222, 244, 434, 695, 767).contains
 
   def g1(x: BigDecimal, y: BigDecimal): Int = {
     val percentage: BigDecimal = if (y == 0) 0 else round(x / y * 100)
@@ -32,8 +34,7 @@ class ScaldingTypedCsvJob(args: Args) extends Job(args) {
       if (percentage <= 0) 1
       else if (percentage <= 100) 2
       else 3
-    }
-    else {
+    } else {
       if (percentage <= 100) 4
       else 5
     }
