@@ -11,18 +11,18 @@ import au.com.cba.omnia.etl.util.SimpleMaestroJob
 
 import Feature.{EntityId, Time}
 
-trait FeatureJobConfig {
-  def sourcePath:  Path
-  def featureSink: FeatureSink
+trait FeatureJobConfig[S] {
+  def featureSource: FeatureSource[S]
+  def featureSink:   FeatureSink
 }
 
 abstract class SimpleFeatureJob extends SimpleMaestroJob {
   def generate[S](
-    cfg:      Config => FeatureJobConfig,
-    source:   FeatureSource[S],
+    cfg:      Config => FeatureJobConfig[S],
     features: AggregationFeatureSet[S]
   ): Execution[JobStatus] = for {
       conf     <- Execution.getConfig.map(cfg)
+      source    = conf.featureSource
       input    <- source.load(conf)
       grouped   = input.groupBy(s => (features.entity(s), features.time(s)))
       values    = generate(grouped, features)

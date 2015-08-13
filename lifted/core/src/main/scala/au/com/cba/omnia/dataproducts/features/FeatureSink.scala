@@ -23,7 +23,7 @@ import Feature.Value.{Integral, Decimal, Str}
 import au.com.cba.omnia.dataproducts.features.thrift.Eavt
 
 trait FeatureSink {
-  def write(features: TypedPipe[FeatureValue[_, _]], jobConfig: FeatureJobConfig): Execution[Unit]
+  def write(features: TypedPipe[FeatureValue[_, _]], jobConfig: FeatureJobConfig[_]): Execution[Unit]
 }
 
 object HydroSink {
@@ -64,7 +64,7 @@ case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
     Eavt(fv.entity, fv.feature.metadata.name, featureValue, featureTime)
   }
 
-  def write(features: TypedPipe[FeatureValue[_, _]], jobConfig: FeatureJobConfig) = {
+  def write(features: TypedPipe[FeatureValue[_, _]], jobConfig: FeatureJobConfig[_]) = {
     val hiveConfig = conf.hiveConfig
     val eavtPipe = features.map(toEavt)
     for {
