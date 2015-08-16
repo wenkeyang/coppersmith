@@ -1,17 +1,18 @@
 package au.com.cba.omnia.dataproducts.features
 
-import org.apache.hadoop.fs.Path
+import scala.reflect.runtime.universe.TypeTag
 
-import com.twitter.scalding.{Config, Execution, MultipleTextLineFiles, TupleSetter, TupleConverter}
-import com.twitter.scalding.typed._
+import scalaz.syntax.std.boolean.ToBooleanOpsFromBoolean
+import scalaz.syntax.std.option.ToOptionIdOps
 
-import au.com.cba.omnia.maestro.api._
-import au.com.cba.omnia.maestro.core.partition.HivePartition
+import com.twitter.scalding.Execution
+import com.twitter.scalding.typed.TypedPipe
 
-import au.com.cba.omnia.etl.util.{ParseUtils, SimpleMaestroJob}
+import au.com.cba.omnia.maestro.api.Partition
 
-import lift.scalding._
+import lift.scalding.liftJoin
 
+import Feature.{Conforms, EntityId, Name, Namespace, Time, Type, Value}
 import Join.Joined
 
 object FeatureSource {
@@ -20,22 +21,60 @@ object FeatureSource {
              filter: ((L, R)) => Boolean = (in: (L, R)) => true): FeatureSource[(L, R)] =
       JoinedFeatureSource(j, cfg, filter)
   }
-
-  case class PartitionPath[S, P](underlying: Partition[S, P], value: P)(implicit ev: PartitionToPath[P]) {
-    def toPath = new Path(underlying.pattern.format(ev.toPathComponents((value)): _*))
-  }
-
-  case class PartitionToPath[P](toPathComponents: P => List[String])
-  import shapeless.syntax.std.tuple.productTupleOps
-  implicit val StringToPath       = PartitionToPath[String](List(_))
-  implicit val StringTuple2ToPath = PartitionToPath[(String, String)](_.toList)
-  implicit val StringTuple3ToPath = PartitionToPath[(String, String, String)](_.toList)
-  implicit val StringTuple4ToPath = PartitionToPath[(String, String, String, String)](_.toList)
 }
 
 trait FeatureSource[S] {
   def filter(p: S => Boolean): FeatureSource[S]
   def load(conf: FeatureJobConfig[S]): Execution[TypedPipe[S]]
+}
+
+object From {
+  def apply[S](): From[S] = From[S](None)
+}
+
+case class From[S](filter: Option[S => Boolean] = None) {
+  // Common filter
+  def where(condition: S => Boolean) =
+    copy(filter = filter.map(f => (s: S) => f(s) && condition(s)).orElse(condition.some))
+
+  def featureSetBuilder(namespace: Namespace, entity: S => EntityId, time: S => Time) =
+    FeatureSetBuilder(namespace, entity, time)
+
+  def bind(cfg: SourceConfiguration[S]): FeatureSource[S] = FromSource[S](cfg, filter)
+}
+
+case class FromSource[S](srcCfg: SourceConfiguration[S],
+                         filter: Option[S => Boolean]) extends FeatureSource[S]{
+  // TODO: Not specific to From sources - lift up
+  def filter(p: S => Boolean): FeatureSource[S] =
+    copy(filter = filter.map(f => (s: S) => f(s) && p(s)).orElse(p.some))
+
+  def load(conf: FeatureJobConfig[S]): Execution[TypedPipe[S]] = {
+    val pipeExec = srcCfg.load(conf)
+    filter.map(f => pipeExec.map(_.filter(f))).getOrElse(pipeExec)
+  }
+}
+
+case class FeatureSetBuilder[S](namespace: Namespace, entity: S => EntityId, time: S => Time) {
+  def select[FV <% V, V <: Value : TypeTag](value : S => FV) = FeatureBuilder[S, FV, V](this, value)
+}
+
+case class FeatureBuilder[S, FV <% V, V <: Value : TypeTag](
+  fsBuilder: FeatureSetBuilder[S],
+  value: S => FV,
+  filter: Option[S => Boolean] = None
+) {
+  def andWhere(condition: S => Boolean) = where(condition)
+  def where(condition: S => Boolean) =
+    copy(filter = filter.map(f => (s: S) => f(s) && condition(s)).orElse(condition.some))
+
+  def asFeature[T <: Type](name: Name, featureType: T)(implicit ev: Conforms[T, V]) =
+    Patterns.general[S, V, FV](fsBuilder.namespace,
+                               name,
+                               featureType,
+                               fsBuilder.entity,
+                               (s: S) => filter.map(_(s)).getOrElse(true).option(value(s): V),
+                               fsBuilder.time)
 }
 
 case class JoinedFeatureSource[L, R, J : Ordering](
@@ -68,43 +107,3 @@ case class GroupedFeatureSource[S](
   }
 }
 */
-
-trait SourceConfiguration[S] {
-  def load(conf: FeatureJobConfig[_]): Execution[TypedPipe[S]]
-}
-
-case class HiveTextSource[S <: ThriftStruct : Decode, P](
-  basePath:  Path,
-  partition: FeatureSource.PartitionPath[S, P],
-  delimiter: String = "|",
-  filter:    S => Boolean = (_: S) => true
-) extends SourceConfiguration[S] {
-  def filter(f: S => Boolean): HiveTextSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
-  def load(conf: FeatureJobConfig[_]) = {
-    val inputPath = new Path(basePath, partition.toPath)
-    // FIXME: This implementation completely ignores errors
-    Execution.from {
-      ParseUtils.decodeHiveTextTable[S](
-        MultipleTextLineFiles(inputPath.toString, delimiter)
-      ).rows.filter(filter)
-    }
-  }
-}
-
-case class HiveParquetSource[S <: ThriftStruct : Decode : Tag : Manifest, P](
-  basePath:   Path,
-  partition:  FeatureSource.PartitionPath[S, P],
-  loadConfig: Either[MaestroConfig, LoadConfig[S]],
-  filter:     S => Boolean = (_: S) => true
-) extends SourceConfiguration[S] {
-  def filter(f: S => Boolean): HiveParquetSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
-  def load(conf: FeatureJobConfig[_]) = {
-    val config = loadConfig.left.map(maestro =>
-      maestro.load[S](errorThreshold = 0.05)
-    ).merge
-    for {
-      (input, loadInfo) <- Maestro.load[S](config, List(new Path(basePath, partition.toPath).toString))
-      _                 <- loadInfo.withSuccess
-    } yield input
-  }
-}
