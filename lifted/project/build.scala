@@ -34,7 +34,7 @@ object build extends Build {
    ++ Seq(
         publishArtifact := false
       )
-  , aggregate = Seq(core, test)
+  , aggregate = Seq(core, test, examples)
   )
 
   lazy val core = Project(
