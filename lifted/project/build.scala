@@ -11,8 +11,8 @@ import au.com.cba.omnia.uniform.thrift.UniformThriftPlugin._
 import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
-  val etlUtilVersion = "1.14.1-20150703071108-fb2a434"
   val humbugVersion  = "0.6.1-20150513010955-5eb6297"
+  val maestroVersion = "2.13.1-20150802232323-bf6f4f0"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
@@ -45,11 +45,10 @@ object build extends Build {
    ++ uniform.project("features", "au.com.cba.omnia.dataproducts.features")
    ++ uniformThriftSettings
    ++ Seq(
-        libraryDependencies ++= depend.omnia("etl-util", etlUtilVersion)
-          ++ Seq(
-             "au.com.cba.omnia" %% "etl-test" % etlUtilVersion % "test",
+          libraryDependencies ++= depend.omnia("maestro", maestroVersion),
+          libraryDependencies ++= Seq(
              "org.specs2" %% "specs2-matcher-extra" % versions.specs
-          )
+          ) ++  depend.testing()
         , parallelExecution in Test := false
       )
   )
@@ -62,7 +61,7 @@ object build extends Build {
     ++ uniform.project("features-examples", "au.com.omnia.dataproducts.features.examples")
     ++ uniformAssemblySettings
     ++ Seq(
-        libraryDependencies ++= depend.omnia("etl-util", etlUtilVersion),
+        libraryDependencies ++= depend.scalding(),
         libraryDependencies ++= depend.hadoopClasspath,
         libraryDependencies ++= depend.scalding(),
         libraryDependencies ++= depend.omnia("humbug-core", humbugVersion)
@@ -78,7 +77,8 @@ object build extends Build {
    ++ uniform.project("features-test", "au.com.cba.omnia.dataproducts.features.test")
    ++ uniformThriftSettings
    ++ Seq(
-        libraryDependencies := depend.omnia("etl-test", etlUtilVersion)
+        libraryDependencies ++= depend.testing()
       )
+
   ).dependsOn(core)
 }
