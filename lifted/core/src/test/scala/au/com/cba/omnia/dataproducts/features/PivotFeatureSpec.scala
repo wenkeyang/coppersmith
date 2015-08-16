@@ -75,9 +75,9 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     val featureValues = CustomerFeatureSet.generate(c)
 
     featureValues must_== List(
-      FeatureValue[Customer, Str]     (CustomerFeatureSet.name,   c.id, c.name,   c.time),
-      FeatureValue[Customer, Integral](CustomerFeatureSet.age,    c.id, c.age,    c.time),
-      FeatureValue[Customer, Decimal] (CustomerFeatureSet.height, c.id, c.height, c.time)
+      FeatureValue(c.id, CustomerFeatureSet.name.metadata.name,   c.name,   c.time),
+      FeatureValue(c.id, CustomerFeatureSet.age.metadata.name,    c.age,    c.time),
+      FeatureValue(c.id, CustomerFeatureSet.height.metadata.name, c.height, c.time)
     )
   }}
 }
@@ -92,8 +92,8 @@ object PivotFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     must derive value type from field   $metadataValueType
 
   Generating pivot feature values
-    must pass underlying feature through $valueFeature
     must use specified id as entity      $valueEntity
+    must use field name as name          $valueName
     must use field's value as value      $valueValue
     must use specified time as time      $valueTime
 """
@@ -144,16 +144,16 @@ object PivotFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     feature.metadata.valueType must_== expected
   }}
 
-  def valueFeature = forAll { (namespace: Namespace, fType: Type, field: Field[Customer, _], c: Customer) => {
-    val feature = pivot(namespace, fType, _.id, _.time, field)
-
-    feature.generate(c) must beSome.like { case v => v.feature must_== feature }
-  }}
-
   def valueEntity = forAll { (namespace: Namespace, fType: Type, field: Field[Customer, _], c: Customer) => {
     val feature = pivot(namespace, fType, _.id, _.time, field)
 
     feature.generate(c) must beSome.like { case v => v.entity must_== c.id }
+  }}
+
+  def valueName = forAll { (namespace: Namespace, fType: Type, field: Field[Customer, _], c: Customer) => {
+    val feature = pivot(namespace, fType, _.id, _.time, field)
+
+    feature.generate(c) must beSome.like { case v => v.name must_== field.name }
   }}
 
   def valueValue = forAll { (namespace: Namespace, fType: Type, field: Field[Customer, _], c: Customer) => {

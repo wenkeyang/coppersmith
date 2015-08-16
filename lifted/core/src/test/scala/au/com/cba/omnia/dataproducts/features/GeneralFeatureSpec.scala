@@ -26,8 +26,8 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     must pass feature type through $metadataFeatureType
 
   Generating general feature values
-    must pass underlying feature through $valueFeature
     must use specified id as entity      $valueEntity
+    must use specified name as name      $valueName
     must use value as defined            $valueValue
     must use specified time as time      $valueTime
 """
@@ -56,14 +56,14 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     feature.metadata.featureType must_== fType
   }}
 
-  def valueFeature = forAll { (namespace: Namespace, name: String, fType: Type, c: Customer) => {
-    val feature = general(namespace, name, fType)
-    feature.generate(c) must beSome.like { case v => v.feature must_== feature }
-  }}
-
   def valueEntity = forAll { (c: Customer) => {
     val feature = general(entity = _.id)
     feature.generate(c) must beSome.like { case v => v.entity must_== c.id }
+  }}
+
+  def valueName = forAll { (namespace: Namespace, name: String, fType: Type, c: Customer) => {
+    val feature = general(namespace, name, fType)
+    feature.generate(c) must beSome.like { case v => v.name must_== name }
   }}
 
   def valueValue = forAll { (c: Customer, field: Field[Customer, _], filter: Boolean) => {

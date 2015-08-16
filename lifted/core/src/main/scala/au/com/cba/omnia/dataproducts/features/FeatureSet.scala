@@ -13,7 +13,7 @@ trait FeatureSet[S] {
 
   def features: Iterable[Feature[S, Value]]
 
-  def generate(source: S): Iterable[FeatureValue[S, Value]] = features.flatMap(f =>
+  def generate(source: S): Iterable[FeatureValue] = features.flatMap(f =>
     f.generate(source)
   )
 
@@ -60,13 +60,13 @@ case class AggregationFeature[S, U, +V <: Value : TypeTag](
   // the fact that aggregators should be able to be run natively on the underlying plumbing
   def toFeature(namespace: Namespace, time: S => Time) =
       new Feature[(EntityId, Iterable[S]), Value](FeatureMetadata(namespace, name, featureType)) {
-    def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[(EntityId, Iterable[S]), Value]] = {
+    def generate(s: (EntityId, Iterable[S])): Option[FeatureValue] = {
       val source = s._2.filter(where.getOrElse(_ => true)).toList.toNel
       source.map(nonEmptySource => {
         val value = aggregator.present(
           nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
         )
-        FeatureValue(this, s._1, value, time(nonEmptySource.head))
+        FeatureValue(s._1, name, value, time(nonEmptySource.head))
       })
     }
   }
@@ -84,10 +84,10 @@ trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
   // would otherwise be required if calling the delegated methods directly
   def size: Aggregator[S, Long, Long] = Aggregator.size
   def count(where: S => Boolean = _ => true): Aggregator[S, Long, Long] = Aggregator.count(where)
-  def avg[V](v: S => Double): Aggregator[S, AveragedValue, Double] = AggregationFeature.avg[S](v)
-  def max[V : Ordering](v: S => V): Aggregator[S, V, V] = AggregationFeature.max[S, V](v)
-  def min[V : Ordering](v: S => V): Aggregator[S, V, V] = AggregationFeature.min[S, V](v)
-  def sum[V : Monoid]  (v: S => V): Aggregator[S, V, V] = Aggregator.prepareMonoid(v)
+  def avg[V](v: S => Double): Aggregator[S, AveragedValue, Double]      = AggregationFeature.avg[S](v)
+  def max[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.max[S, V](v)
+  def min[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.min[S, V](v)
+  def sum[V : Monoid]  (v: S => V): Aggregator[S, V, V]                 = Aggregator.prepareMonoid(v)
 
 }
 

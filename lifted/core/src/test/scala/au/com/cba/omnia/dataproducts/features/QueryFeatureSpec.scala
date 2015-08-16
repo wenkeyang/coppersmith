@@ -63,7 +63,7 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     val expectedFeature = if (c.age < 18) youngHeight else if (c.age >= 65) oldHeight else midHeight
 
     featureValues must_== List(
-      FeatureValue[Customer, Decimal] (expectedFeature, c.id, c.height, c.time)
+      FeatureValue (c.id, expectedFeature.metadata.name, c.height, c.time)
     )
   }}
 }

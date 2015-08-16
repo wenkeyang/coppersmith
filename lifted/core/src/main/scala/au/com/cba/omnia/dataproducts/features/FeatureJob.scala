@@ -25,7 +25,7 @@ abstract class SimpleFeatureJob extends SimpleMaestroJob {
 
   def generate[S](
     cfg:      Config => FeatureJobConfig[S],
-    transform: TypedPipe[S] => TypedPipe[FeatureValue[_, _]]
+    transform: TypedPipe[S] => TypedPipe[FeatureValue]
   ): Execution[JobStatus] = {
     for {
       conf     <- Execution.getConfig.map(cfg)
@@ -37,22 +37,21 @@ abstract class SimpleFeatureJob extends SimpleMaestroJob {
   }
 
   private def generateOneToMany[S](features: FeatureSet[S])
-                                  (input: TypedPipe[S]): TypedPipe[FeatureValue[_, _]] =
+                                  (input: TypedPipe[S]): TypedPipe[FeatureValue] =
     input.flatMap(features.generate(_))
 
   // FIXME: Should be able to take advantage of shapless' tuple support in combination with
   // Aggregator.join in order to run the aggregators in one pass over the input
   private def generateAggregate[S](features: AggregationFeatureSet[S])
-                                  (input: TypedPipe[S]): TypedPipe[FeatureValue[_, _]] = {
+                                  (input: TypedPipe[S]): TypedPipe[FeatureValue] = {
 
     val grouped: Grouped[(EntityId, Time), S] = input.groupBy(s => (features.entity(s), features.time(s)))
 
     features.aggregationFeatures.map(feature => {
+      val name = feature.name
       grouped.aggregate(feature.aggregator).toTypedPipe.map { case ((e, t), v) =>
-        // FIXME: Change FeatureValue to take name (or metadata) instead of related feature
-        // to avoid this unnecessary call to toFeature
-        FeatureValue(feature.toFeature(features.namespace, features.time), e, v, t)
+        FeatureValue(e, name, v, t)
       }
-    }).foldLeft(TypedPipe.from(List[FeatureValue[_, _]]()))(_.++(_))
+    }).foldLeft(TypedPipe.from(List[FeatureValue]()))(_.++(_))
   }
 }

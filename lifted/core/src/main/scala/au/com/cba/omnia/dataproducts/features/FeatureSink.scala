@@ -23,7 +23,7 @@ import Feature.Value.{Integral, Decimal, Str}
 import au.com.cba.omnia.dataproducts.features.thrift.Eavt
 
 trait FeatureSink {
-  def write(features: TypedPipe[FeatureValue[_, _]], jobConfig: FeatureJobConfig[_]): Execution[Unit]
+  def write(features: TypedPipe[FeatureValue], jobConfig: FeatureJobConfig[_]): Execution[Unit]
 }
 
 object HydroSink {
@@ -52,7 +52,7 @@ object HydroSink {
 
 case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
 
-  def toEavt(fv: FeatureValue[_, _]) = {
+  def toEavt(fv: FeatureValue) = {
     val featureValue = (fv.value match {
       case Integral(v) => v.map(_.toString)
       case Decimal(v)  => v.map(_.toString)
@@ -61,10 +61,10 @@ case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
 
     // TODO: Does time format need to be configurable?
     val featureTime = new DateTime(fv.time).toString("yyyy-MM-dd")
-    Eavt(fv.entity, fv.feature.metadata.name, featureValue, featureTime)
+    Eavt(fv.entity, fv.name, featureValue, featureTime)
   }
 
-  def write(features: TypedPipe[FeatureValue[_, _]], jobConfig: FeatureJobConfig[_]) = {
+  def write(features: TypedPipe[FeatureValue], jobConfig: FeatureJobConfig[_]) = {
     val hiveConfig = conf.hiveConfig
     val eavtPipe = features.map(toEavt)
     for {
