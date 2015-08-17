@@ -18,12 +18,12 @@ object PivotMacro {
     import c.universe._
 
     val typ        = c.universe.weakTypeOf[A]
-    val entries    = Inspect.fields[A](c)
+    val entries    = Inspect.info[A](c)
 
 
 
     val features = entries.map({
-      case (method, field) =>
+      case (int, field, method) =>
         val returnType = method.returnType
         val featureValueType = typeToFeatureValueType(c)(returnType)
         val mapperFn = typeMapper(c)(returnType)
@@ -49,7 +49,7 @@ object PivotMacro {
     })
 
       val featureRefs = entries.map({
-        case (method, field) =>
+        case (position, field, name) =>
           val n = TermName(field)
           q"$n"
       })

@@ -5,7 +5,7 @@ import au.com.cba.omnia.dataproducts.features._
 
 import au.com.cba.omnia.dataproducts.features.Feature.Value
 
-trait MemoryLift extends Lift[List] with Materialise[List, ({type λ[-α] = α => Unit})#λ, ({type λ[α] = Unit => α})#λ]{
+trait MemoryLift extends Lift[List] with Materialise[List, ({type λ[-α] = α => Unit})#λ, ({type λ[α] =(() => α)})#λ]{
   def lift[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[S, V]] = {
     s.flatMap(s => f.generate(s))
   }
@@ -32,11 +32,11 @@ trait MemoryLift extends Lift[List] with Materialise[List, ({type λ[-α] = α =
   (leftSrc:List[A], rightSrc:List[B], sink: (FeatureValue[(A, B), V]) => Unit) =
     materialise[(A,B), V](feature)(liftJoin(joined)(leftSrc, rightSrc), sink)
 
-  def materialise[S, V <: Value](f:Feature[S, V])(src:List[S], sink: FeatureValue[S, V] => Unit): Unit => Unit = _ => {
+  def materialise[S, V <: Value](f:Feature[S, V])(src:List[S], sink: FeatureValue[S, V] => Unit): (() => Unit) = () => {
     lift(f)(src).foreach(sink)
   }
 
-  def materialise[S](featureSet: FeatureSet[S])(src:List[S], sink: FeatureValue[S, _] => Unit): Unit => Unit = _ => {
+  def materialise[S](featureSet: FeatureSet[S])(src:List[S], sink: FeatureValue[S, _] => Unit): (() => Unit) = () => {
     lift(featureSet)(src).foreach(sink)
   }
 }

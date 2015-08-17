@@ -6,7 +6,6 @@ import com.twitter.scalding._
 
 import au.com.cba.omnia.maestro.api.Macros
 
-import au.com.cba.omnia.etl.util.ParseUtils
 
 import au.com.cba.omnia.dataproducts.features.examples.thrift.Wide1
 
@@ -14,8 +13,8 @@ class ScaldingTypedCsvJob(args: Args) extends Job(args) {
   val input = TextLine(args("input"))
   val output = TypedCsv[(String, Int)](args("output"))
 
-  ParseUtils.decodeHiveTextTable(input, sep=",")(Macros.mkDecode[Wide1])
-    .rows
+  Util.decodeHive(input, sep=",")(Macros.mkDecode[Wide1])
+    ._1
     .filter { case wide1               => predicate(wide1.f2) }
     .map    { case wide1               => (wide1, g1(BigDecimal(wide1.f351), BigDecimal(wide1.f361))) }
     .map    { case (wide1, g1)         => (wide1, g1, g2(wide1.f356, wide1.f357)) }
