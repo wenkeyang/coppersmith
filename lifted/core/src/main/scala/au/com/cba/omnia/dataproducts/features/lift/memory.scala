@@ -5,7 +5,7 @@ import au.com.cba.omnia.dataproducts.features._
 
 import au.com.cba.omnia.dataproducts.features.Feature.Value
 
-trait MemoryLift extends Lift[List] with Materialise[List, ({type λ[-α] = α => Unit})#λ, ({type λ[α] =( () => α)})#λ]{
+trait MemoryLift extends Lift[List] with Materialise[List, ({type λ[-α] = α => Unit})#λ, ({type λ[α] =(() => α)})#λ]{
   def lift[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[S, V]] = {
     s.flatMap(s => f.generate(s))
   }

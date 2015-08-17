@@ -16,23 +16,23 @@ object Example1Memory {
   val balance: Feature[Customer, Value.Integral] = pivoted.balance
 
   def main(args: Array[String]) = {
-    val c1 = new Customer()
-    val c2 = new Customer()
+    val c1 = new Customer() {
+      id = ""
+      acct = "123"
+      cat = "333"
+      subCat = "444"
+      balance = 100
+      effectiveDate = "01022001"
+    }
 
-    c1.id = ""
-    c1.acct = "123"
-    c1.cat = "333"
-    c1.subCat = "444"
-    c1.balance = 100
-    c1.effectiveDate = "01022001"
-
-
-    c2.id = ""
-    c2.acct = "124"
-    c2.cat = "333"
-    c2.subCat = "444"
-    c2.balance = 100
-    c2.effectiveDate = "01022001"
+    val c2 = new Customer() {
+      id = ""
+      acct = "124"
+      cat = "333"
+      subCat = "444"
+      balance = 100
+      effectiveDate = "01022001"
+    }
 
     materialise(acct)(List(c1, c2), it => println(it.value))()
   }

@@ -42,7 +42,7 @@ object Example1 {
   def accountFeatureJob: Execution[JobStatus] = {
     for {
       conf                    <- Execution.getConfig.map(ExampleConfig)
-      (inputPipe, errors)     <- Execution.from(Util.decodeHive[Customer](
+      (inputPipe, _)          <- Execution.from(Util.decodeHive[Customer](
                                   MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
       _                       <- materialise(acct)(inputPipe, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
@@ -51,7 +51,7 @@ object Example1 {
   def allFeaturesJob: Execution[JobStatus] = {
     for {
       conf                    <- Execution.getConfig.map(ExampleConfig)
-      (inputPipe, errors)     <- Execution.from(Util.decodeHive[Customer](
+      (inputPipe, _)          <- Execution.from(Util.decodeHive[Customer](
                                 MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
       _                       <- materialise(pivotedAsFeatureSet)(inputPipe, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
