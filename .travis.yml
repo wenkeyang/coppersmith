@@ -18,7 +18,6 @@ install:
 - ci/sbt-setup.sh
 script:
 - sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci '; test; package'
-- ci/sbt-deploy.sh
 after_script:
 - cd ..
 - rm -rf ci
