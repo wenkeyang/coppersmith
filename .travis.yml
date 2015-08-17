@@ -1,0 +1,31 @@
+language: scala
+jdk:
+- oraclejdk7
+cache:
+  directories:
+  - $HOME/.ivy2
+  - $HOME/.m2
+
+# These two settings enable the build in the "lifted" subdir.
+env:
+- TRAVIS_BUILD_DIR=$TRAVIS_BUILD_DIR/lifted
+before_install:
+- cd lifted
+
+install:
+- git clone https://omnia-bamboo:$OMNIA_CI_PASSWORD@github.com/CommBank/ci.git
+- chmod ugo+x ci/*
+- ci/sbt-setup.sh
+script:
+- sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci '; test; package'
+- ci/sbt-deploy.sh
+after_script:
+- cd ..
+- rm -rf ci
+# notifications:
+#   webhooks:
+#     urls:
+#     - https://webhooks.gitter.im/e/???
+#     on_success: always
+#     on_failure: always
+#     on_start: false
