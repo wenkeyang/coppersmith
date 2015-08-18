@@ -5,7 +5,6 @@ import scala.reflect.runtime.universe.TypeTag
 import scalaz.syntax.std.boolean.ToBooleanOpsFromBoolean
 import scalaz.syntax.std.option.ToOptionIdOps
 
-import com.twitter.scalding.Execution
 import com.twitter.scalding.typed.TypedPipe
 
 import au.com.cba.omnia.maestro.api.Partition
@@ -25,7 +24,7 @@ object FeatureSource {
 
 trait FeatureSource[S] {
   def filter(p: S => Boolean): FeatureSource[S]
-  def load(conf: FeatureJobConfig[S]): Execution[TypedPipe[S]]
+  def load(conf: FeatureJobConfig[S]): TypedPipe[S]
 }
 
 object From {
@@ -49,9 +48,9 @@ case class FromSource[S](srcCfg: SourceConfiguration[S],
   def filter(p: S => Boolean): FeatureSource[S] =
     copy(filter = filter.map(f => (s: S) => f(s) && p(s)).orElse(p.some))
 
-  def load(conf: FeatureJobConfig[S]): Execution[TypedPipe[S]] = {
-    val pipeExec = srcCfg.load(conf)
-    filter.map(f => pipeExec.map(_.filter(f))).getOrElse(pipeExec)
+  def load(conf: FeatureJobConfig[S]): TypedPipe[S] = {
+    val pipe = srcCfg.load(conf)
+    filter.map(f => pipe.filter(f)).getOrElse(pipe)
   }
 }
 
@@ -85,13 +84,9 @@ case class JoinedFeatureSource[L, R, J : Ordering](
   // TODO: Not specific to Joined sources - lift up
   def filter(p: ((L, R)) => Boolean): FeatureSource[(L, R)] = copy(filter = s => filter(s) && p(s))
 
-  def load(conf: FeatureJobConfig[(L, R)]): Execution[TypedPipe[(L, R)]] = {
+  def load(conf: FeatureJobConfig[(L, R)]): TypedPipe[(L, R)] = {
     val (leftSrc, rightSrc) = srcCfg
-    for {
-      leftPipe <- leftSrc.load(conf)
-      rightPipe <- rightSrc.load(conf)
-      joinedPipe = liftJoin(j)(leftPipe, rightPipe)
-    } yield joinedPipe.filter(filter)
+    liftJoin(j)(leftSrc.load(conf), rightSrc.load(conf)).filter(filter)
   }
 }
 

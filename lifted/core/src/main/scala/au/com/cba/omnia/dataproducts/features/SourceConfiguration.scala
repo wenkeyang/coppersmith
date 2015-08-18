@@ -39,11 +39,9 @@ case class HiveTextSource[S <: ThriftStruct : Decode, P](
   def load(conf: FeatureJobConfig[_]) = {
     val inputPath = new Path(basePath, partition.toPath)
     // FIXME: This implementation completely ignores errors
-    Execution.from {
-      ParseUtils.decodeHiveTextTable[S](
-        MultipleTextLineFiles(inputPath.toString), delimiter
-      ).rows.filter(filter)
-    }
+    ParseUtils.decodeHiveTextTable[S](
+      MultipleTextLineFiles(inputPath.toString), delimiter
+    ).rows.filter(filter)
   }
 }
 
@@ -54,26 +52,6 @@ case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : Tup
 ) extends SourceConfiguration[S] {
   def filter(f: S => Boolean): HiveParquetSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
   def load(conf: FeatureJobConfig[_]) = {
-    Execution.from {
-      TypedPipe.from(ParquetScroogeSource[S](new Path(basePath, partition.toPath).toString))
-    }
-  }
-}
-
-case class MaestroSource[S <: ThriftStruct : Decode : Tag : Manifest, P](
-  basePath:   Path,
-  partition:  SourceConfiguration.PartitionPath[S, P],
-  loadConfig: Either[MaestroConfig, LoadConfig[S]],
-  filter:     S => Boolean = (_: S) => true
-) extends SourceConfiguration[S] {
-  def filter(f: S => Boolean): MaestroSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
-  def load(conf: FeatureJobConfig[_]) = {
-    val config = loadConfig.left.map(maestro =>
-      maestro.load[S](errorThreshold = 0.05)
-    ).merge
-    for {
-      (input, loadInfo) <- Maestro.load[S](config, List(new Path(basePath, partition.toPath).toString))
-      _                 <- loadInfo.withSuccess
-    } yield input
+    TypedPipe.from(ParquetScroogeSource[S](new Path(basePath, partition.toPath).toString))
   }
 }
