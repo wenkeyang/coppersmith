@@ -40,18 +40,22 @@ abstract class SimpleFeatureJob extends SimpleMaestroJob {
                                   (input: TypedPipe[S]): TypedPipe[FeatureValue] =
     input.flatMap(features.generate(_))
 
-  // FIXME: Should be able to take advantage of shapless' tuple support in combination with
-  // Aggregator.join in order to run the aggregators in one pass over the input
+  // Should be able to take advantage of shapless' tuple support in combination with Aggregator.join
+  // in order to run the aggregators in one pass over the input. Need to consider that features may
+  // have different filter conditions though.
   private def generateAggregate[S](features: AggregationFeatureSet[S])
                                   (input: TypedPipe[S]): TypedPipe[FeatureValue] = {
 
     val grouped: Grouped[(EntityId, Time), S] = input.groupBy(s => (features.entity(s), features.time(s)))
-
     features.aggregationFeatures.map(feature => {
       val name = feature.name
-      grouped.aggregate(feature.aggregator).toTypedPipe.map { case ((e, t), v) =>
+      // TODO: Unnecessarily traverses grouped when feature.where is None, however, there doesn't
+      // appear to be a common supertype of Grouped and UnsortedGrouped with aggregate. One option
+      // might be Either[Grouped, UnsortedGrouped].fold(_.aggregate(...), _.aggregate(...)).merge
+      val filtered = grouped.filter { case (_, s) => feature.where.map(_(s)).getOrElse(true) }
+      filtered.aggregate(feature.aggregator).toTypedPipe.map { case ((e, t), v) =>
         FeatureValue(e, name, v, t)
       }
-    }).foldLeft(TypedPipe.from(List[FeatureValue]()))(_.++(_))
+    }).foldLeft(TypedPipe.from(List[FeatureValue]()))(_ ++ _)
   }
 }

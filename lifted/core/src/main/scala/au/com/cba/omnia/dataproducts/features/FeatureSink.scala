@@ -91,7 +91,7 @@ object HiveSupport {
     database:  String,
     path:      Path,
     tablename: String,
-    delimiter: String = "|"
+    delimiter: String = "\u0001"
   )
 
   def writeTextTable[T <: ThriftStruct with Product : Manifest, P : TupleSetter : TupleConverter](
