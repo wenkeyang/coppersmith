@@ -36,7 +36,7 @@ object PivotMacro {
 
               new Feature[$typ, $featureValueType](featureMetadata) { self =>
 
-                def generate(source: $typ):Option[FeatureValue] = {
+                def generate(source: $typ):Option[FeatureValue[$featureValueType]] = {
                   val v = source.$method
                   Some(FeatureValue($entity(source), ${field.toLowerCase}, Feature.Value.$mapperFn(v), $time(source)))
                 }

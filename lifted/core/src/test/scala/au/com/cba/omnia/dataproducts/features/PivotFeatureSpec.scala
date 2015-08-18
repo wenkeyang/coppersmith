@@ -75,9 +75,9 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     val featureValues = CustomerFeatureSet.generate(c)
 
     featureValues must_== List(
-      FeatureValue(c.id, CustomerFeatureSet.name.metadata.name,   c.name,   c.time),
-      FeatureValue(c.id, CustomerFeatureSet.age.metadata.name,    c.age,    c.time),
-      FeatureValue(c.id, CustomerFeatureSet.height.metadata.name, c.height, c.time)
+      FeatureValue[Str]     (c.id, CustomerFeatureSet.name.metadata.name,   c.name,   c.time),
+      FeatureValue[Integral](c.id, CustomerFeatureSet.age.metadata.name,    c.age,    c.time),
+      FeatureValue[Decimal] (c.id, CustomerFeatureSet.height.metadata.name, c.height, c.time)
     )
   }}
 }

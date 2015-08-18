@@ -85,18 +85,18 @@ case class FeatureMetadata[+V <: Value : TypeTag](namespace: Namespace, name: Na
 }
 
 abstract class Feature[S, +V <: Value](val metadata: FeatureMetadata[V]) {
-  def generate(source:S): Option[FeatureValue]
+  def generate(source:S): Option[FeatureValue[V]]
 }
 
-case class FeatureValue(
+case class FeatureValue[+V <: Value](
   entity:  EntityId,
   name:    Name,
-  value:   Value,
+  value:   V,
   time:    Time
 )
 
 object FeatureValue {
-  implicit class AsEavt(fv: FeatureValue) {
-    def asEavt: (EntityId, Name, Value, Time) = (fv.entity, fv.name, fv.value, fv.time)
+  implicit class AsEavt[V <: Value](fv: FeatureValue[V]) {
+    def asEavt: (EntityId, Name, V, Time) = (fv.entity, fv.name, fv.value, fv.time)
   }
 }

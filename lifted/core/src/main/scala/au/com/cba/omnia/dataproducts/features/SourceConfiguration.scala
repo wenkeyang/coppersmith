@@ -26,7 +26,7 @@ object SourceConfiguration {
 }
 
 trait SourceConfiguration[S] {
-  def load(conf: FeatureJobConfig[_]): Execution[TypedPipe[S]]
+  def load(conf: FeatureJobConfig[_]): TypedPipe[S]
 }
 
 case class HiveTextSource[S <: ThriftStruct : Decode, P](

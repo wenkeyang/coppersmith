@@ -13,7 +13,7 @@ trait FeatureSet[S] {
 
   def features: Iterable[Feature[S, Value]]
 
-  def generate(source: S): Iterable[FeatureValue] = features.flatMap(f =>
+  def generate(source: S): Iterable[FeatureValue[Value]] = features.flatMap(f =>
     f.generate(source)
   )
 
@@ -60,7 +60,7 @@ case class AggregationFeature[S, U, +V <: Value : TypeTag](
   // the fact that aggregators should be able to be run natively on the underlying plumbing
   def toFeature(namespace: Namespace, time: S => Time) =
       new Feature[(EntityId, Iterable[S]), Value](FeatureMetadata(namespace, name, featureType)) {
-    def generate(s: (EntityId, Iterable[S])): Option[FeatureValue] = {
+    def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
       val source = s._2.filter(where.getOrElse(_ => true)).toList.toNel
       source.map(nonEmptySource => {
         val value = aggregator.present(
