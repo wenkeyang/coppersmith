@@ -2,15 +2,15 @@ package au.com.cba.omnia.dataproducts.features
 
 import org.apache.hadoop.fs.Path
 
-import com.twitter.scalding.{Execution, MultipleTextLineFiles, TupleSetter, TupleConverter}
+import com.twitter.scalding.{Execution, MultipleTextLineFiles, TextLineScheme, TupleSetter, TupleConverter}
+import com.twitter.scalding.TDsl.sourceToTypedPipe
 import com.twitter.scalding.typed.TypedPipe
 
 import au.com.cba.omnia.maestro.api._
+import au.com.cba.omnia.maestro.core.codec.DecodeOk
 
 import au.com.cba.omnia.ebenezer.scrooge.ParquetScroogeSource
 import au.com.cba.omnia.ebenezer.scrooge.hive.PartitionHiveParquetScroogeSource
-
-import au.com.cba.omnia.etl.util.ParseUtils
 
 object SourceConfiguration {
   case class PartitionPath[S, P](underlying: Partition[S, P], value: P)(implicit ev: PartitionToPath[P]) {
@@ -37,11 +37,14 @@ case class HiveTextSource[S <: ThriftStruct : Decode, P](
 ) extends SourceConfiguration[S] {
   def filter(f: S => Boolean): HiveTextSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
   def load(conf: FeatureJobConfig[_]) = {
-    val inputPath = new Path(basePath, partition.toPath)
-    // FIXME: This implementation completely ignores errors
-    ParseUtils.decodeHiveTextTable[S](
-      MultipleTextLineFiles(inputPath.toString), delimiter
-    ).rows.filter(filter)
+    val ev = implicitly[Decode[S]]
+    val input: TextLineScheme = MultipleTextLineFiles(new Path(basePath, partition.toPath).toString)
+    input.map { raw =>
+      ev.decode(none = "\\N", Splitter.delimited(delimiter).run(raw).toList)
+    }.collect {
+      // FIXME: This implementation completely ignores errors
+      case DecodeOk(row) if filter(row) => row
+    }
   }
 }
 

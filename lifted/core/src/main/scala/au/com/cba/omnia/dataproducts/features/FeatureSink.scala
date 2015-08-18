@@ -16,8 +16,6 @@ import com.twitter.scrooge.ThriftStruct
 
 import au.com.cba.omnia.maestro.api._, Maestro._
 
-import au.com.cba.omnia.etl.util.ParseUtils
-
 import Feature.Value.{Integral, Decimal, Str}
 
 import au.com.cba.omnia.dataproducts.features.thrift.Eavt
@@ -101,7 +99,7 @@ object HiveSupport {
 
     import conf.partition
     val partitioned = pipe.map(v =>
-      partition.extract(v) -> ParseUtils.mkStringThrift[T](v, conf.delimiter)
+      partition.extract(v) -> serialise[T](v, conf.delimiter, "\\N")
     )
     val partitionPath = partition.fieldNames.map(_ + "=%s").mkString("/")
     for {
@@ -121,4 +119,19 @@ object HiveSupport {
         )
     _ <- Hive.queries(List(s"use ${conf.database}", s"msck repair table ${conf.tablename}"))
   } yield ()
+
+  // Adapted from ParseUtils in util.etl project
+  private def serialise[T <: Product](row: T, sep: String, none: String): String =
+    row.productIterator.map(value => {
+      val result = value match {
+        case Some(x) => x
+        case None    => none
+        case any     => any
+      }
+      if (result.toString.contains(sep)) {
+        sys.error((s"field $result in $row contains the specified delimiter $sep"))
+      } else {
+        result
+      }
+    }).mkString(sep)
 }

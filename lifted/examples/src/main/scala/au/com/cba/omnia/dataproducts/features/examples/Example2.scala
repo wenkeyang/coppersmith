@@ -4,8 +4,6 @@ import au.com.cba.omnia.dataproducts.features.Feature._
 import au.com.cba.omnia.dataproducts.features._
 import au.com.cba.omnia.dataproducts.features.example.thrift._
 
-import au.com.cba.omnia.etl.util.{ParseUtils, SimpleMaestroJob}
-
 import au.com.cba.omnia.maestro.scalding.JobStatus
 import au.com.cba.omnia.maestro.api._, Maestro._
 
@@ -37,9 +35,9 @@ object Example2 {
   def featureJob: Execution[JobStatus] = {
     for {
       conf          <- Execution.getConfig.map(ExampleConfig)
-      customers     <- Execution.from(ParseUtils.decodeHiveTextTable[Customer](MultipleTextLineFiles(s"${conf.hdfsInputPath}/cust/efft_yr_month=${conf.yearMonth}")))
-      accounts      <- Execution.from(ParseUtils.decodeHiveTextTable[Account](MultipleTextLineFiles(s"${conf.hdfsInputPath}/acct/efft_yr_month=${conf.yearMonth}")))
-      _             <- materialiseJoinFeature(customerJoinAccount, feature)(customers.rows, accounts.rows, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
+      (customers, _)     <- Execution.from(Util.decodeHive[Customer](MultipleTextLineFiles(s"${conf.hdfsInputPath}/cust/efft_yr_month=${conf.yearMonth}")))
+      (accounts, _)      <- Execution.from(Util.decodeHive[Account](MultipleTextLineFiles(s"${conf.hdfsInputPath}/acct/efft_yr_month=${conf.yearMonth}")))
+      _             <- materialiseJoinFeature(customerJoinAccount, feature)(customers, accounts, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
   }
 }

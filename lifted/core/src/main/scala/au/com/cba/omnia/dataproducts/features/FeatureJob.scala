@@ -5,8 +5,6 @@ import com.twitter.scalding.typed._
 
 import au.com.cba.omnia.maestro.api._
 
-import au.com.cba.omnia.etl.util.SimpleMaestroJob
-
 import Feature.{EntityId, Time}
 
 trait FeatureJobConfig[S] {
@@ -14,7 +12,9 @@ trait FeatureJobConfig[S] {
   def featureSink:   FeatureSink
 }
 
-abstract class SimpleFeatureJob extends SimpleMaestroJob {
+abstract class SimpleFeatureJob extends MaestroJob {
+  val attemptsExceeded = Execution.from(JobNeverReady)
+
   def generate[S](cfg:      Config => FeatureJobConfig[S],
                   features: FeatureSet[S]): Execution[JobStatus] =
     generate[S](cfg, generateOneToMany(features)_)
