@@ -45,6 +45,7 @@ object build extends Build {
    ++ uniform.project("features", "au.com.cba.omnia.dataproducts.features")
    ++ uniformThriftSettings
    ++ Seq(
+          libraryDependencies ++= depend.hadoopClasspath,
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
           libraryDependencies ++= Seq(
              "org.specs2" %% "specs2-matcher-extra" % versions.specs

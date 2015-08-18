@@ -8,7 +8,7 @@ import scala.reflect.macros.whitebox.Context
 
 object PivotMacro {
   def pivotThrift[A <: ThriftStruct](namespace:Namespace, entity: A => EntityId, time: A => Time):Any = macro pivotImpl[A]
-  
+
   def pivotImpl[A <: ThriftStruct: c.WeakTypeTag]
     (c: Context)
     (namespace:c.Expr[Namespace],
@@ -36,9 +36,9 @@ object PivotMacro {
 
               new Feature[$typ, $featureValueType](featureMetadata) { self =>
 
-                def generate(source: $typ):Option[FeatureValue[$typ, $featureValueType]] = {
+                def generate(source: $typ):Option[FeatureValue[$featureValueType]] = {
                   val v = source.$method
-                  Some(FeatureValue(self, $entity(source), Feature.Value.$mapperFn(v), $time(source)))
+                  Some(FeatureValue($entity(source), ${field.toLowerCase}, Feature.Value.$mapperFn(v), $time(source)))
                 }
 
 

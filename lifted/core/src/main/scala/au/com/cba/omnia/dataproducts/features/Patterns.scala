@@ -19,7 +19,7 @@ object Patterns {
   ) =
     new Feature[S, V](FeatureMetadata(namespace, name, fType)) {
       def generate(source: S) = value(source).map(
-        FeatureValue[S, V](this, entity(source), _, time(source))
+        FeatureValue(entity(source), name, _, time(source))
       )
     }
 
