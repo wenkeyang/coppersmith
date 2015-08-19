@@ -1,29 +1,9 @@
----
-layout: default
-title: Omnia Feature Engineering
----
+Feature Generation, as Functions
+================================
 
-Feature Engineering
-===================
-
-Omnia Engineering builds the platform which is allowing the Bank to use machine
-learning, data science, and advanced modelling on its vast trove of data.
-Working in the Data Products portfolio, the Feature Engineering squad is working
-to advance the platform, ensure data integrity, improve responsiveness to
-customer needs, and develop new capabilities.
-
-Review the [Product Vision](http://knowit.cba/display/OMNIA/Product+Vision+-+Data+Products)
-(handed down by the business).
-
-We're a distributed team, currently with:
-
- * [Jaminda Wimalasiri](https://github.com/jamindaw) (Product Owner)
- * [Andrew Cowie](https://github.com/afcowie) (Squad Lead)
- * [Kristian Domagala](https://github.com/dkristian), based in Melbourne
- * [Tin Pavlinic](https://github.com/triggerNZ)
- * [Todd Owen](https://github.com/toddmowen)
-
-Notes on sprints past, present, and future can be found in [sprints/](sprints/)
+**coppersmith** is a library to enable the joining, aggregation, and synthesis
+of "features", streams of facts about entities derived from "analytical
+records".
 
 AfC
 
