@@ -88,7 +88,6 @@ trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
   def max[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.max[S, V](v)
   def min[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.min[S, V](v)
   def sum[V : Monoid]  (v: S => V): Aggregator[S, V, V]                 = Aggregator.prepareMonoid(v)
-
 }
 
 object AggregationFeature {
@@ -102,26 +101,5 @@ object AggregationFeature {
   // TODO: Would be surprised if this doesn't exist elsewhere
   implicit class AlgebirdSemigroup[T](s: Semigroup[T]) {
     def toScalaz = new scalaz.Semigroup[T] { def append(t1: T, t2: =>T): T = s.plus(t1, t2) }
-  }
-
-  implicit class FeatureBuilder[S, T, U <% V, V <: Value : TypeTag](aggregator: Aggregator[S, T, U]) {
-    def asFeature[FT <: Feature.Type](featureName: Feature.Name,
-                                      featureType: FT)(implicit ev: Conforms[FT, V]) =
-      FeatureWhereBuilder((aggregator, None)).asFeature(featureName, featureType)
-  }
-
-  implicit class FeatureWhereBuilder[S, T, U <% V, V <: Value : TypeTag](
-    aggregatorWhere: (Aggregator[S, T, U], Option[S => Boolean])
-  ) {
-    def asFeature[FT <: Feature.Type](featureName: Feature.Name,
-                                      featureType: FT)(implicit ev: Conforms[FT, V]) =
-      AggregationFeature(featureName,
-                         aggregatorWhere._1.andThenPresent(u => u: V),
-                         featureType,
-                         where = aggregatorWhere._2)
-  }
-
-  implicit class WhereExtender[S, T, U <% V, V <: Value : TypeTag](aggregator: Aggregator[S, T, U]) {
-    def where(where: S => Boolean) = (aggregator, where.some)
   }
 }
