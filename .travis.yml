@@ -6,12 +6,6 @@ cache:
   - $HOME/.ivy2
   - $HOME/.m2
 
-# These two settings enable the build in the "lifted" subdir.
-env:
-- TRAVIS_BUILD_DIR=$TRAVIS_BUILD_DIR/lifted
-before_install:
-- cd lifted
-
 install:
 - git clone https://omnia-bamboo:$OMNIA_CI_PASSWORD@github.com/CommBank/ci.git
 - chmod ugo+x ci/*
