@@ -67,9 +67,10 @@ case class FeatureBuilder[S, FV <% V, V <: Value : TypeTag](
   def where(condition: S => Boolean) =
     copy(filter = filter.map(f => (s: S) => f(s) && condition(s)).orElse(condition.some))
 
-  def asFeature[T <: Type](name: Name, featureType: T)(implicit ev: Conforms[T, V]) =
+  def asFeature[T <: Type](name: Name, humanDescription: String, featureType: T)(implicit ev: Conforms[T, V]) =
     Patterns.general[S, V, FV](fsBuilder.namespace,
                                name,
+                               humanDescription,
                                featureType,
                                fsBuilder.entity,
                                (s: S) => filter.map(_(s)).getOrElse(true).option(value(s): V),

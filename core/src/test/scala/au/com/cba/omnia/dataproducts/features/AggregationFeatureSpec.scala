@@ -34,12 +34,12 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     import AggregationFeature.FeatureBuilder
 
     type CustAggFeature = AggregationFeature[Customer, _, Value]
-    val sizeF:  CustAggFeature = size                      .asFeature("size",  Categorical)
-    val countF: CustAggFeature = count(where = _.age >= 18).asFeature("count", Continuous)
-    val sumF:   CustAggFeature = sum(_.height)             .asFeature("sum",   Continuous)
-    val maxF:   CustAggFeature = max(_.age)                .asFeature("max",   Continuous)
-    val minF:   CustAggFeature = min(_.height)             .asFeature("min",   Continuous)
-    val avgF:   CustAggFeature = avg(_.age.toDouble)       .asFeature("avg",   Continuous)
+    val sizeF:  CustAggFeature = size                      .asFeature("size", "Agg feature",  Categorical)
+    val countF: CustAggFeature = count(where = _.age >= 18).asFeature("count", "Agg feature", Continuous)
+    val sumF:   CustAggFeature = sum(_.height)             .asFeature("sum",  "Agg feature",  Continuous)
+    val maxF:   CustAggFeature = max(_.age)                .asFeature("max",  "Agg feature",  Continuous)
+    val minF:   CustAggFeature = min(_.height)             .asFeature("min", "Agg feature",   Continuous)
+    val avgF:   CustAggFeature = avg(_.age.toDouble)       .asFeature("avg", "Agg feature",   Continuous)
 
     def aggregationFeatures = List(sizeF, countF, sumF, maxF, minF, avgF)
   }
@@ -48,12 +48,12 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val metadata = CustomerFeatureSet.generateMetadata
 
     metadata must_== List(
-      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "size",  Categorical),
-      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "count", Continuous),
-      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "sum",   Continuous),
-      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "max",   Continuous),
-      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "min",   Continuous),
-      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "avg",   Continuous)
+      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "size", "Agg feature",  Categorical),
+      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "count","Agg feature",  Continuous),
+      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "sum",  "Agg feature",  Continuous),
+      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "max",  "Agg feature",  Continuous),
+      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "min",  "Agg feature",  Continuous),
+      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "avg",  "Agg feature",  Continuous)
     )
   }
 
