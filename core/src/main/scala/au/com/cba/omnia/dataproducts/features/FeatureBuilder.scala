@@ -54,6 +54,6 @@ case class AggregationFeatureBuilder[S, T, U <% V, V <: Value : TypeTag](
   def where(condition: S => Boolean) =
     copy(filter = filter.map(f => (s: S) => f(s) && condition(s)).orElse(condition.some))
 
-  def asFeature[FT <: Type](name: Feature.Name, humanDescription: String, featureType: FT)(implicit ev: Conforms[FT, V]) =
-    AggregationFeature(name, humanDescription, aggregator.andThenPresent(u => u: V), featureType, filter)
+  def asFeature[FT <: Type](featureType: FT, name: Feature.Name, description: String)(implicit ev: Conforms[FT, V]) =
+    AggregationFeature(name, description, aggregator.andThenPresent(u => u: V), featureType, filter)
 }

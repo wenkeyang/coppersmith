@@ -56,11 +56,11 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
   }
 
   def generateMetadataCompareMacro = {
-    val macroMetadata = CustomerFeatureSet.generateMetadata.toSeq.map(_.copy(humanDescription = ""))
+    val macroMetadata = CustomerFeatureSet.generateMetadata.toSeq.map(_.copy(description = ""))
     val metadata = PivotMacro.pivotThrift[Customer](
       CustomerFeatureSet.namespace,
       CustomerFeatureSet.entity,
-      CustomerFeatureSet.time).features.map(_.metadata.copy(humanDescription = ""))
+      CustomerFeatureSet.time).features.map(_.metadata.copy(description = ""))
 
 
 

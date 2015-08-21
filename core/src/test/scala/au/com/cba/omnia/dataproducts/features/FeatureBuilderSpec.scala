@@ -85,12 +85,12 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
 
     type CustAggFeature = AggregationFeature[Customer, _, Value]
 
-    val sizeF:  CustAggFeature = select(size )                     .asFeature("size", "Agg feature",  Categorical)
-    val countF: CustAggFeature = select(count(where = _.age >= 18)).asFeature("count", "Agg feature", Continuous)
-    val sumF:   CustAggFeature = select(sum(_.height))             .asFeature("sum", "Agg feature",   Continuous)
-    val maxF:   CustAggFeature = select(max(_.age))                .asFeature("max", "Agg feature",   Continuous)
-    val minF:   CustAggFeature = select(min(_.height))             .asFeature("min", "Agg feature",   Continuous)
-    val avgF:   CustAggFeature = select(avg(_.age.toDouble))       .asFeature("avg", "Agg feature",   Continuous)
+    val sizeF:  CustAggFeature = select(size )                     .asFeature(Categorical, "size",  "Agg feature")
+    val countF: CustAggFeature = select(count(where = _.age >= 18)).asFeature(Continuous,  "count", "Agg feature")
+    val sumF:   CustAggFeature = select(sum(_.height))             .asFeature(Continuous,  "sum",   "Agg feature")
+    val maxF:   CustAggFeature = select(max(_.age))                .asFeature(Continuous,  "max",   "Agg feature")
+    val minF:   CustAggFeature = select(min(_.height))             .asFeature(Continuous,  "min",   "Agg feature")
+    val avgF:   CustAggFeature = select(avg(_.age.toDouble))       .asFeature(Continuous,  "avg",   "Agg feature")
 
     def aggregationFeatures = List(sizeF, countF, sumF, maxF, minF, avgF)
   }
