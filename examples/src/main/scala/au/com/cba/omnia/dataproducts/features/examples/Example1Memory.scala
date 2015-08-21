@@ -1,8 +1,9 @@
 package au.com.cba.omnia.dataproducts.features.examples
 
+import au.com.cba.omnia.dataproducts.features.Feature.Value.Str
 import au.com.cba.omnia.dataproducts.features.Feature._
 import au.com.cba.omnia.dataproducts.features.PivotMacro._
-import au.com.cba.omnia.dataproducts.features._
+import au.com.cba.omnia.dataproducts.features.{lift => _, _}
 import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
 import au.com.cba.omnia.dataproducts.features.lift.memory._
 import org.joda.time.DateTime
@@ -34,7 +35,7 @@ object Example1Memory {
       effectiveDate = "01022001"
     }
 
-    materialise(acct)(List(c1, c2), it => println(it.value))()
+    val result: List[FeatureValue[Str]] = lift(acct)(List(c1, c2))
   }
 
 }
