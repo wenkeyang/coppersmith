@@ -5,8 +5,7 @@ import au.com.cba.omnia.dataproducts.features._
 
 import au.com.cba.omnia.dataproducts.features.Feature.Value
 
-trait MemoryLift extends Lift[List]
-    with Materialise[List, ({type λ[-α] = α => Unit})#λ, ({type λ[α] =(() => α)})#λ]{
+trait MemoryLift extends Lift[List] {
   def lift[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[V]] = {
     s.flatMap(s => f.generate(s))
   }
@@ -15,7 +14,7 @@ trait MemoryLift extends Lift[List]
     s.flatMap(s => fs.generate(s))
   }
 
-  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J])(a:List[A], b: List[B]): List[(A, B)] = {
+  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, Inner.type ])(a:List[A], b: List[B]): List[(A, B)] = {
     val aMap: Map[J, List[A]] = a.groupBy(joined.left)
     val bMap: Map[J, List[B]] = b.groupBy(joined.right)
 
@@ -27,19 +26,16 @@ trait MemoryLift extends Lift[List]
     } yield (a, b)
   }
 
-  def materialiseJoinFeature[A, B, J : Ordering, V <: Value]
-      (joined: Joined[A, B, J], feature: Feature[(A,B),V])
-      (leftSrc:List[A], rightSrc:List[B], sink: (FeatureValue[V]) => Unit) =
-    materialise[(A,B), V](feature)(liftJoin(joined)(leftSrc, rightSrc), sink)
+  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter.type ])(as: List[A], bs: List[B]): List[(A, Option[B])] =
+    as.flatMap { a =>
+      val leftKey = joined.left(a)
+      val rightValues = bs.filter {b => joined.right(b) == leftKey}
+      if (rightValues.isEmpty) {
+        List((a, None))
+      } else {
+        rightValues.map {b => (a, Some(b))}
+      }
+    }
 
-  def materialise[S, V <: Value](f:Feature[S, V])
-                                (src:List[S], sink: FeatureValue[V] => Unit): (() => Unit) = () => {
-    lift(f)(src).foreach(sink)
-  }
-
-  def materialise[S](featureSet: FeatureSet[S])
-                    (src:List[S], sink: FeatureValue[_] => Unit): (() => Unit) = () => {
-    lift(featureSet)(src).foreach(sink)
-  }
 }
 object memory extends MemoryLift

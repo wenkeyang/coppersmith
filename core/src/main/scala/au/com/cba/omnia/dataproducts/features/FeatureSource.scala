@@ -8,10 +8,10 @@ import au.com.cba.omnia.maestro.api.Partition
 
 import lift.scalding.liftJoin
 
-import Join.Joined
+import Join._
 
 object FeatureSource {
-  implicit class RichJoined[L, R, J: Ordering](j: Joined[L, R, J]) {
+  implicit class RichJoined[L, R, J: Ordering](j: Joined[L, R, J, Inner.type]) {
     def bind(cfg: (SourceConfiguration[L], SourceConfiguration[R]),
              filter: ((L, R)) => Boolean = (in: (L, R)) => true): FeatureSource[(L, R)] =
       JoinedFeatureSource(j, cfg, filter)
@@ -48,7 +48,7 @@ case class FromSource[S](srcCfg: SourceConfiguration[S],
 }
 
 case class JoinedFeatureSource[L, R, J : Ordering](
-  j: Joined[L, R, J],
+  j: Joined[L, R, J, Inner.type],
   srcCfg: (SourceConfiguration[L], SourceConfiguration[R]),
   filter: ((L, R)) => Boolean =  (in: (L, R)) => true
 ) extends FeatureSource[(L, R)] {
