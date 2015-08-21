@@ -39,7 +39,7 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     entity:    Customer => EntityId  = _.id,
     fValue:    Customer => Option[V] = (_: Customer) => Some(null),
     time:      Customer => Time      = _.time
-  ) = Patterns.general(namespace, name, fType, entity, fValue, time)
+  ) = Patterns.general(namespace, name, "Feature description", fType, entity, fValue, time)
 
   def metadataNamespace = forAll { (namespace: Namespace) => {
     val feature = general(namespace = namespace)

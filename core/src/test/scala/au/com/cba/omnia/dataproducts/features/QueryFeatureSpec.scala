@@ -35,13 +35,13 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     def value(c: Customer)  = c.height
     def time(c: Customer)   = c.time
 
-    def feature(name: String, condition: Customer => Boolean) = {
-      queryFeature(name, condition)
+    def feature(name: String, humanDescription: String, condition: Customer => Boolean) = {
+      queryFeature(name, humanDescription, condition)
     }
 
-    val youngHeight: Feature[Customer, Decimal] = feature("youngHeight", _.age < 18)
-    val midHeight:   Feature[Customer, Decimal] = feature("midHeight",   c => Range(18 , 65).contains(c.age))
-    val oldHeight:   Feature[Customer, Decimal] = feature("oldHeight",   _.age >= 65)
+    val youngHeight: Feature[Customer, Decimal] = feature("youngHeight", "Young Height", _.age < 18)
+    val midHeight:   Feature[Customer, Decimal] = feature("midHeight",  "Middle Height", c => Range(18 , 65).contains(c.age))
+    val oldHeight:   Feature[Customer, Decimal] = feature("oldHeight", "Old Height",  _.age >= 65)
 
     def features = List(youngHeight, midHeight, oldHeight)
   }
@@ -50,9 +50,9 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     val metadata = CustomerFeatureSet.generateMetadata
 
     metadata must_== List(
-      FeatureMetadata[Decimal](CustomerFeatureSet.namespace, "youngHeight", Continuous),
-      FeatureMetadata[Decimal](CustomerFeatureSet.namespace, "midHeight",   Continuous),
-      FeatureMetadata[Decimal](CustomerFeatureSet.namespace, "oldHeight",   Continuous)
+      FeatureMetadata[Decimal](CustomerFeatureSet.namespace, "youngHeight", "Young Height", Continuous),
+      FeatureMetadata[Decimal](CustomerFeatureSet.namespace, "midHeight",   "Middle Height", Continuous),
+      FeatureMetadata[Decimal](CustomerFeatureSet.namespace, "oldHeight",  "Old Height", Continuous)
     )
   }
 

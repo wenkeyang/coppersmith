@@ -28,11 +28,12 @@ object PivotMacro {
         val featureValueType = typeToFeatureValueType(c)(returnType)
         val mapperFn = typeMapper(c)(returnType)
         val continuous = isContinuous(c)(returnType)
+        val fieldDescription = s"Feature auto-pivoted from ${typ.typeSymbol.toString}.${field}"
         val feature =
           q"""
               import au.com.cba.omnia.dataproducts.features._
 
-              val featureMetadata = FeatureMetadata($namespace, ${field.toLowerCase}, ${ if(continuous) q"Feature.Type.Continuous" else q"Feature.Type.Categorical"})
+              val featureMetadata = FeatureMetadata($namespace, ${field.toLowerCase}, $fieldDescription, ${ if(continuous) q"Feature.Type.Continuous" else q"Feature.Type.Categorical"})
 
               new Feature[$typ, $featureValueType](featureMetadata) { self =>
 

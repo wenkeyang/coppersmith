@@ -30,7 +30,7 @@ object build extends Build {
   , base = file(".")
   , settings =
       standardSettings
-   ++ uniform.project("features-all", "au.com.cba.omnia.dataproducts.features.all")
+   ++ uniform.project("coppersmith-all", "au.com.cba.omnia.dataproducts.features.all")
    ++ Seq(
         publishArtifact := false
       )
@@ -42,7 +42,7 @@ object build extends Build {
   , base = file("core")
   , settings =
       standardSettings
-   ++ uniform.project("features", "au.com.cba.omnia.dataproducts.features")
+   ++ uniform.project("coppersmith", "au.com.cba.omnia.dataproducts.features")
    ++ uniformThriftSettings
    ++ Seq(
           libraryDependencies ++= depend.hadoopClasspath,
@@ -59,7 +59,7 @@ object build extends Build {
   , base = file("examples")
   , settings =
       standardSettings
-    ++ uniform.project("features-examples", "au.com.omnia.dataproducts.features.examples")
+    ++ uniform.project("coppersmith-examples", "au.com.omnia.dataproducts.features.examples")
     ++ uniformAssemblySettings
     ++ Seq(
         libraryDependencies ++= depend.scalding(),
@@ -75,7 +75,7 @@ object build extends Build {
   , base = file("test")
   , settings =
       standardSettings
-   ++ uniform.project("features-test", "au.com.cba.omnia.dataproducts.features.test")
+   ++ uniform.project("coppersmith-test", "au.com.cba.omnia.dataproducts.features.test")
    ++ uniformThriftSettings
    ++ Seq(
         libraryDependencies ++= depend.testing()

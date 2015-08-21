@@ -19,7 +19,14 @@ object Example2 {
 
   val customerJoinAccount = Join[Customer].to[Account].on(_.acct, _.id)
 
-  val feature = Patterns.general[(Customer, Account), Value.Decimal, Value.Decimal]("ns", "name", Type.Continuous, {case (c, a) => c._1}, {case (c,a) => Some(a.balance)}, {case (c,a) => 0})
+  val feature = Patterns.general[(Customer, Account), Value.Decimal, Value.Decimal](
+    "ns",
+    "name",
+    "description",
+    Type.Continuous,
+    {case (c, a) => c._1},
+    {case (c,a) => Some(a.balance)},
+    {case (c,a) => 0})
 
   case class ExampleConfig(config:Config) {
     val args          = config.getArgs

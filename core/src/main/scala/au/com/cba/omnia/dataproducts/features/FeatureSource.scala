@@ -47,6 +47,7 @@ case class FromSource[S](srcCfg: SourceConfiguration[S],
   }
 }
 
+
 case class JoinedFeatureSource[L, R, J : Ordering](
   j: Joined[L, R, J],
   srcCfg: (SourceConfiguration[L], SourceConfiguration[R]),
