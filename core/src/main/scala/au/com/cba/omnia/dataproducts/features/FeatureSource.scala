@@ -6,7 +6,7 @@ import com.twitter.scalding.typed.TypedPipe
 
 import au.com.cba.omnia.maestro.api.Partition
 
-import lift.scalding.liftJoin
+import lift.scalding._
 
 import Join._
 
@@ -15,6 +15,12 @@ object FeatureSource {
     def bind(cfg: (SourceConfiguration[L], SourceConfiguration[R]),
              filter: ((L, R)) => Boolean = (in: (L, R)) => true): FeatureSource[(L, R)] =
       JoinedFeatureSource(j, cfg, filter)
+  }
+
+  implicit class RichLeftJoined[L, R, J: Ordering](j: Joined[L, R, J, LeftOuter.type]) {
+    def bind(cfg: (SourceConfiguration[L], SourceConfiguration[R]),
+             filter: ((L, Option[R])) => Boolean = (in: (L, Option[R])) => true): FeatureSource[(L, Option[R])] =
+      LeftJoinedFeatureSource(j, cfg, filter)
   }
 }
 
@@ -58,6 +64,20 @@ case class JoinedFeatureSource[L, R, J : Ordering](
   def load(conf: FeatureJobConfig[(L, R)]): TypedPipe[(L, R)] = {
     val (leftSrc, rightSrc) = srcCfg
     liftJoin(j)(leftSrc.load(conf), rightSrc.load(conf)).filter(filter)
+  }
+}
+
+case class LeftJoinedFeatureSource[L, R, J : Ordering](
+                                                    j: Joined[L, R, J, LeftOuter.type],
+                                                    srcCfg: (SourceConfiguration[L], SourceConfiguration[R]),
+                                                    filter: ((L, Option[R])) => Boolean =  (in: (L, Option[R])) => true
+                                                    ) extends FeatureSource[(L, Option[R])] {
+  // TODO: Not specific to Joined sources - lift up
+  def filter(p: ((L, Option[R])) => Boolean): FeatureSource[(L, Option[R])] = copy(filter = s => filter(s) && p(s))
+
+  def load(conf: FeatureJobConfig[(L, Option[R])]): TypedPipe[(L, Option[R])] = {
+    val (leftSrc, rightSrc) = srcCfg
+    liftLeftJoin(j)(leftSrc.load(conf), rightSrc.load(conf)).filter(filter)
   }
 }
 
