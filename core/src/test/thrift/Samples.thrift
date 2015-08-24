@@ -18,3 +18,14 @@ struct Account {
   6 :          double min_balance
   7 : required i64    time
 }
+
+//for testing joins
+struct C {
+  1 : required i32 id
+  2: required string value
+}
+
+struct D {
+  1 : required i32 id
+  2: required string value
+}

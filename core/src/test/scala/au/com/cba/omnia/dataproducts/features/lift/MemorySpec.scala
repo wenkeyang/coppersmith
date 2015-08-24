@@ -2,6 +2,7 @@ package au.com.cba.omnia.dataproducts.features.lift
 
 import au.com.cba.omnia.dataproducts.features.Join
 import org.specs2.Specification
+import memory._
 
 class MemorySpec extends Specification {
   def is =
@@ -29,7 +30,6 @@ class MemorySpec extends Specification {
     )
 
   def joins = {
-    import memory._
 
     val expected = List(
       A(2,"2") -> B(2, "2"),
@@ -45,7 +45,6 @@ class MemorySpec extends Specification {
   }
 
   def leftJoins = {
-    import memory._
 
     val expected = List(
       A(1, "1") -> None,
