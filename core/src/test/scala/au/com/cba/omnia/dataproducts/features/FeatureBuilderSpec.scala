@@ -34,9 +34,9 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
     val select = source.featureSetBuilder(namespace, entity(_), time(_))
 
     type CustFeature = Feature[Customer, Value]
-    val age:       CustFeature = select(_.age)                      .asFeature("age", "Age",              Categorical)
-    val tallAge:   CustFeature = select(_.age).where(_.height > 2.0).asFeature("tallAge", "Tall Age",     Continuous)
-    val oldHeight: CustFeature = select(_.height).where(_.age > 65) .asFeature("oldHeight", "Old Height", Continuous)
+    val age:       CustFeature = select(_.age)                      .asFeature(Categorical, "age",       "Age")
+    val tallAge:   CustFeature = select(_.age).where(_.height > 2.0).asFeature(Continuous,  "tallAge",   "Tall Age")
+    val oldHeight: CustFeature = select(_.height).where(_.age > 65) .asFeature(Continuous,  "oldHeight", "Old Height")
 
     def features = List(age, tallAge, oldHeight)
   }
@@ -45,8 +45,8 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
     val metadata = CustomerFeatureSet.generateMetadata
 
     metadata must_== List(
-      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "age", "Age",      Categorical),
-      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "tallAge", "Tall Age", Continuous),
+      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "age",       "Age",        Categorical),
+      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "tallAge",   "Tall Age",   Continuous),
       FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "oldHeight", "Old Height", Continuous)
     )
   }
