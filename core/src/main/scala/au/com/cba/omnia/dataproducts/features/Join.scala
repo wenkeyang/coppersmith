@@ -6,16 +6,16 @@ object Join {
   case object Inner extends JoinType
 
   trait InnerJoinableTo[L] {
-    def to[R]: IncompleteJoin[L, R, Inner.type] = new IncompleteJoin[L,R, Inner.type ](Inner)
+    def to[R]: IncompleteJoin[L, R, Inner.type] = new IncompleteJoin[L,R, Inner.type ]
   }
   trait LeftOuterJoinableTo[L] {
-    def to[R]: IncompleteJoin[L,R,  LeftOuter.type] = new IncompleteJoin[L, R, LeftOuter.type](LeftOuter)
+    def to[R]: IncompleteJoin[L,R,  LeftOuter.type] = new IncompleteJoin[L, R, LeftOuter.type]
   }
 
   class EmptyInnerJoinableTo[L] extends InnerJoinableTo[L]
   class EmptyLeftOuterJoinableTo[L] extends LeftOuterJoinableTo[L]
 
-  class IncompleteJoin[L, R, JT <: JoinType](joinType: JT) {
+  class IncompleteJoin[L, R, JT <: JoinType] {
     //Write as many of these as we need...
     def on[J : Ordering](l: L => J, r: R => J): Joined[L, R, J, JT] = Joined[L, R, J, JT](l, r)
   }
