@@ -9,9 +9,9 @@ trait Lift[P[_]] {
   def lift[S](fs: FeatureSet[S])(s: P[S]): P[FeatureValue[_]]
 
 
-  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, Inner.type])(a:P[A], b: P[B]): P[(A, B)]
+  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, Inner.type])(a: P[A], b: P[B]): P[(A, B)]
 
-  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter.type])(a:P[A], b: P[B]): P[(A, Option[B])]
+  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter.type])(a: P[A], b: P[B]): P[(A, Option[B])]
 
 }
 

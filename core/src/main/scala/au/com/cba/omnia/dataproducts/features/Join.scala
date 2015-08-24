@@ -26,16 +26,3 @@ object Join {
   def left[T]: LeftOuterJoinableTo[T] = new EmptyLeftOuterJoinableTo[T]
   def apply[T] = join[T]
 }
-
-
-object JoinDemo {
-  case class Customer(id:Long)
-  case class Account(id: Long, customerId:Long)
-  case class HomeLoan(id:Long, accountId:Long, primaryCustomer: Long)
-
-  Join[Customer]
-    .to[Account].on(_.id, _.customerId)
-
-  Join.left[Customer]
-    .to[Account].on(_.id, _.customerId)
-}
