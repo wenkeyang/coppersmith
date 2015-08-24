@@ -6,15 +6,13 @@ import org.specs2.Specification
 class MemorySpec extends Specification {
   def is =
     s2"""
-         Joins $joins
+         Joins        $joins
+         Left joins   $leftJoins
       """
 
 
   case class A(a:Int, b:String)
   case class B(a:Int, b: String)
-
-  def joins = {
-    import memory._
 
     val as = List(
       A(1, "1"),
@@ -30,6 +28,9 @@ class MemorySpec extends Specification {
       B(4, "4")
     )
 
+  def joins = {
+    import memory._
+
     val expected = List(
       A(2,"2") -> B(2, "2"),
       A(2,"2") -> B(2, "22"),
@@ -41,5 +42,22 @@ class MemorySpec extends Specification {
     )
 
     liftJoin(Join[A].to[B].on(_.a, _.a))(as, bs) === expected
+  }
+
+  def leftJoins = {
+    import memory._
+
+    val expected = List(
+      A(1, "1") -> None,
+      A(2,"2") -> Some(B(2, "2")),
+      A(2,"2") -> Some(B(2, "22")),
+      A(2,"2") -> Some(B(2, "222")),
+      A(2,"22") -> Some(B(2, "2")),
+      A(2,"22") -> Some(B(2, "22")),
+      A(2,"22") -> Some(B(2, "222")),
+      A(3,"333") -> Some(B(3, "333"))
+    )
+
+    liftLeftJoin(Join.left[A].to[B].on(_.a, _.a))(as, bs) === expected
   }
 }
