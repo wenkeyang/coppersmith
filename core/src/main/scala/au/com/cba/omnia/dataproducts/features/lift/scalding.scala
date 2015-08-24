@@ -16,12 +16,12 @@ trait ScaldingLift extends Lift[TypedPipe] {
   }
 
 
-  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, Inner.type])
+  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, Inner])
                                   (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, B)] =
     a.groupBy(joined.left).join(b.groupBy(joined.right)).values
 
 
-  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter.type])
+  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter])
                                   (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, Option[B])] =
     a.groupBy(joined.left).leftJoin(b.groupBy(joined.right)).values
 

@@ -2,14 +2,14 @@ package au.com.cba.omnia.dataproducts.features
 
 object Join {
   sealed trait JoinType
-  case object LeftOuter extends JoinType
-  case object Inner extends JoinType
+  sealed trait LeftOuter extends JoinType
+  sealed trait Inner extends JoinType
 
   trait InnerJoinableTo[L] {
-    def to[R]: IncompleteJoin[L, R, Inner.type] = new IncompleteJoin[L,R, Inner.type ]
+    def to[R]: IncompleteJoin[L, R, Inner] = new IncompleteJoin[L,R, Inner]
   }
   trait LeftOuterJoinableTo[L] {
-    def to[R]: IncompleteJoin[L,R,  LeftOuter.type] = new IncompleteJoin[L, R, LeftOuter.type]
+    def to[R]: IncompleteJoin[L, R, LeftOuter] = new IncompleteJoin[L, R, LeftOuter]
   }
 
   class EmptyInnerJoinableTo[L] extends InnerJoinableTo[L]
