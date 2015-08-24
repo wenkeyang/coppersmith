@@ -47,6 +47,7 @@ object build extends Build {
    ++ Seq(
           libraryDependencies ++= depend.hadoopClasspath,
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
+          libraryDependencies ++= depend.omnia("thermometer", "[1.1,1.2)", "test"),
           libraryDependencies ++= Seq(
              "org.specs2" %% "specs2-matcher-extra" % versions.specs
           ) ++  depend.testing()

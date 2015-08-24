@@ -1,11 +1,11 @@
 package au.com.cba.omnia.dataproducts.features.lift
 
 import au.com.cba.omnia.dataproducts.features.Feature.Value
-import au.com.cba.omnia.dataproducts.features.Join.Joined
+import au.com.cba.omnia.dataproducts.features.Join._
 import au.com.cba.omnia.dataproducts.features._
 import com.twitter.scalding._
 
-trait ScaldingLift extends Lift[TypedPipe] with Materialise[TypedPipe, TypedSink, Execution] {
+trait ScaldingLift extends Lift[TypedPipe] {
 
   def lift[S, V <: Value](f:Feature[S,V])(s: TypedPipe[S]): TypedPipe[FeatureValue[V]] = {
     s.flatMap(s => f.generate(s))
@@ -16,27 +16,15 @@ trait ScaldingLift extends Lift[TypedPipe] with Materialise[TypedPipe, TypedSink
   }
 
 
-  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J])
-                                  (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, B)] = {
+  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, Inner.type])
+                                  (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, B)] =
     a.groupBy(joined.left).join(b.groupBy(joined.right)).values
-  }
 
-  def materialiseJoinFeature[A, B, J : Ordering, V <: Value]
-    (joined: Joined[A, B, J], feature: Feature[(A,B),V])
-    (leftSrc:TypedPipe[A], rightSrc:TypedPipe[B], sink: TypedSink[FeatureValue[V]]) =
-      materialise[(A,B), V](feature)(liftJoin(joined)(leftSrc, rightSrc), sink)
 
-  def materialise[S,V <: Value](f:Feature[S,V])
-                               (src:TypedPipe[S], sink: TypedSink[FeatureValue[V]]): Execution[Unit] = {
-    val pipe = lift(f)(src)
-    pipe.writeExecution(sink)
-  }
+  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter.type])
+                                  (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, Option[B])] =
+    a.groupBy(joined.left).leftJoin(b.groupBy(joined.right)).values
 
-  def materialise[S](featureSet: FeatureSet[S])
-                    (src:TypedPipe[S], sink: TypedSink[FeatureValue[_]]): Execution[Unit] = {
-    val pipe = lift(featureSet)(src)
-    pipe.writeExecution(sink)
-  }
 }
 
 object scalding extends ScaldingLift

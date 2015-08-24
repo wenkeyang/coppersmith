@@ -44,7 +44,8 @@ object Example2 {
       conf          <- Execution.getConfig.map(ExampleConfig)
       (customers, _)     <- Execution.from(Util.decodeHive[Customer](MultipleTextLineFiles(s"${conf.hdfsInputPath}/cust/efft_yr_month=${conf.yearMonth}")))
       (accounts, _)      <- Execution.from(Util.decodeHive[Account](MultipleTextLineFiles(s"${conf.hdfsInputPath}/acct/efft_yr_month=${conf.yearMonth}")))
-      _             <- materialiseJoinFeature(customerJoinAccount, feature)(customers, accounts, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
+      outputPipe         =  liftJoin(customerJoinAccount)(customers, accounts)
+      _                  <- outputPipe.writeExecution(TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
   }
 }

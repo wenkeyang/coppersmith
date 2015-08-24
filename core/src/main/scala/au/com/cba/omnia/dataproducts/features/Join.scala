@@ -1,46 +1,28 @@
 package au.com.cba.omnia.dataproducts.features
 
 object Join {
-  type JoinCondition = Boolean
+  sealed trait JoinType
+  case object LeftOuter extends JoinType
+  case object Inner extends JoinType
 
-  trait JoinableTo[L] {
-    def to[R]: IncompleteJoin[L,R] = new IncompleteJoin[L,R]
+  trait InnerJoinableTo[L] {
+    def to[R]: IncompleteJoin[L, R, Inner.type] = new IncompleteJoin[L,R, Inner.type ](Inner)
+  }
+  trait LeftOuterJoinableTo[L] {
+    def to[R]: IncompleteJoin[L,R,  LeftOuter.type] = new IncompleteJoin[L, R, LeftOuter.type](LeftOuter)
   }
 
-  class EmptyJoinableTo[L] extends JoinableTo[L]
+  class EmptyInnerJoinableTo[L] extends InnerJoinableTo[L]
+  class EmptyLeftOuterJoinableTo[L] extends LeftOuterJoinableTo[L]
 
-  class IncompleteJoin[L,R] {
+  class IncompleteJoin[L, R, JT <: JoinType](joinType: JT) {
     //Write as many of these as we need...
-    def on[J : Ordering](l: L => J, r: R => J): Joined[L, R, J] = Joined[L, R, J](l,r)
-
-//    TODO: Fix multi-arity
-//    def on[P1,P2](cond: (P1, P2, R) => JoinCondition)(implicit e: (P1,P2)=:=L): Joined[(P1, P2), R] =
-//      Joined((t1: (P1, P2), p3:R) => cond(t1._1, t1._2, p3))
-//
-//    def on[P1,P2,P3](cond: (P1, P2, P3, R) => JoinCondition)(implicit e: ((P1, P2), P3) =:= L): Joined[(P1, P2, P3), R] =
-//      Joined((t1: (P1, P2, P3), r:R) => cond(t1._1, t1._2, t1._3, r))
-//
-//    def on[P1,P2,P3,P4](cond: (P1, P2, P3, P4,  R) => JoinCondition)(implicit e: (((P1, P2), P3), P4) =:= L): Joined[(P1, P2, P3, P4), R] =
-//      Joined((t1: (P1, P2, P3, P4), r:R) => cond(t1._1, t1._2, t1._3, t1._4, r))
+    def on[J : Ordering](l: L => J, r: R => J): Joined[L, R, J, JT] = Joined[L, R, J, JT](l, r)
   }
 
-  case class Joined[L, R, J : Ordering](left: L => J, right: R => J) extends JoinableTo[(L,R)]
+  case class Joined[L, R, J : Ordering, JT <: JoinType](left: L => J, right: R => J)
 
-  def join[T]:JoinableTo[T] = new EmptyJoinableTo[T]
+  def join[T]: InnerJoinableTo[T] = new EmptyInnerJoinableTo[T]
+  def left[T]: LeftOuterJoinableTo[T] = new EmptyLeftOuterJoinableTo[T]
   def apply[T] = join[T]
-}
-
-
-object JoinDemo {
-  import Join._
-
-  case class Customer(id:Long)
-  case class Account(id: Long, customerId:Long)
-  case class HomeLoan(id:Long, accountId:Long, primaryCustomer: Long)
-
-  join[Customer]
-    .to[Account].on(_.id, _.customerId)
-//    .to[HomeLoan].on((customer:Customer, acct:Account, loan:HomeLoan) => loan.accountId === acct.id)
-//    .to[Customer].on((customer:Customer, acct:Account, loan:HomeLoan, primaryCustomer:Customer) => loan.primaryCustomer === primaryCustomer.id)
-
 }

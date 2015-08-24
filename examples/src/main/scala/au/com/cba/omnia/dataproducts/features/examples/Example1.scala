@@ -1,7 +1,7 @@
 package au.com.cba.omnia.dataproducts.features.examples
 
 import au.com.cba.omnia.dataproducts.features.Feature._
-import au.com.cba.omnia.dataproducts.features._
+import au.com.cba.omnia.dataproducts.features.{lift => _, _}
 import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
 import au.com.cba.omnia.maestro.core.codec.{DecodeError, DecodeOk, DecodeResult}
 
@@ -17,7 +17,7 @@ import org.joda.time.DateTime
 import scalaz.{Value => _, _}, Scalaz._
 
 import PivotMacro._
-import lift.scalding._
+import au.com.cba.omnia.dataproducts.features.lift.scalding._
 
 object Example1 {
   val pivoted = pivotThrift[Customer]("namespace", _.id, c => DateTime.parse(c.effectiveDate).getMillis())
@@ -44,7 +44,8 @@ object Example1 {
       conf                    <- Execution.getConfig.map(ExampleConfig)
       (inputPipe, _)          <- Execution.from(Util.decodeHive[Customer](
                                   MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
-      _                       <- materialise(acct)(inputPipe, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
+      outputPipe             = lift(acct)(inputPipe)
+      _                       <- outputPipe.writeExecution(TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
   }
 
@@ -53,7 +54,8 @@ object Example1 {
       conf                    <- Execution.getConfig.map(ExampleConfig)
       (inputPipe, _)          <- Execution.from(Util.decodeHive[Customer](
                                 MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
-      _                       <- materialise(pivotedAsFeatureSet)(inputPipe, TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
+      outputPipe             = lift(pivotedAsFeatureSet)(inputPipe)
+      _                       <- outputPipe.writeExecution(TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
   }
 }
