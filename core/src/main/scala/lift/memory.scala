@@ -1,11 +1,8 @@
 package commbank.coppersmith.lift
 
-import commbank.coppersmith.Join._
 import commbank.coppersmith._
+import commbank.coppersmith.Join._
 
-import commbank.coppersmith.Feature.Value
-import commbank.coppersmith.Join.{LeftOuter, Inner, Joined}
-import commbank.coppersmith.{FeatureSet, FeatureValue, Feature}
 import commbank.coppersmith.Feature.Value
 
 trait MemoryLift extends Lift[List] {

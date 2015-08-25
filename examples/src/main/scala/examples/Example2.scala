@@ -20,7 +20,7 @@ object Example2 {
 
   val customerJoinAccount = Join[Customer].to[Account].on(_.acct, _.id)
 
-  val feature = Patterns.general[(Customer, Account), Decimal, Value.Decimal](
+  val feature = Patterns.general[(Customer, Account), Decimal, Decimal](
     "ns",
     "name",
     "description",
