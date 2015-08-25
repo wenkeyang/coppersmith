@@ -11,13 +11,13 @@ import lift.scalding._
 import Join._
 
 object FeatureSource {
-  implicit class RichJoined[L, R, J: Ordering](j: Joined[L, R, J, Inner.type]) {
+  implicit class RichJoined[L, R, J: Ordering](j: Joined[L, R, J, Inner]) {
     def bind(cfg: (SourceConfiguration[L], SourceConfiguration[R]),
              filter: ((L, R)) => Boolean = (in: (L, R)) => true): FeatureSource[(L, R)] =
       JoinedFeatureSource(j, cfg, filter)
   }
 
-  implicit class RichLeftJoined[L, R, J: Ordering](j: Joined[L, R, J, LeftOuter.type]) {
+  implicit class RichLeftJoined[L, R, J: Ordering](j: Joined[L, R, J, LeftOuter]) {
     def bind(cfg: (SourceConfiguration[L], SourceConfiguration[R]),
              filter: ((L, Option[R])) => Boolean = (in: (L, Option[R])) => true): FeatureSource[(L, Option[R])] =
       LeftJoinedFeatureSource(j, cfg, filter)
@@ -55,7 +55,7 @@ case class FromSource[S](srcCfg: SourceConfiguration[S],
 
 
 case class JoinedFeatureSource[L, R, J : Ordering](
-  j: Joined[L, R, J, Inner.type],
+  j: Joined[L, R, J, Inner],
   srcCfg: (SourceConfiguration[L], SourceConfiguration[R]),
   filter: ((L, R)) => Boolean =  (in: (L, R)) => true
 ) extends FeatureSource[(L, R)] {
@@ -69,7 +69,7 @@ case class JoinedFeatureSource[L, R, J : Ordering](
 }
 
 case class LeftJoinedFeatureSource[L, R, J : Ordering](
-                                                    j: Joined[L, R, J, LeftOuter.type],
+                                                    j: Joined[L, R, J, LeftOuter],
                                                     srcCfg: (SourceConfiguration[L], SourceConfiguration[R]),
                                                     filter: ((L, Option[R])) => Boolean =  (in: (L, Option[R])) => true
                                                     ) extends FeatureSource[(L, Option[R])] {
