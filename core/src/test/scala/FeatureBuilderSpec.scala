@@ -91,8 +91,9 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val maxF:   CustAggFeature = select(max(_.age))                .asFeature(Continuous,  "max",   "Agg feature")
     val minF:   CustAggFeature = select(min(_.height))             .asFeature(Continuous,  "min",   "Agg feature")
     val avgF:   CustAggFeature = select(avg(_.age.toDouble))       .asFeature(Continuous,  "avg",   "Agg feature")
+    val ageGroupsF: CustAggFeature = select(uniqueCountBy(_.age % 10)).asFeature(Continuous, "countUnique",   "Agg feature")
 
-    def aggregationFeatures = List(sizeF, countF, sumF, maxF, minF, avgF)
+    def aggregationFeatures = List(sizeF, countF, sumF, maxF, minF, avgF,ageGroupsF)
   }
 
   def generateMetadata = {
@@ -104,7 +105,8 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
       FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "sum",  "Agg feature",  Continuous),
       FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "max",  "Agg feature",  Continuous),
       FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "min",  "Agg feature",  Continuous),
-      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "avg",  "Agg feature",  Continuous)
+      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "avg",  "Agg feature",  Continuous),
+      FeatureMetadata[Integral] (CustomerFeatureSet.namespace, "countUnique",  "Agg feature",  Continuous)
     )
   }
 
@@ -114,6 +116,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val c = cs.head
     val heights = cs.map(_.height).list
     val ages = cs.map(_.age).list
+    val groupedAges = cs.map(_.age).list.groupBy(_ % 10)
 
     featureValues must matchEavts(List(
       (c.id, "size",  cs.size:                         Integral, c.time),
@@ -121,7 +124,8 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
       (c.id, "sum",   heights.sum:                     Decimal,  c.time),
       (c.id, "max",   ages.max:                        Integral, c.time),
       (c.id, "min",   heights.min:                     Decimal,  c.time),
-      (c.id, "avg",   (ages.sum / ages.size.toDouble): Decimal,  c.time)
+      (c.id, "avg",   (ages.sum / ages.size.toDouble): Decimal,  c.time),
+      (c.id, "countUnique",  groupedAges.size: Integral,  c.time)
     ))
   }}
 

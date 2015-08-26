@@ -89,15 +89,16 @@ trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
   def max[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.max[S, V](v)
   def min[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.min[S, V](v)
   def sum[V : Monoid]  (v: S => V): Aggregator[S, V, V]                 = Aggregator.prepareMonoid(v)
+  def uniqueCountBy[T](f : S => T): Aggregator[S, Set[T], Int]          = AggregationFeature.uniqueCountBy(f)
 }
 
 object AggregationFeature {
   def avg[T](t: T => Double): Aggregator[T, AveragedValue, Double] =
     AveragedValue.aggregator.composePrepare[T](t)
 
-  def max[T, V : Ordering](v: T => V): Aggregator[T, V, V] = Aggregator.max[V].composePrepare[T](v)
-  def min[T, V : Ordering](v: T => V): Aggregator[T, V, V] = Aggregator.min[V].composePrepare[T](v)
-
+  def max[T, V : Ordering](v: T => V): Aggregator[T, V, V]              = Aggregator.max[V].composePrepare[T](v)
+  def min[T, V : Ordering](v: T => V): Aggregator[T, V, V]              = Aggregator.min[V].composePrepare[T](v)
+  def uniqueCountBy[S, T](f : S => T): Aggregator[S, Set[T], Int]       = Aggregator.uniqueCount[T].composePrepare(f)
 
   // TODO: Would be surprised if this doesn't exist elsewhere
   implicit class AlgebirdSemigroup[T](s: Semigroup[T]) {
