@@ -20,7 +20,7 @@ on some source data.
 
 ### The `Feature` class
 
-A individual feature is represented by the `Feature[S, V]` class.
+An individual feature is represented by the `Feature[S, V]` class.
 Its two type parameters are
 the *source* (or input) type
 and the *value* (or output) type.
@@ -37,28 +37,30 @@ A feature must also define some metadata, including:
 
 Below is an example of a feature defined by extending the `Feature` class:
 
-    // NOTE: This example is for pedagogical purposes only; it is not the
-    // recommended approach. Consider using the convenience methods of the
-    // FeatureSet class (see below) instead of extending Feature directly.
+```scala
+// NOTE: This example is for pedagogical purposes only; it is not the
+// recommended approach. Consider using the convenience methods of the
+// FeatureSet class (see below) instead of extending Feature directly.
 
-    import org.joda.time.DateTime
+import org.joda.time.DateTime
 
-    import au.com.cba.omnia.dataproducts.features.{Feature, FeatureMetadata, FeatureValue}
-    import Feature.Type._, Feature.Value._
-    import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
+import au.com.cba.omnia.dataproducts.features.{Feature, FeatureMetadata, FeatureValue}
+import Feature.Type._, Feature.Value._
+import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
 
-    object customerBirthYear extends Feature[Customer, Integral](
-      FeatureMetadata(namespace  ="userguide.examples",
-                      name       ="CUST_BIRTHYEAR",
-                      featureType=Continuous)
-    ) {
-      def generate(cust: Customer) = Some(FeatureValue(
-        entity=cust.id,
-        name="CUST_BIRTHYEAR",
-        value=DateTime.parse(cust.dob).getYear,
-        time=DateTime.parse(cust.effectiveDate).getMillis
-      ))
-    }
+object customerBirthYear extends Feature[Customer, Integral](
+  FeatureMetadata(namespace   = "userguide.examples",
+                  name        = "CUST_BIRTHYEAR",
+                  featureType = Continuous)
+) {
+  def generate(cust: Customer) = Some(
+    FeatureValue(entity = cust.id,
+                 name   = "CUST_BIRTHYEAR",
+                 value  = DateTime.parse(cust.dob).getYear,
+                 time   = DateTime.parse(cust.effectiveDate).getMillis)
+  )
+}
+```
 
 
 ### The `FeatureSet` class
@@ -88,21 +90,23 @@ Here is an example using `BasicFeatureSet`
 (which provides the method `basicFeature`).
 For details of the other classes available, refer to the **Advanced** section.
 
-    import org.joda.time.DateTime
+```scala
+import org.joda.time.DateTime
 
-    import au.com.cba.omnia.dataproducts.features.{BasicFeatureSet, Feature}
-    import Feature.Type._, Feature.Value._
-    import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
+import au.com.cba.omnia.dataproducts.features.{BasicFeatureSet, Feature}
+import Feature.Type._, Feature.Value._
+import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
 
-    object customerFeatures extends BasicFeatureSet[Customer] {
-      val namespace              = "userguide.examples"
-      def entity(cust: Customer) = cust.id
-      def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
+object customerFeatures extends BasicFeatureSet[Customer] {
+  val namespace              = "userguide.examples"
+  def entity(cust: Customer) = cust.id
+  def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
 
-      val customerBirthYear = basicFeature[Integral]("CUST_BIRTHYEAR", Continuous, {
-        (cust) => DateTime.parse(cust.dob).getYear
-      })
-    }
+  val customerBirthYear = basicFeature[Integral]("CUST_BIRTHYEAR", Continuous, {
+    (cust) => DateTime.parse(cust.dob).getYear
+  })
+}
+```
 
 
 ### Execution (aka Lifting)
