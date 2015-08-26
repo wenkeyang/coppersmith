@@ -91,9 +91,9 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val maxF:   CustAggFeature = select(max(_.age))                .asFeature(Continuous,  "max",   "Agg feature")
     val minF:   CustAggFeature = select(min(_.height))             .asFeature(Continuous,  "min",   "Agg feature")
     val avgF:   CustAggFeature = select(avg(_.age.toDouble))       .asFeature(Continuous,  "avg",   "Agg feature")
-    val ageGroupsF: CustAggFeature = select(uniqueCountBy(_.age % 10)).asFeature(Continuous, "countUnique",   "Agg feature")
+    val cuF:    CustAggFeature = select(uniqueCountBy(_.age % 10)) .asFeature(Continuous,  "cu",    "Agg feature")
 
-    def aggregationFeatures = List(sizeF, countF, sumF, maxF, minF, avgF,ageGroupsF)
+    def aggregationFeatures = List(sizeF, countF, sumF, maxF, minF, avgF, cuF)
   }
 
   def generateMetadata = {
@@ -106,7 +106,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
       FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "max",  "Agg feature",  Continuous),
       FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "min",  "Agg feature",  Continuous),
       FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "avg",  "Agg feature",  Continuous),
-      FeatureMetadata[Integral] (CustomerFeatureSet.namespace, "countUnique",  "Agg feature",  Continuous)
+      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "cu",   "Agg feature",  Continuous)
     )
   }
 
@@ -125,7 +125,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
       (c.id, "max",   ages.max:                        Integral, c.time),
       (c.id, "min",   heights.min:                     Decimal,  c.time),
       (c.id, "avg",   (ages.sum / ages.size.toDouble): Decimal,  c.time),
-      (c.id, "countUnique",  groupedAges.size: Integral,  c.time)
+      (c.id, "cu",    groupedAges.size:                Integral, c.time)
     ))
   }}
 
