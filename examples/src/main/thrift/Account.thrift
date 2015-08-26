@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-#@namespace scala au.com.cba.omnia.dataproducts.features.example.thrift
+#@namespace scala commbank.coppersmith.example.thrift
 
 struct Account {
   1  : string id

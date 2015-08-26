@@ -1,4 +1,4 @@
-#@namespace scala au.com.cba.omnia.dataproducts.features.examples.thrift
+#@namespace scala commbank.coppersmith.examples.thrift
 
 struct Wide1 {
   1 : string f1

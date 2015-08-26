@@ -1,4 +1,4 @@
-#@namespace scala au.com.cba.omnia.dataproducts.features.test.thrift
+#@namespace scala commbank.coppersmith.test.thrift
 
 struct Customer {
   1 : required string id
