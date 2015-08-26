@@ -8,7 +8,7 @@ import au.com.cba.omnia.maestro.api._
 import Feature.{EntityId, Time}
 
 trait FeatureJobConfig[S] {
-  def featureSource: FeatureSource[S]
+  def featureSource: ConfiguredFeatureSource[S, _]
   def featureSink:   FeatureSink
 }
 
@@ -43,6 +43,7 @@ abstract class SimpleFeatureJob extends MaestroJob {
   // Should be able to take advantage of shapless' tuple support in combination with Aggregator.join
   // in order to run the aggregators in one pass over the input. Need to consider that features may
   // have different filter conditions though.
+  // TODO: Where unable to join aggregators, might be possible to run in parallel instead
   private def generateAggregate[S](features: AggregationFeatureSet[S])
                                   (input: TypedPipe[S]): TypedPipe[FeatureValue[_]] = {
 
