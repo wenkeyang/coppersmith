@@ -4,93 +4,83 @@ import scalaz.syntax.std.option.ToOptionIdOps
 
 import com.twitter.scalding.typed.TypedPipe
 
-import au.com.cba.omnia.maestro.api.Partition
-
 import lift.scalding._
 
 import Join._
 
-object FeatureSource {
-  implicit class RichJoined[L, R, J: Ordering](j: Joined[L, R, J, Inner]) {
-    def bind(cfg: (SourceConfiguration[L], SourceConfiguration[R]),
-             filter: ((L, R)) => Boolean = (in: (L, R)) => true): FeatureSource[(L, R)] =
-      JoinedFeatureSource(j, cfg, filter)
-  }
+case class FeatureSource[S, U, B <: SourceBinder[S, U]](underlying: U, filter: Option[S => Boolean] = None) {
+  import Feature._
+  def featureSetBuilder(namespace: Namespace, entity: S => EntityId, time: S => Time) =
+    FeatureSetBuilder(namespace, entity, time)
 
-  implicit class RichLeftJoined[L, R, J: Ordering](j: Joined[L, R, J, LeftOuter]) {
-    def bind(cfg: (SourceConfiguration[L], SourceConfiguration[R]),
-             filter: ((L, Option[R])) => Boolean = (in: (L, Option[R])) => true): FeatureSource[(L, Option[R])] =
-      LeftJoinedFeatureSource(j, cfg, filter)
-  }
-}
-
-trait FeatureSource[S] {
-  def filter(p: S => Boolean): FeatureSource[S]
-  def load(conf: FeatureJobConfig[S]): TypedPipe[S]
-}
-
-object From {
-  def apply[S](): From[S] = From[S](None)
-}
-
-case class From[S](filter: Option[S => Boolean] = None) {
-  // Common filter
-  def where(condition: S => Boolean) =
-    copy(filter = filter.map(f => (s: S) => f(s) && condition(s)).orElse(condition.some))
-
-  def bind(cfg: SourceConfiguration[S]): FeatureSource[S] = FromSource[S](cfg, filter)
-}
-
-case class FromSource[S](srcCfg: SourceConfiguration[S],
-                         filter: Option[S => Boolean]) extends FeatureSource[S]{
-  // TODO: Not specific to From sources - lift up
-  def filter(p: S => Boolean): FeatureSource[S] =
+  def filter(p: S => Boolean): FeatureSource[S, U, B] =
     copy(filter = filter.map(f => (s: S) => f(s) && p(s)).orElse(p.some))
 
-  def load(conf: FeatureJobConfig[S]): TypedPipe[S] = {
-    val pipe = srcCfg.load(conf)
+  def configure(binder: B): ConfiguredFeatureSource[S, U] = {
+    ConfiguredFeatureSource(underlying, binder, filter)
+  }
+}
+
+object FeatureSource extends FeatureSourceInstances
+
+trait FeatureSourceInstances {
+  implicit def fromFS[S](s: From[S]) =
+    FeatureSource[S, From[S], FromBinder[S]](s)
+
+  implicit def joinFS[L, R, J : Ordering](s: Joined[L, R, J, Inner]) =
+    FeatureSource[(L, R), Joined[L, R, J, Inner], JoinedBinder[L, R, J]](s)
+
+  implicit def leftFS[L, R, J : Ordering](s: Joined[L, R, J, LeftOuter]) =
+    FeatureSource[(L, Option[R]), Joined[L, R, J, LeftOuter], LeftJoinedBinder[L, R, J]](s)
+}
+
+case class ConfiguredFeatureSource[S, U](
+  underlying: U,
+  binder: SourceBinder[S, U],
+  filter: Option[S => Boolean]
+) {
+  def load: TypedPipe[S] = {
+    val pipe = binder.bind(underlying)
     filter.map(f => pipe.filter(f)).getOrElse(pipe)
   }
 }
 
+trait SourceBinder[S, U] {
+  def bind(underlying: U): TypedPipe[S]
+}
 
-case class JoinedFeatureSource[L, R, J : Ordering](
-  j: Joined[L, R, J, Inner],
-  srcCfg: (SourceConfiguration[L], SourceConfiguration[R]),
-  filter: ((L, R)) => Boolean =  (in: (L, R)) => true
-) extends FeatureSource[(L, R)] {
-  // TODO: Not specific to Joined sources - lift up
-  def filter(p: ((L, R)) => Boolean): FeatureSource[(L, R)] = copy(filter = s => filter(s) && p(s))
+object SourceBinder extends SourceBinderInstances
 
-  def load(conf: FeatureJobConfig[(L, R)]): TypedPipe[(L, R)] = {
-    val (leftSrc, rightSrc) = srcCfg
-    liftJoin(j)(leftSrc.load(conf), rightSrc.load(conf)).filter(filter)
+trait SourceBinderInstances {
+  def from[S](dataSource: DataSource[S]) = FromBinder(dataSource)
+
+  def join[L, R, J : Ordering](leftSource: DataSource[L], rightSource: DataSource[R]) =
+    JoinedBinder(leftSource, rightSource)
+
+  def leftJoin[L, R, J : Ordering](leftSource: DataSource[L], rightSource: DataSource[R]) =
+    LeftJoinedBinder(leftSource, rightSource)
+}
+
+case class FromBinder[S](src: DataSource[S]) extends SourceBinder[S, From[S]]{
+  def bind(from: From[S]): TypedPipe[S] = {
+    src.load
   }
 }
 
-case class LeftJoinedFeatureSource[L, R, J : Ordering](
-                                                    j: Joined[L, R, J, LeftOuter],
-                                                    srcCfg: (SourceConfiguration[L], SourceConfiguration[R]),
-                                                    filter: ((L, Option[R])) => Boolean =  (in: (L, Option[R])) => true
-                                                    ) extends FeatureSource[(L, Option[R])] {
-  // TODO: Not specific to Joined sources - lift up
-  def filter(p: ((L, Option[R])) => Boolean): FeatureSource[(L, Option[R])] = copy(filter = s => filter(s) && p(s))
-
-  def load(conf: FeatureJobConfig[(L, Option[R])]): TypedPipe[(L, Option[R])] = {
-    val (leftSrc, rightSrc) = srcCfg
-    liftLeftJoin(j)(leftSrc.load(conf), rightSrc.load(conf)).filter(filter)
+case class JoinedBinder[L, R, J : Ordering](
+  leftSrc:  DataSource[L],
+  rightSrc: DataSource[R]
+) extends SourceBinder[(L, R), Joined[L, R, J, Inner]] {
+  def bind(j: Joined[L, R, J, Inner]): TypedPipe[(L, R)] = {
+    liftJoin(j)(leftSrc.load, rightSrc.load)
   }
 }
 
-// FIXME: Needs further abstraction of underlying 'TypedPipe' structure, as load would
-// return a Grouped instance
-/*
-case class GroupedFeatureSource[S](
-  underlying: FeatureSource[S],
-  grouping: S => Feature.EntityId
-) extends FeatureSource[(Feature.EntityId, Iterable[S])] {
-  def load(conf: FeatureJobConfig[S]): Execution[TypedPipe[(Feature.EntityId, Iterable[S])]] = {
-    underlying.load(conf).map(_.groupBy(grouping))
+case class LeftJoinedBinder[L, R, J : Ordering](
+  leftSrc:  DataSource[L],
+  rightSrc: DataSource[R]
+) extends SourceBinder[(L, Option[R]), Joined[L, R, J, LeftOuter]] {
+  def bind(j: Joined[L, R, J, LeftOuter]): TypedPipe[(L, Option[R])] = {
+    liftLeftJoin(j)(leftSrc.load, rightSrc.load)
   }
 }
-*/

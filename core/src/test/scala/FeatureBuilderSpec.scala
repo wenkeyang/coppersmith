@@ -11,7 +11,7 @@ import org.scalacheck.Prop.forAll
 import org.specs2._, matcher.Matcher
 
 import Feature._, Value._, Type.{Categorical, Continuous}
-import FeatureBuilderSource._
+import FeatureSource._
 
 import Arbitraries._
 
