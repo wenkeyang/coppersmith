@@ -9,12 +9,18 @@ import com.twitter.algebird.Aggregator
 
 import Feature.{Conforms, EntityId, Name, Namespace, Time, Type, Value}
 
-object FeatureSetBuilder {
-  // The parameter types here (basically any type constructor) might be too broad - consider narrowing
-  implicit class FeatureSetBuilderSource[T[_], S](t: T[S]) {
-    def featureSetBuilder(namespace: Namespace, entity: S => EntityId, time: S => Time) =
-      FeatureSetBuilder(namespace, entity, time)
-  }
+trait FeatureBuilderSource[S] {
+  def featureSetBuilder(namespace: Namespace, entity: S => EntityId, time: S => Time) =
+    FeatureSetBuilder(namespace, entity, time)
+}
+
+object FeatureBuilderSource extends FeatureBuilderSourceInstances
+
+trait FeatureBuilderSourceInstances {
+  import Join._
+  implicit def fromFBS[S]   (s: From[S])                    = new FeatureBuilderSource[S] {}
+  implicit def joinFBS[L, R](s: Joined[L, R, _, Inner])     = new FeatureBuilderSource[(L, R)] {}
+  implicit def leftFBS[L, R](s: Joined[L, R, _, LeftOuter]) = new FeatureBuilderSource[(L, Option[R])] {}
 }
 
 case class FeatureSetBuilder[S](namespace: Namespace, entity: S => EntityId, time: S => Time) {
