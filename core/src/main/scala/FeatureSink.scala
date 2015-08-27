@@ -9,6 +9,8 @@ import scalaz.syntax.foldable.ToFoldableOps
 
 import org.apache.hadoop.fs.Path
 
+import com.twitter.algebird.Aggregator
+
 import com.twitter.scalding.{Execution, TupleSetter, TupleConverter}
 import com.twitter.scalding.typed.{PartitionedTextLine, TypedPipe}
 
@@ -18,7 +20,7 @@ import au.com.cba.omnia.maestro.api._, Maestro._
 
 import Feature.Value.{Integral, Decimal, Str}
 
-import commbank.coppersmith.thrift.Eavt
+import thrift.Eavt
 
 trait FeatureSink {
   def write(features: TypedPipe[FeatureValue[_]], jobConfig: FeatureJobConfig[_]): Execution[Unit]
@@ -66,15 +68,15 @@ case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
     val hiveConfig = conf.hiveConfig
     val eavtPipe = features.map(toEavt)
     for {
-      _ <- HiveSupport.writeTextTable(conf.hiveConfig, eavtPipe)
-      _ <- Execution.fromHdfs {
-           for {
-             // FIXME: Derive path(s) from job
-             files <- Hdfs.glob(new Path(hiveConfig.path, "*/*/*"))
-             _     <- files.traverse_[Hdfs](eachPath => for {
-                        r1  <- Hdfs.create(s"${eachPath.toString}/_SUCCESS".toPath)
-                      } yield ())
-             } yield()
+      partitions <- HiveSupport.writeTextTable(conf.hiveConfig, eavtPipe)
+      _          <- Execution.fromHdfs {
+                      for {
+                        // FIXME: Derive path(s) from job
+                        files <- Hdfs.glob(new Path(hiveConfig.path, "*/*/*"))
+                        _     <- files.traverse_[Hdfs](eachPath => for {
+                                   r1  <- Hdfs.create(s"${eachPath.toString}/_SUCCESS".toPath)
+                                 } yield ())
+                      } yield()
       }
     } yield()
   }
@@ -95,17 +97,18 @@ object HiveSupport {
   def writeTextTable[T <: ThriftStruct with Product : Manifest, P : TupleSetter : TupleConverter](
     conf: HiveConfig[T, P],
     pipe: TypedPipe[T]
-  ): Execution[Unit] = {
+  ): Execution[Set[P]] = {
 
     import conf.partition
-    val partitioned = pipe.map(v =>
+    val partitioned: TypedPipe[(P, String)] = pipe.map(v =>
       partition.extract(v) -> serialise[T](v, conf.delimiter, "\\N")
     )
     val partitionPath = partition.fieldNames.map(_ + "=%s").mkString("/")
     for {
-      _ <- partitioned.writeExecution(PartitionedTextLine[P](conf.path.toString, partitionPath))
-      _ <- Execution.fromHive(createTextTable(conf))
-    } yield ()
+      _          <- partitioned.writeExecution(PartitionedTextLine[P](conf.path.toString, partitionPath))
+      _          <- Execution.fromHive(createTextTable(conf))
+      partitions <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
+    } yield partitions.toSet.flatten
   }
 
   def createTextTable[T <: ThriftStruct with Product : Manifest](conf: HiveConfig[T, _]): Hive[Unit] =
