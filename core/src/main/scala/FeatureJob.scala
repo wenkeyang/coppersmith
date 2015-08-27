@@ -30,7 +30,7 @@ abstract class SimpleFeatureJob extends MaestroJob {
     for {
       conf     <- Execution.getConfig.map(cfg)
       source    = conf.featureSource
-      input     = source.load(conf)
+      input     = source.load
       values    = transform(input)
       _        <- conf.featureSink.write(values, conf)
     } yield JobFinished

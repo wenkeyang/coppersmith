@@ -39,14 +39,14 @@ case class ConfiguredFeatureSource[S, U](
   binder: SourceBinder[S, U],
   filter: Option[S => Boolean]
 ) {
-  def load(conf: FeatureJobConfig[S]): TypedPipe[S] = {
-    val pipe = binder.bind(underlying, conf)
+  def load: TypedPipe[S] = {
+    val pipe = binder.bind(underlying)
     filter.map(f => pipe.filter(f)).getOrElse(pipe)
   }
 }
 
 trait SourceBinder[S, U] {
-  def bind(underlying: U, cfg: FeatureJobConfig[S]): TypedPipe[S]
+  def bind(underlying: U): TypedPipe[S]
 }
 
 object SourceBinder extends SourceBinderInstances
@@ -62,8 +62,8 @@ trait SourceBinderInstances {
 }
 
 case class FromBinder[S](src: DataSource[S]) extends SourceBinder[S, From[S]]{
-  def bind(from: From[S], conf: FeatureJobConfig[S]): TypedPipe[S] = {
-    src.load(conf)
+  def bind(from: From[S]): TypedPipe[S] = {
+    src.load
   }
 }
 
@@ -71,8 +71,8 @@ case class JoinedBinder[L, R, J : Ordering](
   leftSrc:  DataSource[L],
   rightSrc: DataSource[R]
 ) extends SourceBinder[(L, R), Joined[L, R, J, Inner]] {
-  def bind(j: Joined[L, R, J, Inner], conf: FeatureJobConfig[(L, R)]): TypedPipe[(L, R)] = {
-    liftJoin(j)(leftSrc.load(conf), rightSrc.load(conf))
+  def bind(j: Joined[L, R, J, Inner]): TypedPipe[(L, R)] = {
+    liftJoin(j)(leftSrc.load, rightSrc.load)
   }
 }
 
@@ -80,8 +80,7 @@ case class LeftJoinedBinder[L, R, J : Ordering](
   leftSrc:  DataSource[L],
   rightSrc: DataSource[R]
 ) extends SourceBinder[(L, Option[R]), Joined[L, R, J, LeftOuter]] {
-  def bind(j: Joined[L, R, J, LeftOuter],
-           conf: FeatureJobConfig[(L, Option[R])]): TypedPipe[(L, Option[R])] = {
-    liftLeftJoin(j)(leftSrc.load(conf), rightSrc.load(conf))
+  def bind(j: Joined[L, R, J, LeftOuter]): TypedPipe[(L, Option[R])] = {
+    liftLeftJoin(j)(leftSrc.load, rightSrc.load)
   }
 }
