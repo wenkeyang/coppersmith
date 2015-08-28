@@ -34,7 +34,7 @@ object HydroSink {
 
   import HiveSupport.HiveConfig
 
-  val partition = Partition.byDate(Fields[Eavt].Time, "yyyy-MM-dd")
+  val partition = HivePartition.byDay(Fields[Eavt].Time, "yyyy-MM-dd")
   def config(maestro: MaestroConfig, dbRawPrefix: String) = Config(
       HiveConfig(
         partition,
@@ -63,23 +63,23 @@ object HydroSink {
 }
 
 case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
-
   def write(features: TypedPipe[FeatureValue[_]]) = {
     val hiveConfig = conf.hiveConfig
     val eavtPipe = features.map(HydroSink.toEavt)
     for {
       partitions <- HiveSupport.writeTextTable(conf.hiveConfig, eavtPipe)
       _          <- Execution.fromHdfs {
-                      for {
-                        // FIXME: Derive path(s) from job
-                        files <- Hdfs.glob(new Path(hiveConfig.path, "*/*/*"))
-                        _     <- files.traverse_[Hdfs](eachPath => for {
-                                   r1  <- Hdfs.create(s"${eachPath.toString}/_SUCCESS".toPath)
-                                 } yield ())
-                      } yield()
+                      paths(hiveConfig.path, partitions).toList.traverse_[Hdfs](eachPath =>
+                        Hdfs.create(s"${eachPath.toString}/_SUCCESS".toPath).map(_ => ())
+                      )
       }
     } yield()
   }
+
+  private def paths(root: Path, partitions: Iterable[(String, String, String)]) =
+    partitions.map(p =>
+      new Path(root, HydroSink.partition.pattern.format(p._1, p._2, p._3))
+    )
 }
 
 // Maestro's HiveTable currently assumes the underlying format to be Parquet. This code generalises
@@ -103,9 +103,8 @@ object HiveSupport {
     val partitioned: TypedPipe[(P, String)] = pipe.map(v =>
       partition.extract(v) -> serialise[T](v, conf.delimiter, "\\N")
     )
-    val partitionPath = partition.fieldNames.map(_ + "=%s").mkString("/")
     for {
-      _          <- partitioned.writeExecution(PartitionedTextLine[P](conf.path.toString, partitionPath))
+      _          <- partitioned.writeExecution(PartitionedTextLine(conf.path.toString, partition.pattern))
       _          <- Execution.fromHive(createTextTable(conf))
       partitions <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
     } yield partitions.toSet.flatten
