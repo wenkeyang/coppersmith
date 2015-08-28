@@ -35,7 +35,10 @@ A feature must also define some metadata, including:
 - a feature *name*,
 - and a feature *type* (`Categorial` or `Continuous`).
 
-Below is an example of a feature defined by extending the `Feature` class:
+Below is an example of a feature defined by extending the `Feature` class.
+If this looks complicated, don't worry!
+In the next section,
+we'll see how this can be made a lot easier.
 
 ```scala
 // NOTE: This example is for pedagogical purposes only; it is not the
@@ -93,11 +96,12 @@ For details of the other classes available, refer to the **Advanced** section.
 ```scala
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.dataproducts.features.{BasicFeatureSet, Feature}
+import au.com.cba.omnia.dataproducts.features.{BasicFeatureSet, Feature, From}
 import Feature.Type._, Feature.Value._
 import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
 
 object customerFeatures extends BasicFeatureSet[Customer] {
+  val source                 = From[Customer]
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
   def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
@@ -111,6 +115,84 @@ object customerFeatures extends BasicFeatureSet[Customer] {
 ```
 
 
-### Execution (aka Lifting)
+### Execution: the `SimpleFeatureJob` class
 
-(to be written)
+Coppersmith is part of a broader programme of work
+that aims to simplify all the repetitive aspects of feature generation,
+including deployment and execution.
+However, we are not there yet!
+For the moment,
+you still need to create a mainline scalding job
+to execute the features which you have defined,
+and deploy it in the usual way
+with `ops.logical` and Autosys.
+
+To make this as easy as possible,
+Coppersmith provides a class called `SimpleFeatureJob`,
+which helps turn a `FeatureSet` into a maestro job.
+As with any maestro job,
+you still need to define the `job` function,
+but in many cases
+this is as simple as calling the `generate` function
+with a `FeatureSet` and a `FeatureJobConfig`.
+
+Recall that the definition of the features themselves
+says nothing about where on disk to read the data.
+`FeatureJobConfig` is where you specify
+the *source* and *sink*
+for the feature generation job.
+Coppersmith currently supports the following source types:
+
+- `HiveTextSource`: a delimited file with Hive conventions
+- `HiveParquetSource`: a parquet-encoded file
+
+and one sink type:
+
+- `HydroSink`: a file in the format required for ingestion into Hydro
+  (this is currently a text-encoded EAVT format, but will evolve to support
+  future versions of Hydro as well)
+
+Here is an example of a job which materialises the feature set
+which we defined in the previous section:
+
+```scala
+import org.apache.hadoop.fs.Path
+
+import com.twitter.scalding.Config
+
+import au.com.cba.omnia.maestro.api.{MaestroConfig, HivePartition, Maestro}
+import Maestro._
+
+import au.com.cba.omnia.dataproducts.features.{HiveTextSource, HydroSink}
+import au.com.cba.omnia.dataproducts.features.{FeatureJobConfig, SimpleFeatureJob}
+import au.com.cba.omnia.dataproducts.features.SourceConfiguration.PartitionPath
+
+import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
+
+case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Customer] {
+  val partition     = HivePartition.byDay(Fields[Customer].EffectiveDate, "yyyy-MM-dd")
+  val partitionPath = PartitionPath(partition, ("2015", "08", "28"))
+  val customers     = HiveTextSource(new Path("/data/customers"), partitionPath)
+  val maestroConf   = MaestroConfig(conf, "features", "CUST", "birthdays")
+  val dbRawPrefix   = conf.getArgs("db-raw-prefix")
+
+  val featureSource = customerFeatures.source.bind(customers)
+  val featureSink   = HydroSink(HydroSink.config(maestroConf, dbRawPrefix))
+}
+
+object CustomerFeaturesJob extends SimpleFeatureJob {
+  def job = generate(CustomerFeaturesConfig(_), customerFeatures)
+}
+```
+
+
+Advanced
+--------
+
+### Joins
+
+To do.
+
+### Testing
+
+Guidelines for unit testing are still forthcoming.
