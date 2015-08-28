@@ -105,6 +105,8 @@ object customerFeatures extends BasicFeatureSet[Customer] {
   val customerBirthYear = basicFeature[Integral]("CUST_BIRTHYEAR", Continuous, {
     (cust) => DateTime.parse(cust.dob).getYear
   })
+
+  val features = List(customerBirthYear)
 }
 ```
 

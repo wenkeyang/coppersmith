@@ -30,6 +30,14 @@ trait PivotFeatureSet[S] extends FeatureSet[S] {
     Patterns.pivot(namespace, fType, entity, time, field)
 }
 
+abstract class BasicFeatureSet[S] extends FeatureSet[S] {
+  def entity(s: S): EntityId
+  def time(s: S):   Time
+
+  def basicFeature[V <: Value : TypeTag](featureName: Feature.Name, fType: Type, value: S => V) =
+    Patterns.general(namespace, featureName, fType, entity, (s: S) => Some(value(s)), time)
+}
+
 abstract class QueryFeatureSet[S, V <: Value : TypeTag] extends FeatureSet[S] {
   type Filter = S => Boolean
 

@@ -66,7 +66,14 @@ object build extends Build {
         libraryDependencies ++= depend.hadoopClasspath,
         libraryDependencies ++= depend.scalding(),
         libraryDependencies ++= depend.omnia("humbug-core", humbugVersion)
-       )
+      , sourceGenerators in Compile <+= sourceManaged in Compile map { outdir: File =>
+          // Poor man's "Literate Scala". (Consider alternatives such as https://github.com/non/literati)
+          // This is part of the "examples" project because it depends on a thrift spec there.
+          val outfile = outdir / "USERGUIDE.scala"
+          (file("USERGUIDE.markdown") #> "sed -n /```scala/,/```/p" #| "grep -v ```" #> outfile !)
+          Seq(outfile)
+        }
+      )
     ++ humbugSettings
   ).dependsOn(core)
 
