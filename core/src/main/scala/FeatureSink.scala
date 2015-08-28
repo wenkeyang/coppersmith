@@ -23,7 +23,7 @@ import Feature.Value.{Integral, Decimal, Str}
 import thrift.Eavt
 
 trait FeatureSink {
-  def write(features: TypedPipe[FeatureValue[_]], jobConfig: FeatureJobConfig[_]): Execution[Unit]
+  def write(features: TypedPipe[FeatureValue[_]]): Execution[Unit]
 }
 
 object HydroSink {
@@ -48,25 +48,25 @@ object HydroSink {
     Config(HiveConfig(partition, databaseName, databasePath, tableName))
 
   case class Config(hiveConfig: HiveConfig[Eavt, (String, String, String)])
-}
-
-case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
 
   def toEavt(fv: FeatureValue[_]) = {
     val featureValue = (fv.value match {
       case Integral(v) => v.map(_.toString)
       case Decimal(v)  => v.map(_.toString)
       case Str(v)      => v
-    }).getOrElse(HydroSink.NullValue)
+    }).getOrElse(NullValue)
 
     // TODO: Does time format need to be configurable?
     val featureTime = new DateTime(fv.time).toString("yyyy-MM-dd")
     Eavt(fv.entity, fv.name, featureValue, featureTime)
   }
+}
 
-  def write(features: TypedPipe[FeatureValue[_]], jobConfig: FeatureJobConfig[_]) = {
+case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
+
+  def write(features: TypedPipe[FeatureValue[_]]) = {
     val hiveConfig = conf.hiveConfig
-    val eavtPipe = features.map(toEavt)
+    val eavtPipe = features.map(HydroSink.toEavt)
     for {
       partitions <- HiveSupport.writeTextTable(conf.hiveConfig, eavtPipe)
       _          <- Execution.fromHdfs {
@@ -113,15 +113,15 @@ object HiveSupport {
 
   def createTextTable[T <: ThriftStruct with Product : Manifest](conf: HiveConfig[T, _]): Hive[Unit] =
     for {
-    _ <- Hive.createTextTable[T](
-          database         = conf.database,
-          table            = conf.tablename,
-          partitionColumns = conf.partition.fieldNames.map(_ -> "string"),
-          location         = Option(conf.path),
-          delimiter        = conf.delimiter
-        )
-    _ <- Hive.queries(List(s"use ${conf.database}", s"msck repair table ${conf.tablename}"))
-  } yield ()
+      _ <- Hive.createTextTable[T](
+             database         = conf.database,
+             table            = conf.tablename,
+             partitionColumns = conf.partition.fieldNames.map(_ -> "string"),
+             location         = Option(conf.path),
+             delimiter        = conf.delimiter
+           )
+      _ <- Hive.queries(List(s"use ${conf.database}", s"msck repair table ${conf.tablename}"))
+    } yield ()
 
   // Adapted from ParseUtils in util.etl project
   private def serialise[T <: Product](row: T, sep: String, none: String): String =
