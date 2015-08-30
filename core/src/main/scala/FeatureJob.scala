@@ -32,7 +32,7 @@ abstract class SimpleFeatureJob extends MaestroJob {
       source    = conf.featureSource
       input     = source.load
       values    = transform(input)
-      _        <- conf.featureSink.write(values, conf)
+      _        <- conf.featureSink.write(values)
     } yield JobFinished
   }
 

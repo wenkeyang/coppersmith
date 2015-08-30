@@ -9,6 +9,8 @@ import scalaz.syntax.foldable.ToFoldableOps
 
 import org.apache.hadoop.fs.Path
 
+import com.twitter.algebird.Aggregator
+
 import com.twitter.scalding.{Execution, TupleSetter, TupleConverter}
 import com.twitter.scalding.typed.{PartitionedTextLine, TypedPipe}
 
@@ -18,10 +20,10 @@ import au.com.cba.omnia.maestro.api._, Maestro._
 
 import Feature.Value.{Integral, Decimal, Str}
 
-import commbank.coppersmith.thrift.Eavt
+import thrift.Eavt
 
 trait FeatureSink {
-  def write(features: TypedPipe[FeatureValue[_]], jobConfig: FeatureJobConfig[_]): Execution[Unit]
+  def write(features: TypedPipe[FeatureValue[_]]): Execution[Unit]
 }
 
 object HydroSink {
@@ -32,7 +34,7 @@ object HydroSink {
 
   import HiveSupport.HiveConfig
 
-  val partition = Partition.byDate(Fields[Eavt].Time, "yyyy-MM-dd")
+  val partition = HivePartition.byDay(Fields[Eavt].Time, "yyyy-MM-dd")
   def config(maestro: MaestroConfig, dbRawPrefix: String) = Config(
       HiveConfig(
         partition,
@@ -46,38 +48,38 @@ object HydroSink {
     Config(HiveConfig(partition, databaseName, databasePath, tableName))
 
   case class Config(hiveConfig: HiveConfig[Eavt, (String, String, String)])
-}
-
-case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
 
   def toEavt(fv: FeatureValue[_]) = {
     val featureValue = (fv.value match {
       case Integral(v) => v.map(_.toString)
       case Decimal(v)  => v.map(_.toString)
       case Str(v)      => v
-    }).getOrElse(HydroSink.NullValue)
+    }).getOrElse(NullValue)
 
     // TODO: Does time format need to be configurable?
     val featureTime = new DateTime(fv.time).toString("yyyy-MM-dd")
     Eavt(fv.entity, fv.name, featureValue, featureTime)
   }
+}
 
-  def write(features: TypedPipe[FeatureValue[_]], jobConfig: FeatureJobConfig[_]) = {
+case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
+  def write(features: TypedPipe[FeatureValue[_]]) = {
     val hiveConfig = conf.hiveConfig
-    val eavtPipe = features.map(toEavt)
+    val eavtPipe = features.map(HydroSink.toEavt)
     for {
-      _ <- HiveSupport.writeTextTable(conf.hiveConfig, eavtPipe)
-      _ <- Execution.fromHdfs {
-           for {
-             // FIXME: Derive path(s) from job
-             files <- Hdfs.glob(new Path(hiveConfig.path, "*/*/*"))
-             _     <- files.traverse_[Hdfs](eachPath => for {
-                        r1  <- Hdfs.create(s"${eachPath.toString}/_SUCCESS".toPath)
-                      } yield ())
-             } yield()
+      partitions <- HiveSupport.writeTextTable(conf.hiveConfig, eavtPipe)
+      _          <- Execution.fromHdfs {
+                      paths(hiveConfig.path, partitions).toList.traverse_[Hdfs](eachPath =>
+                        Hdfs.create(s"${eachPath.toString}/_SUCCESS".toPath).map(_ => ())
+                      )
       }
     } yield()
   }
+
+  private def paths(root: Path, partitions: Iterable[(String, String, String)]) =
+    partitions.map(p =>
+      new Path(root, HydroSink.partition.pattern.format(p._1, p._2, p._3))
+    )
 }
 
 // Maestro's HiveTable currently assumes the underlying format to be Parquet. This code generalises
@@ -95,30 +97,30 @@ object HiveSupport {
   def writeTextTable[T <: ThriftStruct with Product : Manifest, P : TupleSetter : TupleConverter](
     conf: HiveConfig[T, P],
     pipe: TypedPipe[T]
-  ): Execution[Unit] = {
+  ): Execution[Set[P]] = {
 
     import conf.partition
-    val partitioned = pipe.map(v =>
+    val partitioned: TypedPipe[(P, String)] = pipe.map(v =>
       partition.extract(v) -> serialise[T](v, conf.delimiter, "\\N")
     )
-    val partitionPath = partition.fieldNames.map(_ + "=%s").mkString("/")
     for {
-      _ <- partitioned.writeExecution(PartitionedTextLine[P](conf.path.toString, partitionPath))
-      _ <- Execution.fromHive(createTextTable(conf))
-    } yield ()
+      _          <- partitioned.writeExecution(PartitionedTextLine(conf.path.toString, partition.pattern))
+      _          <- Execution.fromHive(createTextTable(conf))
+      partitions <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
+    } yield partitions.toSet.flatten
   }
 
   def createTextTable[T <: ThriftStruct with Product : Manifest](conf: HiveConfig[T, _]): Hive[Unit] =
     for {
-    _ <- Hive.createTextTable[T](
-          database         = conf.database,
-          table            = conf.tablename,
-          partitionColumns = conf.partition.fieldNames.map(_ -> "string"),
-          location         = Option(conf.path),
-          delimiter        = conf.delimiter
-        )
-    _ <- Hive.queries(List(s"use ${conf.database}", s"msck repair table ${conf.tablename}"))
-  } yield ()
+      _ <- Hive.createTextTable[T](
+             database         = conf.database,
+             table            = conf.tablename,
+             partitionColumns = conf.partition.fieldNames.map(_ -> "string"),
+             location         = Option(conf.path),
+             delimiter        = conf.delimiter
+           )
+      _ <- Hive.queries(List(s"use ${conf.database}", s"msck repair table ${conf.tablename}"))
+    } yield ()
 
   // Adapted from ParseUtils in util.etl project
   private def serialise[T <: Product](row: T, sep: String, none: String): String =
