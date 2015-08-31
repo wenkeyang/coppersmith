@@ -1,5 +1,7 @@
 package commbank.coppersmith
 
+case class From[S]()
+
 object Join {
   sealed trait JoinType
   sealed trait LeftOuter extends JoinType

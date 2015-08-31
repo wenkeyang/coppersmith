@@ -12,7 +12,7 @@ import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
   val humbugVersion  = "0.6.1-20150513010955-5eb6297"
-  val maestroVersion = "2.13.1-20150802232323-bf6f4f0"
+  val maestroVersion = "2.13.1-20150728061651-8d9c378"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
@@ -47,7 +47,8 @@ object build extends Build {
    ++ Seq(
           libraryDependencies ++= depend.hadoopClasspath,
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
-          libraryDependencies ++= depend.omnia("thermometer", "[1.1,1.2)", "test"),
+          libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
+          libraryDependencies ++= depend.parquet(),
           libraryDependencies ++= Seq(
              "org.specs2" %% "specs2-matcher-extra" % versions.specs
           ) ++  depend.testing()

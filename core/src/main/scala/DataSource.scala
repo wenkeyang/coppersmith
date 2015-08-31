@@ -12,7 +12,7 @@ import au.com.cba.omnia.maestro.core.codec.DecodeOk
 import au.com.cba.omnia.ebenezer.scrooge.ParquetScroogeSource
 import au.com.cba.omnia.ebenezer.scrooge.hive.PartitionHiveParquetScroogeSource
 
-object SourceConfiguration {
+object DataSource {
   case class PartitionPath[S, P](underlying: Partition[S, P], value: P)(implicit ev: PartitionToPath[P]) {
     def toPath = new Path(underlying.pattern.format(ev.toPathComponents((value)): _*))
   }
@@ -25,18 +25,18 @@ object SourceConfiguration {
   implicit val StringTuple4ToPath = PartitionToPath[(String, String, String, String)](_.toList)
 }
 
-trait SourceConfiguration[S] {
-  def load(conf: FeatureJobConfig[_]): TypedPipe[S]
+trait DataSource[S] {
+  def load: TypedPipe[S]
 }
 
 case class HiveTextSource[S <: ThriftStruct : Decode, P](
   basePath:  Path,
-  partition: SourceConfiguration.PartitionPath[S, P],
+  partition: DataSource.PartitionPath[S, P],
   delimiter: String = "|",
   filter:    S => Boolean = (_: S) => true
-) extends SourceConfiguration[S] {
+) extends DataSource[S] {
   def filter(f: S => Boolean): HiveTextSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
-  def load(conf: FeatureJobConfig[_]) = {
+  def load = {
     val ev = implicitly[Decode[S]]
     val input: TextLineScheme = MultipleTextLineFiles(new Path(basePath, partition.toPath).toString)
     input.map { raw =>
@@ -50,11 +50,11 @@ case class HiveTextSource[S <: ThriftStruct : Decode, P](
 
 case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter, P](
   basePath:  Path,
-  partition: SourceConfiguration.PartitionPath[S, P],
+  partition: DataSource.PartitionPath[S, P],
   filter:    S => Boolean = (_: S) => true
-) extends SourceConfiguration[S] {
+) extends DataSource[S] {
   def filter(f: S => Boolean): HiveParquetSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
-  def load(conf: FeatureJobConfig[_]) = {
+  def load = {
     TypedPipe.from(ParquetScroogeSource[S](new Path(basePath, partition.toPath).toString))
   }
 }
