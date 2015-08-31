@@ -12,7 +12,7 @@ import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
   val humbugVersion  = "0.6.1-20150513010955-5eb6297"
-  val maestroVersion = "2.13.1-20150802232323-bf6f4f0"
+  val maestroVersion = "2.13.1-20150728061651-8d9c378"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
@@ -30,7 +30,7 @@ object build extends Build {
   , base = file(".")
   , settings =
       standardSettings
-   ++ uniform.project("features-all", "au.com.cba.omnia.dataproducts.features.all")
+   ++ uniform.project("coppersmith-all", "au.com.cba.omnia.dataproducts.features.all")
    ++ Seq(
         publishArtifact := false
       )
@@ -42,11 +42,13 @@ object build extends Build {
   , base = file("core")
   , settings =
       standardSettings
-   ++ uniform.project("features", "au.com.cba.omnia.dataproducts.features")
+   ++ uniform.project("coppersmith", "au.com.cba.omnia.dataproducts.features")
    ++ uniformThriftSettings
    ++ Seq(
           libraryDependencies ++= depend.hadoopClasspath,
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
+          libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
+          libraryDependencies ++= depend.parquet(),
           libraryDependencies ++= Seq(
              "org.specs2" %% "specs2-matcher-extra" % versions.specs
           ) ++  depend.testing()
@@ -59,7 +61,7 @@ object build extends Build {
   , base = file("examples")
   , settings =
       standardSettings
-    ++ uniform.project("features-examples", "au.com.omnia.dataproducts.features.examples")
+    ++ uniform.project("coppersmith-examples", "au.com.omnia.dataproducts.features.examples")
     ++ uniformAssemblySettings
     ++ Seq(
         libraryDependencies ++= depend.scalding(),
@@ -82,7 +84,7 @@ object build extends Build {
   , base = file("test")
   , settings =
       standardSettings
-   ++ uniform.project("features-test", "au.com.cba.omnia.dataproducts.features.test")
+   ++ uniform.project("coppersmith-test", "au.com.cba.omnia.dataproducts.features.test")
    ++ uniformThriftSettings
    ++ Seq(
         libraryDependencies ++= depend.testing()

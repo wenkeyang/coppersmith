@@ -1,4 +1,4 @@
-#@namespace scala au.com.cba.omnia.dataproducts.features.test.thrift
+#@namespace scala commbank.coppersmith.test.thrift
 
 struct Customer {
   1 : required string id
@@ -17,4 +17,15 @@ struct Account {
   5 :          i32    age
   6 :          double min_balance
   7 : required i64    time
+}
+
+//for testing joins
+struct C {
+  1 : required i32 id
+  2: required string value
+}
+
+struct D {
+  1 : required i32 id
+  2: required string value
 }

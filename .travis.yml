@@ -5,7 +5,6 @@ cache:
   directories:
   - $HOME/.ivy2
   - $HOME/.m2
-
 install:
 - git clone https://omnia-bamboo:$OMNIA_CI_PASSWORD@github.com/CommBank/ci.git
 - chmod ugo+x ci/*
@@ -13,7 +12,6 @@ install:
 script:
 - sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci '; test; package'
 after_script:
-- cd ..
 - rm -rf ci
 # notifications:
 #   webhooks:

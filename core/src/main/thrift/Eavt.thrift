@@ -1,4 +1,4 @@
-#@namespace scala au.com.cba.omnia.dataproducts.features.thrift
+#@namespace scala commbank.coppersmith.thrift
 
 struct Eavt {
   1 : string entity

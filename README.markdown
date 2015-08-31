@@ -1,5 +1,8 @@
 Feature Generation, as Functions
 ================================
+[![Build Status](https://magnum.travis-ci.com/CommBank/coppersmith.svg?token=kex8Z7sKUeUhdEMKT2on&branch=master)](https://magnum.travis-ci.com/CommBank/coppersmith)
+[![Gitter chat](https://badges.gitter.im/CommBank/coppersmith.png)](https://gitter.im/CommBank/coppersmith)
+
 
 > 1. a person who makes artifacts from copper.
 >
