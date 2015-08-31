@@ -32,4 +32,6 @@ object Patterns {
     field:     Field[S, FV],
     humanDescription: String
   ) = general[S, V, FV](namespace, field.name, humanDescription, fType, entity, (s: S) => Option(field.get(s): V), time)
+
+  def empty[V <: Value](metadata: FeatureMetadata[V]): HasMetadata[V] = new EmptyFeature[V](metadata)
 }

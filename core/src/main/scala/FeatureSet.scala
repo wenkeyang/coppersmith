@@ -8,14 +8,18 @@ import au.com.cba.omnia.maestro.api.Field
 
 import Feature._
 
-trait FeatureSet[S] {
+trait FeatureSet[S] extends MetadataSet {
   def namespace: Feature.Namespace
 
-  def features: Iterable[Feature[S, Value]]
+  override def features: Iterable[Feature[S, Value]]
 
   def generate(source: S): Iterable[FeatureValue[Value]] = features.flatMap(f =>
     f.generate(source)
   )
+}
+
+trait MetadataSet {
+  def features: Iterable[HasMetadata[Value]]
 
   def generateMetadata: Iterable[FeatureMetadata[Value]] = {
     features.map(_.metadata)
