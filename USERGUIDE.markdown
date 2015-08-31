@@ -97,12 +97,11 @@ For details of the other classes available, refer to the **Advanced** section.
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{BasicFeatureSet, Feature, From}
+import commbank.coppersmith.{BasicFeatureSet, Feature}
 import Feature.Type._, Feature.Value._
 import commbank.coppersmith.example.thrift.Customer
 
 object customerFeatures extends BasicFeatureSet[Customer] {
-  val source                 = From[Customer]()
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
   def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
@@ -165,7 +164,7 @@ import com.twitter.scalding.Config
 import au.com.cba.omnia.maestro.api.{MaestroConfig, HivePartition, Maestro}
 import Maestro._
 
-import commbank.coppersmith.{DataSource, HiveTextSource, HydroSink}
+import commbank.coppersmith.{DataSource, From, HiveTextSource, HydroSink}
 import commbank.coppersmith.{FeatureJobConfig, SimpleFeatureJob}
 import commbank.coppersmith.FeatureSource.fromFS
 import commbank.coppersmith.SourceBinder.from
@@ -177,9 +176,9 @@ case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Custome
   val partitionPath = DataSource.PartitionPath(partition, ("2015", "08", "28"))
   val customers     = HiveTextSource(new Path("/data/customers"), partitionPath)
   val maestroConf   = MaestroConfig(conf, "features", "CUST", "birthdays")
-  val dbRawPrefix   = conf.getArgs("db-raw-prefix")
+  val dbRawPrefix   = conf.getArgs("db-raw-prefix")  // from command-line option
 
-  val featureSource = customerFeatures.source.configure(from(customers))
+  val featureSource = From[Customer]().configure(from(customers))
   val featureSink   = HydroSink(HydroSink.config(maestroConf, dbRawPrefix))
 }
 
