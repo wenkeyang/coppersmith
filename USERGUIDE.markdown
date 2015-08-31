@@ -5,6 +5,7 @@ This is a guide to using the Coppersmith library to generate features.
 It is aimed at programmers and data engineers.
 The **Basics** section introduces the fundamental concepts
 and should be read in full.
+The **Intermediate** section is also highly recommended.
 The **Advanced** section serves as a reference
 to additional features of the library.
 
@@ -42,8 +43,8 @@ we'll see how this can be made a lot easier.
 
 ```scala
 // NOTE: This example is for pedagogical purposes only; it is not the
-// recommended approach. Consider using the convenience methods of the
-// FeatureSet class (see below) instead of extending Feature directly.
+// recommended approach. Consider using the convenience methods of a
+// FeatureSet subclass or the featureBuilder API (see below for both).
 
 import org.joda.time.DateTime
 
@@ -184,6 +185,74 @@ case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Custome
 
 object CustomerFeaturesJob extends SimpleFeatureJob {
   def job = generate(CustomerFeaturesConfig(_), customerFeatures)
+}
+```
+
+
+Intermediate
+------------
+
+This section introduces an alternative API for feature definitions.
+
+
+### Shaping input data: the `FeatureSource`
+
+In the example above,
+we quietly snuck in `From[Customer]()` without explanation.
+The type of this expression
+(or rather, the implicit type, after conversion)
+is `FeatureSource`.
+This is a trivial example,
+since it simply indicates that
+the input source is a stream of `Customer` records.
+But, as will be described in the **Advanced** section,
+this also provides the basis for complex joins.
+
+Since details such as the join condition
+belong together with the feature definition,
+it is good practice to define a `FeatureSource`
+for each `FeatureSet`.
+By convention, we will call it `source`.
+For an example, see the following section.
+
+
+### A fluent API: `featureBuilder`
+
+Coppersmith offers an alternate "fluent" interface
+which results in more readable feature definitions
+reminiscent of SQL.
+Unless you have special requirements
+(e.g. extending `FeatureSet` with your own convenience methods)
+then the fluent API is generally preferred.
+
+In the example below,
+notice that we create a val called `select`.
+We then treat `select` as a function,
+using it to define our feature.
+Finally, we call `asFeature` to provide the feature metadata,
+returning a `Feature` object.
+
+```scala
+import org.joda.time.DateTime
+
+import commbank.coppersmith.{FeatureSet, Feature}
+import Feature.Type._, Feature.Value._
+import commbank.coppersmith.example.thrift.Customer
+
+object customerFeaturesFluent extends FeatureSet[Customer] {
+  val namespace              = "userguide.examples"
+  def entity(cust: Customer) = cust.id
+  def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
+
+  val source = From[Customer]()  // FeatureSource (see above)
+  val select = source.featureSetBuilder(namespace, entity(_), time(_))
+
+  val customerBirthDay  = select(_.dob)
+    .asFeature(Categorical, "CUST_BIRTHDAY", "Day on which the customer was born")
+  val customerBirthYear = select(cust => DateTime.parse(cust.dob).getYear)
+    .asFeature(Continuous, "CUST_BIRTHYEAR", "Calendar year in which the customer was born")
+
+  val features = List(customerBirthDay, customerBirthYear)
 }
 ```
 
