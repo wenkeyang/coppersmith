@@ -47,13 +47,14 @@ we'll see how this can be made a lot easier.
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.dataproducts.features.{Feature, FeatureMetadata, FeatureValue}
+import commbank.coppersmith.{Feature, FeatureMetadata, FeatureValue}
 import Feature.Type._, Feature.Value._
-import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
+import commbank.coppersmith.example.thrift.Customer
 
 object customerBirthYear extends Feature[Customer, Integral](
   FeatureMetadata(namespace   = "userguide.examples",
                   name        = "CUST_BIRTHYEAR",
+                  description = "Calendar year in which the customer was born",
                   featureType = Continuous)
 ) {
   def generate(cust: Customer) = Some(
@@ -96,19 +97,20 @@ For details of the other classes available, refer to the **Advanced** section.
 ```scala
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.dataproducts.features.{BasicFeatureSet, Feature, From}
+import commbank.coppersmith.{BasicFeatureSet, Feature, From}
 import Feature.Type._, Feature.Value._
-import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
+import commbank.coppersmith.example.thrift.Customer
 
 object customerFeatures extends BasicFeatureSet[Customer] {
-  val source                 = From[Customer]
+  val source                 = From[Customer]()
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
   def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
 
-  val customerBirthYear = basicFeature[Integral]("CUST_BIRTHYEAR", Continuous, {
+  val customerBirthYear = basicFeature[Integral](
+    "CUST_BIRTHYEAR", "Calendar year in which the customer was born", Continuous,
     (cust) => DateTime.parse(cust.dob).getYear
-  })
+  )
 
   val features = List(customerBirthYear)
 }
@@ -163,20 +165,21 @@ import com.twitter.scalding.Config
 import au.com.cba.omnia.maestro.api.{MaestroConfig, HivePartition, Maestro}
 import Maestro._
 
-import au.com.cba.omnia.dataproducts.features.{HiveTextSource, HydroSink}
-import au.com.cba.omnia.dataproducts.features.{FeatureJobConfig, SimpleFeatureJob}
-import au.com.cba.omnia.dataproducts.features.SourceConfiguration.PartitionPath
+import commbank.coppersmith.{DataSource, HiveTextSource, HydroSink}
+import commbank.coppersmith.{FeatureJobConfig, SimpleFeatureJob}
+import commbank.coppersmith.FeatureSource.fromFS
+import commbank.coppersmith.SourceBinder.from
 
-import au.com.cba.omnia.dataproducts.features.example.thrift.Customer
+import commbank.coppersmith.example.thrift.Customer
 
 case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Customer] {
   val partition     = HivePartition.byDay(Fields[Customer].EffectiveDate, "yyyy-MM-dd")
-  val partitionPath = PartitionPath(partition, ("2015", "08", "28"))
+  val partitionPath = DataSource.PartitionPath(partition, ("2015", "08", "28"))
   val customers     = HiveTextSource(new Path("/data/customers"), partitionPath)
   val maestroConf   = MaestroConfig(conf, "features", "CUST", "birthdays")
   val dbRawPrefix   = conf.getArgs("db-raw-prefix")
 
-  val featureSource = customerFeatures.source.bind(customers)
+  val featureSource = customerFeatures.source.configure(from(customers))
   val featureSink   = HydroSink(HydroSink.config(maestroConf, dbRawPrefix))
 }
 
