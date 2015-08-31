@@ -2,8 +2,6 @@ import au.com.cba.omnia.uniform.dependency.UniformDependencyPlugin.depend.versio
 import sbt._
 import sbt.Keys._
 
-import au.com.cba.omnia.humbug.HumbugSBT.humbugSettings
-
 import au.com.cba.omnia.uniform.core.standard.StandardProjectPlugin._
 import au.com.cba.omnia.uniform.core.version.UniqueVersionPlugin._
 import au.com.cba.omnia.uniform.dependency.UniformDependencyPlugin._
@@ -11,7 +9,6 @@ import au.com.cba.omnia.uniform.thrift.UniformThriftPlugin._
 import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
-  val humbugVersion  = "0.6.1-20150513010955-5eb6297"
   val maestroVersion = "2.13.1-20150728061651-8d9c378"
 
   lazy val standardSettings =
@@ -60,16 +57,14 @@ object build extends Build {
     id = "examples"
   , base = file("examples")
   , settings =
-      standardSettings
+       standardSettings
     ++ uniform.project("coppersmith-examples", "au.com.omnia.dataproducts.features.examples")
+    ++ uniformThriftSettings
     ++ uniformAssemblySettings
     ++ Seq(
-        libraryDependencies ++= depend.scalding(),
-        libraryDependencies ++= depend.hadoopClasspath,
-        libraryDependencies ++= depend.scalding(),
-        libraryDependencies ++= depend.omnia("humbug-core", humbugVersion)
+         libraryDependencies ++= depend.scalding(),
+         libraryDependencies ++= depend.hadoopClasspath
        )
-    ++ humbugSettings
   ).dependsOn(core)
 
   lazy val test = Project(
