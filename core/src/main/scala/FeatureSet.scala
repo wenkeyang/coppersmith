@@ -11,19 +11,18 @@ import Feature._
 trait FeatureSet[S] extends MetadataSet {
   def namespace: Feature.Namespace
 
-  override def features: Iterable[Feature[S, Value]]
+  def features: Iterable[Feature[S, Value]]
 
   def generate(source: S): Iterable[FeatureValue[Value]] = features.flatMap(f =>
     f.generate(source)
   )
+  def metadata: Iterable[FeatureMetadata[Value]] = {
+    features.map(_.metadata)
+  }
 }
 
 trait MetadataSet {
-  def features: Iterable[HasMetadata[Value]]
-
-  def generateMetadata: Iterable[FeatureMetadata[Value]] = {
-    features.map(_.metadata)
-  }
+  def metadata: Iterable[FeatureMetadata[Value]]
 }
 
 trait PivotFeatureSet[S] extends FeatureSet[S] {

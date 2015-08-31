@@ -74,10 +74,6 @@ object FeatureMetadata {
 
 import FeatureMetadata.ValueType
 
-trait HasMetadata[+V <: Value] {
-  def metadata: FeatureMetadata[V]
-}
-
 case class FeatureMetadata[+V <: Value : TypeTag](namespace: Namespace, name: Name,  description: String, featureType: Type) {
   def valueType =
     typeOf[V] match {
@@ -88,11 +84,9 @@ case class FeatureMetadata[+V <: Value : TypeTag](namespace: Namespace, name: Na
     }
 }
 
-abstract class Feature[S, +V <: Value](val metadata: FeatureMetadata[V]) extends HasMetadata[V] {
+abstract class Feature[S, +V <: Value](val metadata: FeatureMetadata[V]) {
   def generate(source:S): Option[FeatureValue[V]]
 }
-
-class EmptyFeature[+V <: Value](val metadata: FeatureMetadata[V]) extends HasMetadata[V]
 
 case class FeatureValue[+V <: Value](
   entity:  EntityId,
