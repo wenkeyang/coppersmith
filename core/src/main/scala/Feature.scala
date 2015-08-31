@@ -84,7 +84,11 @@ object FeatureMetadata {
 
 import FeatureMetadata.ValueType
 
-case class FeatureMetadata[+V <: Value : TypeTag](namespace: Namespace, name: Name,  description: String, featureType: Type)(implicit neq: V =:!= Nothing) {
+case class FeatureMetadata[+V <: Value : TypeTag]
+  (namespace:   Namespace,
+   name:        Name,
+   description: String,
+   featureType: Type)(implicit neq: V =:!= Nothing) {
   def valueType =
     typeOf[V] match {
       // Would be nice to get exhaustiveness checking here
