@@ -42,7 +42,7 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
   }
 
   def generateMetadata = {
-    val metadata = CustomerFeatureSet.generateMetadata
+    val metadata = CustomerFeatureSet.metadata
 
     metadata must_== List(
       FeatureMetadata[Integral](CustomerFeatureSet.namespace, "age",       "Age",        Categorical),
@@ -97,7 +97,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
   }
 
   def generateMetadata = {
-    val metadata = CustomerFeatureSet.generateMetadata
+    val metadata = CustomerFeatureSet.metadata
 
     metadata must_== List(
       FeatureMetadata[Integral](CustomerFeatureSet.namespace, "size", "Agg feature",  Categorical),
