@@ -6,6 +6,7 @@ import scalaz.std.list.listInstance
 import scalaz.syntax.bind.ToBindOps
 import scalaz.syntax.functor.ToFunctorOps
 import scalaz.syntax.foldable.ToFoldableOps
+import scalaz.syntax.std.option.ToOptionIdOps
 
 import org.apache.hadoop.fs.Path
 
@@ -35,19 +36,25 @@ object HydroSink {
   import HiveSupport.HiveConfig
 
   val partition = HivePartition.byDay(Fields[Eavt].Time, "yyyy-MM-dd")
-  def config(maestro: MaestroConfig, dbRawPrefix: String) = Config(
-      HiveConfig(
-        partition,
+
+  def configure(maestro: MaestroConfig, dbRawPrefix: String): HydroSink =
+    configure(dbRawPrefix, new Path(maestro.hdfsRoot), maestro.tablename, maestro.source.some)
+
+  def configure(dbRawPrefix: String,
+                dbRoot:      Path,
+                tableName:   TableName,
+                group:       Option[String] = None): HydroSink =
+    HydroSink(
+      Config(
         s"${dbRawPrefix}_features",
-        new Path(s"${maestro.hdfsRoot}/view/warehouse/features/${maestro.source}/${maestro.tablename}"),
-        maestro.tablename
+        new Path(dbRoot, s"view/warehouse/features/${group.map(_ + "/").getOrElse("")}$tableName"),
+        tableName
       )
-  )
+    )
 
-  def config(databaseName: DatabaseName, databasePath: Path, tableName: TableName) =
-    Config(HiveConfig(partition, databaseName, databasePath, tableName))
-
-  case class Config(hiveConfig: HiveConfig[Eavt, (String, String, String)])
+  case class Config(dbName: DatabaseName, tablePath: Path, tableName: TableName) {
+    def hiveConfig = HiveConfig[Eavt, (String, String, String)](partition, dbName, tablePath, tableName)
+  }
 
   def toEavt(fv: FeatureValue[_]) = {
     val featureValue = (fv.value match {
