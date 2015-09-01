@@ -1,11 +1,11 @@
 package commbank.coppersmith
 
-import com.twitter.scalding.{Config, Execution}
-import com.twitter.scalding.typed._
-
 import au.com.cba.omnia.maestro.api._
 
-import Feature.{EntityId, Time}
+import com.twitter.scalding.typed._
+import com.twitter.scalding.{Config, Execution}
+
+import Feature._
 
 trait FeatureJobConfig[S] {
   def featureSource: ConfiguredFeatureSource[S, _]

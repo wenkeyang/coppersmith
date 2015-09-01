@@ -17,6 +17,8 @@ import Arbitraries._
 
 import test.thrift.Customer
 
+import scalaz.NonEmptyList
+
 object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"""
   SelectFeatureSet - Test an example set of features based on selecting fields
   ===========

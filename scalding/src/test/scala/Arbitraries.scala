@@ -43,6 +43,7 @@ object Arbitraries {
   )
 
   // Not specific to coppersmith - consider moving to project like omnitool
+  import org.apache.hadoop.fs.Path
   final case class NonEmptyString private(head: Char, tail: String) { val value = head +: tail }
   object NonEmptyString {
     def nonEmptyString(h: Char, t: String): NonEmptyString = NonEmptyString(h, t)
@@ -54,4 +55,5 @@ object Arbitraries {
   val arbNonEmptyAlphaStr: Gen[NonEmptyString] =
     for (h <- alphaChar; t <- alphaStr) yield nonEmptyString(h, t)
 
+  implicit val arbPath: Arbitrary[Path] = Arbitrary(arbNonEmptyAlphaStr.map(nes => new Path(nes.value)))
 }
