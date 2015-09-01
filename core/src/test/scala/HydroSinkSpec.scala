@@ -37,8 +37,7 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
                 dbName <- arbNonEmptyAlphaStr
                 dbPath <- arbitrary[Path]
                 tableName <- arbNonEmptyAlphaStr
-              } yield HydroSink.config(dbName.value, new Path(dir, dbPath), tableName.value)
-    )
+              } yield HydroSink.Config(dbName.value, new Path(dir, dbPath), tableName.value))
 
   def featureValuesOnDiskMatch =
     forAll { (vs: NonEmptyList[FeatureValue[Value]], hydroConfig: HydroSink.Config) =>  {
