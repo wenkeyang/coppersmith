@@ -14,7 +14,7 @@ object build extends Build {
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
     uniformDependencySettings ++
-    strictDependencySettings ++
+//    strictDependencySettings ++
     Seq(
       scalacOptions += "-Xfatal-warnings",
       scalacOptions in (Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
@@ -42,9 +42,10 @@ object build extends Build {
    ++ uniform.project("coppersmith-core", "commbank.coppersmith")
    ++ uniformThriftSettings
    ++ Seq(
-          dependencyOverrides += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3",
-          libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs,
-          libraryDependencies ++= depend.testing(),
+          dependencyOverrides +=   "org.specs2" %% "specs2-core"  % "3.6.3"   ,
+          libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % "3.6.4",
+          libraryDependencies ++= depend.testing(specs = "3.6.4"),
+
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
           parallelExecution in Test := false
       )
@@ -62,9 +63,10 @@ object build extends Build {
         libraryDependencies ++= depend.omnia("maestro", maestroVersion),
         libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
         libraryDependencies ++= depend.parquet(),
+        dependencyOverrides +=   "org.specs2" %% "specs2-core"  % "3.6.3",
         libraryDependencies ++= Seq(
-          "org.specs2" %% "specs2-matcher-extra" % versions.specs
-        ) ++  depend.testing()
+          "org.specs2" %% "specs2-matcher-extra" % "3.6.4"
+        ) ++  depend.testing(specs = "3.6.4")
         , parallelExecution in Test := false
       )
   ).dependsOn(core)
@@ -91,7 +93,7 @@ object build extends Build {
    ++ uniform.project("coppersmith-test", "commbank.coppersmith.test")
    ++ uniformThriftSettings
    ++ Seq(
-        libraryDependencies ++= depend.testing()
+        libraryDependencies ++= depend.testing(specs = "3.6.4")
       )
 
   ).dependsOn(core)
