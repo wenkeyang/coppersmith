@@ -1,23 +1,24 @@
 package commbank.coppersmith.scalding
 
-import au.com.cba.omnia.maestro.api.Maestro._
-import au.com.cba.omnia.maestro.api._
-import au.com.cba.omnia.maestro.test.Records
-import au.com.cba.omnia.thermometer.core.Thermometer._
-import au.com.cba.omnia.thermometer.fact.PathFactoids.{exists, records}
-import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 import com.twitter.scalding.{Execution, TypedPipe}
-import commbank.coppersmith.Feature.Value
-import commbank.coppersmith._
-import commbank.coppersmith.scalding.ScaldingArbitraries._
-import commbank.coppersmith.thrift.Eavt
-import org.apache.hadoop.fs.Path
-import org.scalacheck.Arbitrary._
-import org.scalacheck.Prop.forAll
-import org.scalacheck.{Arbitrary, Prop}
+
+import org.scalacheck.{Arbitrary, Prop}, Arbitrary._, Prop.forAll
 
 import scalaz.NonEmptyList
 import scalaz.scalacheck.ScalazArbitrary.NonEmptyListArbitrary
+
+import org.apache.hadoop.fs.Path
+
+import au.com.cba.omnia.maestro.api._, Maestro._
+import au.com.cba.omnia.maestro.test.Records
+
+import au.com.cba.omnia.thermometer.core.Thermometer._
+import au.com.cba.omnia.thermometer.fact.PathFactoids.{exists, records}
+import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
+
+import commbank.coppersmith._, Arbitraries._, Feature.Value
+import ScaldingArbitraries._
+import thrift.Eavt
 
 class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     Writing features to a HydroSink
