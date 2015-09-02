@@ -1,19 +1,19 @@
 package commbank.coppersmith.scalding
 
+import au.com.cba.omnia.maestro.api.Maestro.Fields
+import au.com.cba.omnia.maestro.api.{Field, Maestro}
+import commbank.coppersmith.Feature.Type._
+import commbank.coppersmith.Feature.Value._
+import commbank.coppersmith.Feature.{Type, Value}
 import commbank.coppersmith._
-
-import scalaz.{Value => _, _}, Scalaz._
-import scalaz.scalacheck.ScalaCheckBinding._
-
-import org.scalacheck.{Arbitrary,Gen}, Arbitrary._, Gen._
-
-import org.joda.time.DateTime
-
-import au.com.cba.omnia.maestro.api.{Field, Maestro}, Maestro.Fields
-
-import Feature.{Value, Type}, Value._, Type._
-
 import commbank.coppersmith.test.thrift.Customer
+import org.joda.time.DateTime
+import org.scalacheck.Arbitrary._
+import org.scalacheck.Gen._
+import org.scalacheck.{Arbitrary, Gen}
+
+import scalaz.Scalaz._
+import scalaz.scalacheck.ScalaCheckBinding._
 
 object ScaldingArbitraries {
   implicit val arbFeatureType: Arbitrary[Type] = Arbitrary(oneOf(Categorical, Continuous))

@@ -1,12 +1,16 @@
-package commbank.coppersmith
+package commbank.coppersmith.scalding
 
-import Join._
-import Feature._
+import commbank.coppersmith._
+
 import com.twitter.scalding._
-
-import lift.scalding._
+import commbank.coppersmith.Feature._
+import commbank.coppersmith.FeatureSetBuilder
 
 import scalaz.syntax.std.option.ToOptionIdOps
+
+import Join._
+
+import scalding.lift.scalding._
 
 case class FeatureSource[S, U, B <: SourceBinder[S, U]](underlying: U, filter: Option[S => Boolean] = None) {
   def featureSetBuilder(namespace: Namespace, entity: S => EntityId, time: S => Time) =

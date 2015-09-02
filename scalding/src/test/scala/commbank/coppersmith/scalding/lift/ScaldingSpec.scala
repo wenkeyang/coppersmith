@@ -1,10 +1,10 @@
-package commbank.coppersmith.lift
+package commbank.coppersmith.scalding.lift
 
 import au.com.cba.omnia.thermometer.core.ThermometerSpec
-import commbank.coppersmith.lift.scalding._
-import commbank.coppersmith.test.thrift._
-import commbank.coppersmith._
 import com.twitter.scalding.typed._
+import commbank.coppersmith._
+import commbank.coppersmith.scalding.lift.scalding._
+import commbank.coppersmith.test.thrift._
 
 class ScaldingSpec extends ThermometerSpec {
   def is = s2"""

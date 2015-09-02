@@ -2,6 +2,7 @@ package commbank.coppersmith.examples
 
 import commbank.coppersmith.Feature._
 import commbank.coppersmith._
+import commbank.coppersmith._
 import commbank.coppersmith.example.thrift._
 
 import au.com.cba.omnia.maestro.scalding.JobStatus
@@ -12,7 +13,7 @@ import commbank.coppersmith.Feature.Value.Decimal
 
 import org.joda.time.DateTime
 
-import lift.scalding._
+import commbank.coppersmith.scalding.lift.scalding._
 
 import scalaz.{Value => _, _}, Scalaz._
 

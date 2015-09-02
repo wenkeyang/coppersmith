@@ -1,9 +1,9 @@
-package commbank.coppersmith.lift
+package commbank.coppersmith.scalding.lift
 
+import com.twitter.scalding._
 import commbank.coppersmith.Feature.Value
 import commbank.coppersmith.Join._
 import commbank.coppersmith._
-import com.twitter.scalding._
 
 trait ScaldingLift extends Lift[TypedPipe] {
 
