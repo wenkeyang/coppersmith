@@ -2,7 +2,6 @@ package commbank.coppersmith.examples
 
 import commbank.coppersmith.Feature._
 import commbank.coppersmith._
-import commbank.coppersmith._
 import commbank.coppersmith.example.thrift._
 
 import au.com.cba.omnia.maestro.scalding.JobStatus

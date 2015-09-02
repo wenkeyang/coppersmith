@@ -1,14 +1,10 @@
 package commbank.coppersmith.scalding
 
-import au.com.cba.omnia.maestro.api.Maestro._
-import au.com.cba.omnia.maestro.api._
 import com.twitter.algebird.Aggregator
 import com.twitter.scalding.typed.{PartitionedTextLine, TypedPipe}
 import com.twitter.scalding.{Execution, TupleConverter, TupleSetter}
 import com.twitter.scrooge.ThriftStruct
-import commbank.coppersmith.Feature.Value._
-import commbank.coppersmith.FeatureValue
-import commbank.coppersmith.thrift.Eavt
+
 import org.apache.hadoop.fs.Path
 import org.joda.time.DateTime
 
@@ -18,6 +14,12 @@ import scalaz.syntax.foldable.ToFoldableOps
 import scalaz.syntax.functor.ToFunctorOps
 import scalaz.syntax.std.option.ToOptionIdOps
 
+import au.com.cba.omnia.maestro.api.Maestro._
+import au.com.cba.omnia.maestro.api._
+
+import commbank.coppersmith.Feature.Value._
+import commbank.coppersmith.FeatureValue
+import commbank.coppersmith.thrift.Eavt
 
 trait FeatureSink {
   def write(features: TypedPipe[FeatureValue[_]]): Execution[Unit]
