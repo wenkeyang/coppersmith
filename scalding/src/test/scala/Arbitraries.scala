@@ -1,4 +1,6 @@
-package commbank.coppersmith
+package commbank.coppersmith.scalding
+
+import commbank.coppersmith._
 
 import scalaz.{Value => _, _}, Scalaz._
 import scalaz.scalacheck.ScalaCheckBinding._
@@ -11,7 +13,7 @@ import au.com.cba.omnia.maestro.api.{Field, Maestro}, Maestro.Fields
 
 import Feature.{Value, Type}, Value._, Type._
 
-import test.thrift.Customer
+import commbank.coppersmith.test.thrift.Customer
 
 object ScaldingArbitraries {
   implicit val arbFeatureType: Arbitrary[Type] = Arbitrary(oneOf(Categorical, Continuous))

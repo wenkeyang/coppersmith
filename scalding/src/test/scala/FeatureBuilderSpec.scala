@@ -1,4 +1,6 @@
-package commbank.coppersmith
+package commbank.coppersmith.scalding
+
+import commbank.coppersmith._
 
 import scalaz.NonEmptyList
 import scalaz.syntax.std.boolean.ToBooleanOpsFromBoolean

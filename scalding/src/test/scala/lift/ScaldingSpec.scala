@@ -1,4 +1,4 @@
-package commbank.coppermith.lift
+package commbank.coppersmith.lift
 
 import au.com.cba.omnia.thermometer.core.ThermometerSpec
 import commbank.coppersmith.lift.scalding._
