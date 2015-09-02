@@ -260,6 +260,55 @@ object customerFeaturesFluent extends FeatureSet[Customer] {
 Advanced
 --------
 
+
+### Aggregation (aka GROUP BY)
+
+By subclassing `AggregationFeatureSet`,
+you gain access to a number of useful aggregate functions:
+`count`, `avg`, `max`, `min`, `sum`, and `uniqueCountBy`.
+(If you need something that isn't listed here,
+please raise an issue).
+
+The grouping criteria (in SQL terms, the GROUP BY clause)
+is implicitly *the entity and the time*,
+as defined by the `entity` and `time` properties.
+
+Note that when using `AggregationFeatureSet`,
+you should *not* override `features`;
+provide `aggregationFeatures` instead.
+
+Here is an example that finds
+the maximum and minimum balance per account,
+per calendar year.
+Notice that `time` is set to be the year,
+and this defines both the window for aggregation
+as well as the value for "T" in the EAVT output for hydro.
+
+```scala
+import org.joda.time.DateTime
+
+import commbank.coppersmith.{AggregationFeatureSet, Feature}
+import Feature.Type._, Feature.Value._
+import commbank.coppersmith.example.thrift.Account
+
+object accountFeatures extends AggregationFeatureSet[Account] {
+  val namespace            = "userguide.examples"
+  def entity(acc: Account) = acc.id
+  def time(acc: Account)   = DateTime.parse(acc.effectiveDate).getYear
+
+  val source = From[Account]()
+  val select = source.featureSetBuilder(namespace, entity(_), time(_))
+
+  val minBalance = select(min(_.balance))
+    .asFeature(Continuous, "ACC_ANNUAL_MIN_BALANCE", "Minimum balance for the calendar year")
+  val maxBalance = select(max(_.balance))
+    .asFeature(Continuous, "ACC_ANNUAL_MAX_BALANCE", "Maximum balance for the calendar year")
+
+  val aggregationFeatures = List(minBalance, maxBalance)
+}
+```
+
+
 ### Joins
 
 To do.
