@@ -305,8 +305,10 @@ you should *not* override `features`;
 provide `aggregationFeatures` instead.
 
 Here is an example that finds
-the maximum and minimum balance per account,
-per calendar year.
+the maximum and minimum end-of-day balance per account,
+per calendar year
+(based on the assumption that `Account` is updated
+once per day at close of business)
 Notice that `time` is set to be the year,
 and this defines both the window for aggregation
 as well as the value for "T" in the EAVT output for hydro.
@@ -330,9 +332,12 @@ object accountFeatures extends AggregationFeatureSet[Account] {
   val select = source.featureSetBuilder(namespace, entity(_), time(_))
 
   val minBalance = select(min(_.balance))
-    .asFeature(Continuous, "ACC_ANNUAL_MIN_BALANCE", "Minimum balance for the calendar year")
+    .asFeature(Continuous, "ACC_ANNUAL_MIN_BALANCE",
+               "Minimum end-of-day balance for the calendar year")
+
   val maxBalance = select(max(_.balance))
-    .asFeature(Continuous, "ACC_ANNUAL_MAX_BALANCE", "Maximum balance for the calendar year")
+    .asFeature(Continuous, "ACC_ANNUAL_MAX_BALANCE",
+               "Maximum end-of-day-balance for the calendar year")
 
   val aggregationFeatures = List(minBalance, maxBalance)
 }
