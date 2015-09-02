@@ -1,9 +1,9 @@
 package commbank.coppersmith.scalding.lift
 
 import com.twitter.scalding._
-import commbank.coppersmith.Feature.Value
-import commbank.coppersmith.Join._
-import commbank.coppersmith._
+
+import commbank.coppersmith._, Feature.Value, Join._
+import commbank.coppersmith.scalding.ScaldingConfiguredFeatureSource
 
 trait ScaldingLift extends Lift[TypedPipe] {
 
@@ -25,6 +25,11 @@ trait ScaldingLift extends Lift[TypedPipe] {
                                   (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, Option[B])] =
     a.groupBy(joined.left).leftJoin(b.groupBy(joined.right)).values
 
+  def liftBinder[S, U, B <: SourceBinder[S, U, TypedPipe]](
+    underlying: U,
+    binder: B,
+    filter: Option[S => Boolean]
+  ) = ScaldingConfiguredFeatureSource(underlying, binder, filter)
 }
 
 object scalding extends ScaldingLift

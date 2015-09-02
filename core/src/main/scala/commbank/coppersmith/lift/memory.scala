@@ -37,5 +37,19 @@ trait MemoryLift extends Lift[List] {
       }
     }
 
+  def liftBinder[S, U, B <: SourceBinder[S, U, List]](underlying: U, binder: B, filter: Option[S => Boolean]) =
+    MemoryConfiguredFeatureSource(underlying, binder, filter)
+
+  case class MemoryConfiguredFeatureSource[S, U](
+    underlying: U,
+    binder: SourceBinder[S, U, List],
+    filter: Option[S => Boolean]
+  ) extends ConfiguredFeatureSource[S, U, List] {
+    def load: List[S] = {
+      val pipe = binder.bind(underlying)
+      filter.map(f => pipe.filter(f)).getOrElse(pipe)
+    }
+  }
+
 }
 object memory extends MemoryLift
