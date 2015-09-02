@@ -45,11 +45,13 @@ object build extends Build {
           dependencyOverrides +=   "org.specs2" %% "specs2-core"  % "3.6.3"   ,
           libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % "3.6.4",
           libraryDependencies ++= depend.testing(specs = "3.6.4"),
+          libraryDependencies += "org.specs2" %% "specs2-junit"  % "3.6.3",
 
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
-          parallelExecution in Test := false
+          parallelExecution in Test := false,
+        testOptions in Test += Tests.Argument(TestFrameworks.Specs2, "junitxml", "console")
       )
-  )
+  ).disablePlugins (plugins.JUnitXmlReportPlugin)
 
   lazy val scalding = Project(
     id = "scalding"
@@ -63,13 +65,15 @@ object build extends Build {
         libraryDependencies ++= depend.omnia("maestro", maestroVersion),
         libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
         libraryDependencies ++= depend.parquet(),
+        libraryDependencies += "org.specs2" %% "specs2-junit"  % "3.6.3",
         dependencyOverrides +=   "org.specs2" %% "specs2-core"  % "3.6.3",
         libraryDependencies ++= Seq(
           "org.specs2" %% "specs2-matcher-extra" % "3.6.4"
         ) ++  depend.testing(specs = "3.6.4")
-        , parallelExecution in Test := false
+        , parallelExecution in Test := false,
+        testOptions in Test += Tests.Argument(TestFrameworks.Specs2, "junitxml", "console")
       )
-  ).dependsOn(core)
+  ).dependsOn(core).disablePlugins (plugins.JUnitXmlReportPlugin)
 
   lazy val examples = Project(
     id = "examples"
