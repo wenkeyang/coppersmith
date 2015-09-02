@@ -67,7 +67,7 @@ object build extends Build {
         ) ++  depend.testing()
         , parallelExecution in Test := false
       )
-  ).dependsOn(core)
+  ).dependsOn(core % "compile->compile;test->test")
 
   lazy val examples = Project(
     id = "examples"
