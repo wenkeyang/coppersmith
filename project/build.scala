@@ -2,8 +2,6 @@ import au.com.cba.omnia.uniform.dependency.UniformDependencyPlugin.depend.versio
 import sbt._
 import sbt.Keys._
 
-import au.com.cba.omnia.humbug.HumbugSBT.humbugSettings
-
 import au.com.cba.omnia.uniform.core.standard.StandardProjectPlugin._
 import au.com.cba.omnia.uniform.core.version.UniqueVersionPlugin._
 import au.com.cba.omnia.uniform.dependency.UniformDependencyPlugin._
@@ -11,7 +9,6 @@ import au.com.cba.omnia.uniform.thrift.UniformThriftPlugin._
 import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
-  val humbugVersion  = "0.6.1-20150513010955-5eb6297"
   val maestroVersion = "2.13.1-20150728061651-8d9c378"
 
   lazy val standardSettings =
@@ -30,11 +27,11 @@ object build extends Build {
   , base = file(".")
   , settings =
       standardSettings
-   ++ uniform.project("coppersmith-all", "au.com.cba.omnia.dataproducts.features.all")
+   ++ uniform.project("coppersmith-all", "commbank.coppersmith.all")
    ++ Seq(
         publishArtifact := false
       )
-  , aggregate = Seq(core, test, examples)
+  , aggregate = Seq(core, test, examples, scalding)
   )
 
   lazy val core = Project(
@@ -42,49 +39,63 @@ object build extends Build {
   , base = file("core")
   , settings =
       standardSettings
-   ++ uniform.project("coppersmith", "au.com.cba.omnia.dataproducts.features")
+   ++ uniform.project("coppersmith-core", "commbank.coppersmith")
    ++ uniformThriftSettings
    ++ Seq(
-          libraryDependencies ++= depend.hadoopClasspath,
+          dependencyOverrides += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3",
+          libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs,
+          libraryDependencies ++= depend.testing(),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
-          libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
-          libraryDependencies ++= depend.parquet(),
-          libraryDependencies ++= Seq(
-             "org.specs2" %% "specs2-matcher-extra" % versions.specs
-          ) ++  depend.testing()
-        , parallelExecution in Test := false
+          parallelExecution in Test := false
       )
   )
+
+  lazy val scalding = Project(
+    id = "scalding"
+    , base = file("scalding")
+    , settings =
+      standardSettings
+        ++ uniform.project("coppersmith-scalding", "commbank.coppersmith.scalding")
+        ++ uniformThriftSettings
+        ++ Seq(
+        libraryDependencies ++= depend.hadoopClasspath,
+        libraryDependencies ++= depend.omnia("maestro", maestroVersion),
+        libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
+        libraryDependencies ++= depend.parquet(),
+        libraryDependencies ++= Seq(
+          "org.specs2" %% "specs2-matcher-extra" % versions.specs
+        ) ++  depend.testing()
+        , parallelExecution in Test := false
+      )
+  ).dependsOn(core)
 
   lazy val examples = Project(
     id = "examples"
   , base = file("examples")
   , settings =
-      standardSettings
-    ++ uniform.project("coppersmith-examples", "au.com.omnia.dataproducts.features.examples")
+       standardSettings
+    ++ uniform.project("coppersmith-examples", "commbank.coppersmith.examples")
+    ++ uniformThriftSettings
     ++ uniformAssemblySettings
     ++ Seq(
-        libraryDependencies ++= depend.scalding(),
-        libraryDependencies ++= depend.hadoopClasspath,
-        libraryDependencies ++= depend.scalding(),
-        libraryDependencies ++= depend.omnia("humbug-core", humbugVersion)
-      , sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
-          // Poor man's "Literate Scala". (Consider alternatives such as https://github.com/non/literati)
-          // This is part of the "examples" project because it depends on a thrift spec there.
-          val outfile = outdir / "USERGUIDE.scala"
-          file("USERGUIDE.markdown") #> "sed -n /```scala/,/```/p" #| "grep -v ```" #> outfile ! s.log
-          Seq(outfile)
-        }
-      )
-    ++ humbugSettings
-  ).dependsOn(core)
+         libraryDependencies ++= depend.scalding(),
+         libraryDependencies ++= depend.hadoopClasspath,
+         sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
+           // Poor man's "Literate Scala". (Consider alternatives such as https://github.com/non/literati)
+           // This is part of the "examples" project because it depends on a thrift spec there.
+           val outfile = outdir / "USERGUIDE.scala"
+           file("USERGUIDE.markdown") #> "sed -n /```scala/,/```/p" #| "grep -v ```" #> outfile ! s.log
+           Seq(outfile)
+         }
+       )
+  ).dependsOn(core, scalding)
 
   lazy val test = Project(
     id = "test"
   , base = file("test")
   , settings =
       standardSettings
-   ++ uniform.project("coppersmith-test", "au.com.cba.omnia.dataproducts.features.test")
+   ++ uniform.project("coppersmith-test", "commbank.coppersmith.test")
    ++ uniformThriftSettings
    ++ Seq(
         libraryDependencies ++= depend.testing()

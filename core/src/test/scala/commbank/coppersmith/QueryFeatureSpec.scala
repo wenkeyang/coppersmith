@@ -47,7 +47,7 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
   }
 
   def generateMetadata = {
-    val metadata = CustomerFeatureSet.generateMetadata
+    val metadata = CustomerFeatureSet.metadata
 
     metadata must_== List(
       FeatureMetadata[Decimal](CustomerFeatureSet.namespace, "youngHeight", "Young Height", Continuous),

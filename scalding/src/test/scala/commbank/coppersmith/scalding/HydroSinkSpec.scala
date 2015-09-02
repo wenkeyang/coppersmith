@@ -1,29 +1,23 @@
-package commbank.coppersmith
+package commbank.coppersmith.scalding
 
-import scalaz.scalacheck.ScalazArbitrary.NonEmptyListArbitrary
-
-import org.scalacheck.{Arbitrary,Prop}, Arbitrary._, Prop.forAll
-
+import au.com.cba.omnia.maestro.api.Maestro._
+import au.com.cba.omnia.maestro.api._
 import au.com.cba.omnia.maestro.test.Records
-
-import au.com.cba.omnia.thermometer.core._, Thermometer._
-import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
-
+import au.com.cba.omnia.thermometer.core.Thermometer._
 import au.com.cba.omnia.thermometer.fact.PathFactoids.{exists, records}
-
-import Arbitraries._
+import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
+import com.twitter.scalding.{Execution, TypedPipe}
+import commbank.coppersmith.Feature.Value
+import commbank.coppersmith._
+import commbank.coppersmith.scalding.ScaldingArbitraries._
+import commbank.coppersmith.thrift.Eavt
+import org.apache.hadoop.fs.Path
+import org.scalacheck.Arbitrary._
+import org.scalacheck.Prop.forAll
+import org.scalacheck.{Arbitrary, Prop}
 
 import scalaz.NonEmptyList
-
-import org.apache.hadoop.fs.Path
-
-import com.twitter.scalding.{Execution, TypedPipe}
-
-import au.com.cba.omnia.maestro.api._, Maestro._
-
-import Feature.Value
-
-import thrift.Eavt
+import scalaz.scalacheck.ScalazArbitrary.NonEmptyListArbitrary
 
 class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     Writing features to a HydroSink
@@ -37,8 +31,7 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
                 dbName <- arbNonEmptyAlphaStr
                 dbPath <- arbitrary[Path]
                 tableName <- arbNonEmptyAlphaStr
-              } yield HydroSink.config(dbName.value, new Path(dir, dbPath), tableName.value)
-    )
+              } yield HydroSink.Config(dbName.value, new Path(dir, dbPath), tableName.value))
 
   def featureValuesOnDiskMatch =
     forAll { (vs: NonEmptyList[FeatureValue[Value]], hydroConfig: HydroSink.Config) =>  {

@@ -1,5 +1,7 @@
 package commbank.coppersmith
 
+import shapeless.=:!=
+
 import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
 object Feature {
@@ -38,11 +40,19 @@ object Feature {
   implicit object ContinuousIntegral  extends Conforms[Type.Continuous.type,  Value.Integral]
   implicit object ContinuousDecimal   extends Conforms[Type.Continuous.type,  Value.Decimal]
 
-  implicit class RichFeature[S, V <: Value](f: Feature[S, V]) {
-    def as[T <: Feature.Type](t: T)(implicit ev: Conforms[T, V]) =
-      new Feature[S, V](f.metadata.copy(featureType = t)) {
+  implicit class RichFeature[S, V <: Value : TypeTag](f: Feature[S, V]) {
+    def as[T <: Feature.Type](t: T)(implicit ev: Conforms[T, V], neq: T =:!= Nothing) = {
+      val oldMetadata = f.metadata
+      val newMetadata = FeatureMetadata[V](
+        namespace   = oldMetadata.namespace,
+        name        = oldMetadata.name,
+        description = oldMetadata.description,
+        featureType = t
+      )
+      new Feature[S, V](newMetadata) {
         def generate(source: S) = f.generate(source)
       }
+    }
   }
 }
 
@@ -74,7 +84,11 @@ object FeatureMetadata {
 
 import FeatureMetadata.ValueType
 
-case class FeatureMetadata[+V <: Value : TypeTag](namespace: Namespace, name: Name,  description: String, featureType: Type) {
+case class FeatureMetadata[+V <: Value : TypeTag]
+  (namespace:   Namespace,
+   name:        Name,
+   description: String,
+   featureType: Type)(implicit neq: V =:!= Nothing) {
   def valueType =
     typeOf[V] match {
       // Would be nice to get exhaustiveness checking here

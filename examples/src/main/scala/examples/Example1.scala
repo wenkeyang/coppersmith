@@ -17,7 +17,7 @@ import org.joda.time.DateTime
 import scalaz.{Value => _, _}, Scalaz._
 
 import PivotMacro._
-import commbank.coppersmith.lift.scalding._
+import scalding.lift.scalding._
 
 object Example1 {
   val pivoted = pivotThrift[Customer]("namespace", _.id, c => DateTime.parse(c.effectiveDate).getMillis())
