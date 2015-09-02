@@ -237,6 +237,7 @@ import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
 import Feature.Type._, Feature.Value._
+import commbank.coppersmith.FeatureSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
 object customerFeaturesFluent extends FeatureSet[Customer] {
@@ -273,7 +274,8 @@ import commbank.coppersmith.example.thrift.{Customer, Account}
 
 object Implicits {
   implicit class RichCustomer(cust: Customer) {
-    def birthYear: Int = DateTime.parse(cust.dob).getYear
+    def timestamp: Long = DateTime.parse(cust.effectiveDate).getMillis
+    def birthYear: Int  = DateTime.parse(cust.dob).getYear
   }
 
   implicit class RichAccount(acc: Account) {
@@ -314,6 +316,7 @@ import org.joda.time.DateTime
 
 import commbank.coppersmith.{AggregationFeatureSet, Feature}
 import Feature.Type._, Feature.Value._
+import commbank.coppersmith.FeatureSource.fromFS
 import commbank.coppersmith.example.thrift.Account
 
 import Implicits.RichAccount
@@ -349,6 +352,7 @@ import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
 import Feature.Type._, Feature.Value._
+import commbank.coppersmith.FeatureSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
@@ -385,6 +389,7 @@ import org.joda.time.DateTime
 
 import commbank.coppersmith.{QueryFeatureSet, Feature}
 import Feature.Type._, Feature.Value._
+import commbank.coppersmith.FeatureSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
@@ -409,7 +414,52 @@ object customerBirthFlags extends QueryFeatureSet[Customer, Str] {
 
 ### Joins
 
-To do.
+At the type level,
+a feature calculated from two joined tables
+has a pair of thrift structs as its source,
+e.g. `(Customer, Account)`.
+For a left join, the value on the right may be missing,
+e.g. `(Customer, Option[Account)`.
+
+As described in the section **Shaping input data**,
+the convention of defining a `source` per feature set
+allows you to specify further detail about the join:
+
+- Use `Join[A].to[B]` for an inner join
+- Use `Join.left[A].to[B]` for a left outer join
+- Use `.on(left: A => J, right: A => J)` to specify the join columns
+
+An example (somewhat contrived)
+might be the total balance across all accounts
+for customers born before 1970:
+
+```scala
+import org.joda.time.DateTime
+
+import commbank.coppersmith.{AggregationFeatureSet, Feature, Join}
+import Feature.Type._, Feature.Value._
+import commbank.coppersmith.FeatureSource.joinFS
+import commbank.coppersmith.example.thrift.Account
+
+object joinFeatures extends AggregationFeatureSet[(Customer, Account)] {
+  val namespace                      = "userguide.examples"
+  def entity(s: (Customer, Account)) = s._1.id
+  def time(s: (Customer, Account))   = s._1.timestamp
+
+  val source = Join[Customer].to[Account].on(
+    cust => cust.id,
+    acc  => acc.customer
+  )
+  val select = source.featureSetBuilder(namespace, entity(_), time(_))
+
+  val totalBalanceForCustomersBornPre1970 = select(sum(_._2.balance))
+    .where(_._1.birthYear < 1970)
+    .asFeature(Continuous, "CUST_BORN_PRE1970_TOT_BALANCE",
+               "Total balance for customer born before 1970")
+
+  val aggregationFeatures = List(totalBalanceForCustomersBornPre1970)
+}
+```
 
 
 ### Testing
