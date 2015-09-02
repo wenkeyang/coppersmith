@@ -27,11 +27,11 @@ object build extends Build {
   , base = file(".")
   , settings =
       standardSettings
-   ++ uniform.project("coppersmith-all", "au.com.cba.omnia.dataproducts.features.all")
+   ++ uniform.project("coppersmith-all", "commbank.coppersmith.all")
    ++ Seq(
         publishArtifact := false
       )
-  , aggregate = Seq(core, test, examples)
+  , aggregate = Seq(core, test, examples, scalding)
   )
 
   lazy val core = Project(
@@ -39,40 +39,56 @@ object build extends Build {
   , base = file("core")
   , settings =
       standardSettings
-   ++ uniform.project("coppersmith", "au.com.cba.omnia.dataproducts.features")
+   ++ uniform.project("coppersmith-core", "commbank.coppersmith")
    ++ uniformThriftSettings
    ++ Seq(
-          libraryDependencies ++= depend.hadoopClasspath,
+          dependencyOverrides += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3",
+          libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs,
+          libraryDependencies ++= depend.testing(),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
-          libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
-          libraryDependencies ++= depend.parquet(),
-          libraryDependencies ++= Seq(
-             "org.specs2" %% "specs2-matcher-extra" % versions.specs
-          ) ++  depend.testing()
-        , parallelExecution in Test := false
+          parallelExecution in Test := false
       )
   )
+
+  lazy val scalding = Project(
+    id = "scalding"
+    , base = file("scalding")
+    , settings =
+      standardSettings
+        ++ uniform.project("coppersmith-scalding", "commbank.coppersmith.scalding")
+        ++ uniformThriftSettings
+        ++ Seq(
+        libraryDependencies ++= depend.hadoopClasspath,
+        libraryDependencies ++= depend.omnia("maestro", maestroVersion),
+        libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
+        libraryDependencies ++= depend.parquet(),
+        libraryDependencies ++= Seq(
+          "org.specs2" %% "specs2-matcher-extra" % versions.specs
+        ) ++  depend.testing()
+        , parallelExecution in Test := false
+      )
+  ).dependsOn(core)
 
   lazy val examples = Project(
     id = "examples"
   , base = file("examples")
   , settings =
        standardSettings
-    ++ uniform.project("coppersmith-examples", "au.com.omnia.dataproducts.features.examples")
+    ++ uniform.project("coppersmith-examples", "commbank.coppersmith.examples")
     ++ uniformThriftSettings
     ++ uniformAssemblySettings
     ++ Seq(
          libraryDependencies ++= depend.scalding(),
          libraryDependencies ++= depend.hadoopClasspath
        )
-  ).dependsOn(core)
+  ).dependsOn(core, scalding)
 
   lazy val test = Project(
     id = "test"
   , base = file("test")
   , settings =
       standardSettings
-   ++ uniform.project("coppersmith-test", "au.com.cba.omnia.dataproducts.features.test")
+   ++ uniform.project("coppersmith-test", "commbank.coppersmith.test")
    ++ uniformThriftSettings
    ++ Seq(
         libraryDependencies ++= depend.testing()

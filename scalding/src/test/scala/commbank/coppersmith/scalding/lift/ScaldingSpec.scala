@@ -1,14 +1,10 @@
-package commbank.coppersmith.lift
+package commbank.coppersmith.scalding.lift
 
-import java.util.concurrent.Executors
-
-import commbank.coppersmith.Join
-import commbank.coppersmith.lift.scalding._
+import au.com.cba.omnia.thermometer.core.ThermometerSpec
+import com.twitter.scalding.typed._
+import commbank.coppersmith._
+import commbank.coppersmith.scalding.lift.scalding._
 import commbank.coppersmith.test.thrift._
-import com.twitter.scalding.typed.IterablePipe
-
-import au.com.cba.omnia.thermometer.core._
-
 
 class ScaldingSpec extends ThermometerSpec {
   def is = s2"""

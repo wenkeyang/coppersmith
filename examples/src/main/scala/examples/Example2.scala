@@ -12,7 +12,7 @@ import commbank.coppersmith.Feature.Value.Decimal
 
 import org.joda.time.DateTime
 
-import lift.scalding._
+import commbank.coppersmith.scalding.lift.scalding._
 
 import scalaz.{Value => _, _}, Scalaz._
 

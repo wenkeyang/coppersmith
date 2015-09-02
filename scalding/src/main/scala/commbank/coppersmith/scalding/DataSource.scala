@@ -1,16 +1,16 @@
-package commbank.coppersmith
+package commbank.coppersmith.scalding
+
+import com.twitter.scalding.TDsl.sourceToTypedPipe
+import com.twitter.scalding.typed.TypedPipe
+import com.twitter.scalding.{MultipleTextLineFiles, TextLineScheme, TupleConverter, TupleSetter}
 
 import org.apache.hadoop.fs.Path
 
-import com.twitter.scalding.{Execution, MultipleTextLineFiles, TextLineScheme, TupleSetter, TupleConverter}
-import com.twitter.scalding.TDsl.sourceToTypedPipe
-import com.twitter.scalding.typed.TypedPipe
+import au.com.cba.omnia.ebenezer.scrooge.ParquetScroogeSource
 
 import au.com.cba.omnia.maestro.api._
 import au.com.cba.omnia.maestro.core.codec.DecodeOk
 
-import au.com.cba.omnia.ebenezer.scrooge.ParquetScroogeSource
-import au.com.cba.omnia.ebenezer.scrooge.hive.PartitionHiveParquetScroogeSource
 
 object DataSource {
   case class PartitionPath[S, P](underlying: Partition[S, P], value: P)(implicit ev: PartitionToPath[P]) {
