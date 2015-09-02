@@ -261,6 +261,31 @@ Advanced
 --------
 
 
+### Tip: Extension methods for thrift structs
+
+If you find yourself repeating certain calculations
+(such as the date parsing in previous examples),
+you may find that defining a "rich" version of the thrift struct
+can help to keep feature definitions clear and concise.
+
+```scala
+import commbank.coppersmith.example.thrift.{Customer, Account}
+
+object Implicits {
+  implicit class RichCustomer(cust: Customer) {
+    def birthYear: Int = DateTime.parse(cust.dob).getYear
+  }
+
+  implicit class RichAccount(acc: Account) {
+    def eventYear: Int = DateTime.parse(acc.effectiveDate).getYear
+  }
+}
+```
+
+Subsequent examples will use concise syntax
+such as `_.birthYear` wherever possible.
+
+
 ### Aggregation (aka GROUP BY)
 
 By subclassing `AggregationFeatureSet`,
@@ -291,10 +316,12 @@ import commbank.coppersmith.{AggregationFeatureSet, Feature}
 import Feature.Type._, Feature.Value._
 import commbank.coppersmith.example.thrift.Account
 
+import Implicits.RichAccount
+
 object accountFeatures extends AggregationFeatureSet[Account] {
   val namespace            = "userguide.examples"
   def entity(acc: Account) = acc.id
-  def time(acc: Account)   = DateTime.parse(acc.effectiveDate).getYear
+  def time(acc: Account)   = acc.eventYear
 
   val source = From[Account]()
   val select = source.featureSetBuilder(namespace, entity(_), time(_))
@@ -309,9 +336,81 @@ object accountFeatures extends AggregationFeatureSet[Account] {
 ```
 
 
+### Filtering (aka WHERE)
+
+Features need not be defined for every input value.
+When defining features using the fluent API,
+one or more filters can be added using the `where` method
+(`andWhere` is also a synonym,
+to improve readability where there are multiple conditions).
+
+```scala
+import org.joda.time.DateTime
+
+import commbank.coppersmith.{FeatureSet, Feature}
+import Feature.Type._, Feature.Value._
+import commbank.coppersmith.example.thrift.Customer
+
+import Implicits.RichCustomer
+
+object customerBirthFeatures extends FeatureSet[Customer] {
+  val namespace              = "userguide.examples"
+  def entity(cust: Customer) = cust.id
+  def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
+
+  val source = From[Customer]()
+  val select = source.featureSetBuilder(namespace, entity(_), time(_))
+
+  val ageIn1970  = select(1970 - _.birthYear)
+    .where(_.birthYear < 1970)
+    .asFeature(Continuous, "CUST_AGE_1970",
+               "Age in 1970, for customers born prior to 1970")
+
+  val ageIn1980 = select(1980 - _.birthYear)
+    .where   (_.birthYear >= 1970)
+    .andWhere(_.birthYear <= 1979)
+    .asFeature(Continuous, "CUST_AGE_1980",
+               "Age in 1980, for customers born between 1970 and 1979")
+
+  val features = List(ageIn1970, ageIn1980)
+}
+```
+
+In the special case where the value is always the same,
+but the filter varies,
+consider using the `QueryFeatureSet`:
+
+```scala
+import org.joda.time.DateTime
+
+import commbank.coppersmith.{QueryFeatureSet, Feature}
+import Feature.Type._, Feature.Value._
+import commbank.coppersmith.example.thrift.Customer
+
+import Implicits.RichCustomer
+
+object customerBirthFlags extends QueryFeatureSet[Customer, Str] {
+  val namespace              = "userguide.examples"
+  def entity(cust: Customer) = cust.id
+  def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
+
+  def value(cust: Customer)  = "Y"
+  val featureType            = Categorical
+
+  val source = From[Customer]()
+
+  val bornPre1970 = queryFeature("CUST_BORN_PRE1970", "'Y' if born before 1970", _.birthYear < 1970)
+  val bornPre1980 = queryFeature("CUST_BORN_PRE1980", "'Y' if born before 1980", _.birthYear < 1980)
+
+  val features = List(bornPre1970, bornPre1980)
+}
+```
+
+
 ### Joins
 
 To do.
+
 
 ### Testing
 
