@@ -13,7 +13,7 @@ import org.specs2._, matcher.Matcher
 import Feature._, Value._, Type.{Categorical, Continuous}
 import FeatureSource._
 
-import Arbitraries._
+import ScaldingArbitraries._
 
 import test.thrift.Customer
 

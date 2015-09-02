@@ -11,7 +11,7 @@ import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
 import au.com.cba.omnia.thermometer.fact.PathFactoids.{exists, records}
 
-import Arbitraries._
+import ScaldingArbitraries._
 
 import scalaz.NonEmptyList
 

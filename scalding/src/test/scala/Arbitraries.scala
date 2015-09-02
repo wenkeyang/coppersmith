@@ -13,7 +13,7 @@ import Feature.{Value, Type}, Value._, Type._
 
 import test.thrift.Customer
 
-object Arbitraries {
+object ScaldingArbitraries {
   implicit val arbFeatureType: Arbitrary[Type] = Arbitrary(oneOf(Categorical, Continuous))
 
   implicit val integralValueGen: Gen[Integral] = arbitrary[Option[Long]].map(Integral(_))
