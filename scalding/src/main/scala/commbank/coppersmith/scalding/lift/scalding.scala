@@ -3,7 +3,7 @@ package commbank.coppersmith.scalding.lift
 import com.twitter.scalding._
 
 import commbank.coppersmith._, Feature.Value, Join._
-import commbank.coppersmith.scalding.ScaldingConfiguredFeatureSource
+import commbank.coppersmith.scalding.ScaldingBoundFeatureSource
 
 trait ScaldingLift extends Lift[TypedPipe] {
 
@@ -15,21 +15,20 @@ trait ScaldingLift extends Lift[TypedPipe] {
     s.flatMap(s => fs.generate(s))
   }
 
-
-  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, Inner])
+  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, B)])
                                   (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, B)] =
     a.groupBy(joined.left).join(b.groupBy(joined.right)).values
 
 
-  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter])
+  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, Option[B])])
                                   (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, Option[B])] =
     a.groupBy(joined.left).leftJoin(b.groupBy(joined.right)).values
 
-  def liftBinder[S, U, B <: SourceBinder[S, U, TypedPipe]](
+  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, TypedPipe]](
     underlying: U,
     binder: B,
     filter: Option[S => Boolean]
-  ) = ScaldingConfiguredFeatureSource(underlying, binder, filter)
+  ) = ScaldingBoundFeatureSource(underlying, binder, filter)
 }
 
 object scalding extends ScaldingLift

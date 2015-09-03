@@ -1,28 +1,40 @@
 package commbank.coppersmith
 
-case class From[S]()
+object From {
+  def apply[S](): From[S] = From(None)
+}
+
+case class From[S](filter: Option[S => Boolean] = None) extends FeatureSource[S, From[S]](filter) {
+  type FS = From[S]
+  def copyWithFilter(filter: Option[S => Boolean]) = copy(filter)
+}
 
 object Join {
-  sealed trait JoinType
-  sealed trait LeftOuter extends JoinType
-  sealed trait Inner extends JoinType
-
   trait InnerJoinableTo[L] {
-    def to[R]: IncompleteJoin[L, R, Inner] = new IncompleteJoin[L,R, Inner]
+    def to[R]: IncompleteJoin[L, R, (L, R)] = new IncompleteJoin[L, R, (L, R)]
   }
   trait LeftOuterJoinableTo[L] {
-    def to[R]: IncompleteJoin[L, R, LeftOuter] = new IncompleteJoin[L, R, LeftOuter]
+    def to[R]: IncompleteJoin[L, R, (L, Option[R])] = new IncompleteJoin[L, R, (L, Option[R])]
   }
 
   class EmptyInnerJoinableTo[L] extends InnerJoinableTo[L]
   class EmptyLeftOuterJoinableTo[L] extends LeftOuterJoinableTo[L]
 
-  class IncompleteJoin[L, R, JT <: JoinType] {
+  class IncompleteJoin[L, R, S] {
     //Write as many of these as we need...
-    def on[J : Ordering](l: L => J, r: R => J): Joined[L, R, J, JT] = Joined[L, R, J, JT](l, r)
+    def on[J : Ordering](l: L => J, r: R => J): Joined[L, R, J, S] = Joined(l, r)
   }
 
-  case class Joined[L, R, J : Ordering, JT <: JoinType](left: L => J, right: R => J)
+  case class Joined[L, R, J : Ordering, S](
+    left: L => J,
+    right: R => J,
+    filter: Option[S => Boolean] = None
+  ) extends FeatureSource[S, Joined[L, R, J, S]](None) {
+
+    type FS = Joined[L, R, J, S]
+    def copyWithFilter(filter: Option[S => Boolean]) = copy(filter = filter
+    )
+  }
 
   def join[T]: InnerJoinableTo[T] = new EmptyInnerJoinableTo[T]
   def left[T]: LeftOuterJoinableTo[T] = new EmptyLeftOuterJoinableTo[T]
