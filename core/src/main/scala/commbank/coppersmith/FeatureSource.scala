@@ -2,14 +2,10 @@ package commbank.coppersmith
 
 import scalaz.syntax.std.option.ToOptionIdOps
 
-import Feature._
 import Join._
 
 abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => Boolean] = None) {
   self: FS =>
-
-  def featureSetBuilder(namespace: Namespace, entity: S => EntityId, time: S => Time) =
-    FeatureSetBuilder(namespace, entity, time)
 
   def filter(p: S => Boolean): FS =
     copyWithFilter(filter.map(f => (s: S) => f(s) && p(s)).orElse(p.some))
