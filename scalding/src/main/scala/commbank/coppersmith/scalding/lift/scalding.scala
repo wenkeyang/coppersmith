@@ -3,7 +3,7 @@ package commbank.coppersmith.scalding.lift
 import com.twitter.scalding._
 
 import commbank.coppersmith._, Feature.Value, Join._
-import commbank.coppersmith.scalding.ScaldingConfiguredFeatureSource
+import commbank.coppersmith.scalding.ScaldingBoundFeatureSource
 
 trait ScaldingLift extends Lift[TypedPipe] {
 
@@ -28,7 +28,7 @@ trait ScaldingLift extends Lift[TypedPipe] {
     underlying: U,
     binder: B,
     filter: Option[S => Boolean]
-  ) = ScaldingConfiguredFeatureSource(underlying, binder, filter)
+  ) = ScaldingBoundFeatureSource(underlying, binder, filter)
 }
 
 object scalding extends ScaldingLift

@@ -17,5 +17,5 @@ trait Lift[P[_]] {
     underlying: U,
     binder: B,
     filter: Option[S => Boolean]
-  ): ConfiguredFeatureSource[S, U, P]
+  ): BoundFeatureSource[S, P]
 }

@@ -12,12 +12,12 @@ abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => 
 
   def copyWithFilter(filter: Option[S => Boolean]): FS
 
-  def configure[B <: SourceBinder[S, FS, P], P[_] : Lift](binder: B): ConfiguredFeatureSource[S, FS, P] = {
+  def bind[B <: SourceBinder[S, FS, P], P[_] : Lift](binder: B): BoundFeatureSource[S, P] = {
     implicitly[Lift[P]].liftBinder(this, binder, filter)
   }
 }
 
-trait ConfiguredFeatureSource[S, U, P[_]] {
+trait BoundFeatureSource[S, P[_]] {
   def load: P[S]
 }
 
