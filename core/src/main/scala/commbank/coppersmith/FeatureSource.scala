@@ -46,8 +46,8 @@ case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, Fr
 case class JoinedBinder[L, R, J : Ordering, P[_] : Lift](
   leftSrc:  DataSource[L, P],
   rightSrc: DataSource[R, P]
-) extends SourceBinder[(L, R), Joined[L, R, J, (L, R), Inner[L, R]], P] {
-  def bind(j: Joined[L, R, J, (L, R), Inner[L, R]]): P[(L, R)] = {
+) extends SourceBinder[(L, R), Joined[L, R, J, (L, R)], P] {
+  def bind(j: Joined[L, R, J, (L, R)]): P[(L, R)] = {
     implicitly[Lift[P]].liftJoin(j)(leftSrc.load, rightSrc.load)
   }
 }
@@ -55,8 +55,8 @@ case class JoinedBinder[L, R, J : Ordering, P[_] : Lift](
 case class LeftJoinedBinder[L, R, J : Ordering, P[_] : Lift](
   leftSrc:  DataSource[L, P],
   rightSrc: DataSource[R, P]
-) extends SourceBinder[(L, Option[R]), Joined[L, R, J, (L, Option[R]), LeftOuter[L, R]], P] {
-  def bind(j: Joined[L, R, J, (L, Option[R]), LeftOuter[L, R]]): P[(L, Option[R])] = {
+) extends SourceBinder[(L, Option[R]), Joined[L, R, J, (L, Option[R])], P] {
+  def bind(j: Joined[L, R, J, (L, Option[R])]): P[(L, Option[R])] = {
     implicitly[Lift[P]].liftLeftJoin(j)(leftSrc.load, rightSrc.load)
   }
 }

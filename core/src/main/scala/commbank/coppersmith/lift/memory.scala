@@ -14,7 +14,7 @@ trait MemoryLift extends Lift[List] {
     s.flatMap(s => fs.generate(s))
   }
 
-  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, B), Inner[A, B]])(a:List[A], b: List[B]): List[(A, B)] = {
+  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, B)])(a:List[A], b: List[B]): List[(A, B)] = {
     val aMap: Map[J, List[A]] = a.groupBy(joined.left)
     val bMap: Map[J, List[B]] = b.groupBy(joined.right)
 
@@ -26,7 +26,7 @@ trait MemoryLift extends Lift[List] {
     } yield (a, b)
   }
 
-  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, Option[B]), LeftOuter[A, B]])(as: List[A], bs: List[B]): List[(A, Option[B])] =
+  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, Option[B])])(as: List[A], bs: List[B]): List[(A, Option[B])] =
     as.flatMap { a =>
       val leftKey = joined.left(a)
       val rightValues = bs.filter {b => joined.right(b) == leftKey}
@@ -37,10 +37,10 @@ trait MemoryLift extends Lift[List] {
       }
     }
 
-  def liftBinder[S, U, B <: SourceBinder[S, U, List]](underlying: U, binder: B, filter: Option[S => Boolean]) =
+  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, List]](underlying: U, binder: B, filter: Option[S => Boolean]) =
     MemoryConfiguredFeatureSource(underlying, binder, filter)
 
-  case class MemoryConfiguredFeatureSource[S, U](
+  case class MemoryConfiguredFeatureSource[S, U <: FeatureSource[S, U]](
     underlying: U,
     binder: SourceBinder[S, U, List],
     filter: Option[S => Boolean]

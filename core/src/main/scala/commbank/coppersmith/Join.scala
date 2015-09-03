@@ -10,32 +10,28 @@ case class From[S](filter: Option[S => Boolean] = None) extends FeatureSource[S,
 }
 
 object Join {
-  sealed trait JoinType[S]
-  sealed trait LeftOuter[L, R] extends JoinType[(L, Option[R])]
-  sealed trait Inner[L, R] extends JoinType[(L, R)]
-
   trait InnerJoinableTo[L] {
-    def to[R]: IncompleteJoin[L, R, (L, R), Inner[L, R]] = new IncompleteJoin[L, R, (L, R), Inner[L, R]]
+    def to[R]: IncompleteJoin[L, R, (L, R)] = new IncompleteJoin[L, R, (L, R)]
   }
   trait LeftOuterJoinableTo[L] {
-    def to[R]: IncompleteJoin[L, R, (L, Option[R]), LeftOuter[L, R]] = new IncompleteJoin[L, R, (L, Option[R]), LeftOuter[L, R]]
+    def to[R]: IncompleteJoin[L, R, (L, Option[R])] = new IncompleteJoin[L, R, (L, Option[R])]
   }
 
   class EmptyInnerJoinableTo[L] extends InnerJoinableTo[L]
   class EmptyLeftOuterJoinableTo[L] extends LeftOuterJoinableTo[L]
 
-  class IncompleteJoin[L, R, S, JT <: JoinType[S]] {
+  class IncompleteJoin[L, R, S] {
     //Write as many of these as we need...
-    def on[J : Ordering](l: L => J, r: R => J): Joined[L, R, J, S, JT] = Joined(l, r)
+    def on[J : Ordering](l: L => J, r: R => J): Joined[L, R, J, S] = Joined(l, r)
   }
 
-  case class Joined[L, R, J : Ordering, S, JT <: JoinType[S]](
+  case class Joined[L, R, J : Ordering, S](
     left: L => J,
     right: R => J,
     filter: Option[S => Boolean] = None
-  ) extends FeatureSource[S, Joined[L, R, J, S, JT]](None) {
+  ) extends FeatureSource[S, Joined[L, R, J, S]](None) {
 
-    type FS = Joined[L, R, J, S, JT]
+    type FS = Joined[L, R, J, S]
     def copyWithFilter(filter: Option[S => Boolean]) = copy(filter = filter
     )
   }

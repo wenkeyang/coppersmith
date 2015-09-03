@@ -2,9 +2,9 @@ package commbank.coppersmith.scalding
 
 import com.twitter.scalding._
 
-import commbank.coppersmith.{ConfiguredFeatureSource, SourceBinder}
+import commbank.coppersmith.{ConfiguredFeatureSource, FeatureSource, SourceBinder}
 
-case class ScaldingConfiguredFeatureSource[S, U](
+case class ScaldingConfiguredFeatureSource[S, U <: FeatureSource[S, U]](
   underlying: U,
   binder: SourceBinder[S, U, TypedPipe],
   filter: Option[S => Boolean]
