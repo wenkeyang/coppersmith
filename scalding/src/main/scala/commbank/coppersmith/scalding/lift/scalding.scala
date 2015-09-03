@@ -15,13 +15,12 @@ trait ScaldingLift extends Lift[TypedPipe] {
     s.flatMap(s => fs.generate(s))
   }
 
-
-  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, Inner])
+  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, B), Inner[A, B]])
                                   (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, B)] =
     a.groupBy(joined.left).join(b.groupBy(joined.right)).values
 
 
-  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter])
+  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, Option[B]), LeftOuter[A, B]])
                                   (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, Option[B])] =
     a.groupBy(joined.left).leftJoin(b.groupBy(joined.right)).values
 
