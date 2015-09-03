@@ -12,7 +12,7 @@ abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => 
 
   def copyWithFilter(filter: Option[S => Boolean]): FS
 
-  def bind[B <: SourceBinder[S, FS, P], P[_] : Lift](binder: B): BoundFeatureSource[S, P] = {
+  def bind[P[_] : Lift](binder: SourceBinder[S, FS, P]): BoundFeatureSource[S, P] = {
     implicitly[Lift[P]].liftBinder(this, binder, filter)
   }
 }
@@ -28,7 +28,7 @@ trait SourceBinder[S, U, P[_]] {
 object SourceBinder extends SourceBinderInstances
 
 trait SourceBinderInstances {
-  def from[S, P[_]](dataSource: DataSource[S, P]) = FromBinder(dataSource)
+  def from[S, P[_] : Lift](dataSource: DataSource[S, P]) = FromBinder(dataSource)
 
   def join[L, R, J : Ordering, P[_] : Lift](leftSource: DataSource[L, P], rightSource: DataSource[R, P]) =
     JoinedBinder(leftSource, rightSource)
