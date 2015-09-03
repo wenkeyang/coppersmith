@@ -1,4 +1,4 @@
-package commbank.coppersmith.scalding
+package commbank.coppersmith
 
 import org.scalacheck.Prop.forAll
 
@@ -9,8 +9,10 @@ import scalaz.NonEmptyList
 import scalaz.scalacheck.ScalazArbitrary.NonEmptyListArbitrary
 import scalaz.syntax.std.boolean.ToBooleanOpsFromBoolean
 
-import commbank.coppersmith._, Arbitraries._, Feature._, FeatureSource._, Type._, Value._
-import commbank.coppersmith.test.thrift.Customer
+import Feature._, Value._, Type._
+import FeatureSource.fromFS
+import Arbitraries._
+import test.thrift.Customer
 
 object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"""
   SelectFeatureSet - Test an example set of features based on selecting fields

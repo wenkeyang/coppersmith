@@ -15,5 +15,9 @@ trait Lift[P[_]] {
 
   def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter])(a: P[A], b: P[B]): P[(A, Option[B])]
 
+  def liftBinder[S, U, B <: SourceBinder[S, U, P]](
+    underlying: U,
+    binder: B,
+    filter: Option[S => Boolean]
+  ): ConfiguredFeatureSource[S, U, P]
 }
-

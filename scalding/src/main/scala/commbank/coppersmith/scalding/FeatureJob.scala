@@ -9,7 +9,7 @@ import commbank.coppersmith.Feature._
 import commbank.coppersmith._
 
 trait FeatureJobConfig[S] {
-  def featureSource: ConfiguredFeatureSource[S, _]
+  def featureSource: ConfiguredFeatureSource[S, _, TypedPipe]
   def featureSink:   FeatureSink
 }
 
