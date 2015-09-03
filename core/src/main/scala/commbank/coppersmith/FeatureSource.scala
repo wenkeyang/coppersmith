@@ -5,16 +5,15 @@ import scalaz.syntax.std.option.ToOptionIdOps
 import Feature._
 import Join._
 
-case class FeatureSource[S, U, B <: SourceBinder[S, U, P], P[_]](underlying: U,
-                                                                 filter: Option[S => Boolean] = None) {
+case class FeatureSource[S, U](underlying: U, filter: Option[S => Boolean] = None) {
   def featureSetBuilder(namespace: Namespace, entity: S => EntityId, time: S => Time) =
     FeatureSetBuilder(namespace, entity, time)
 
-  def filter(p: S => Boolean): FeatureSource[S, U, B, P] =
+  def filter(p: S => Boolean): FeatureSource[S, U] =
     copy(filter = filter.map(f => (s: S) => f(s) && p(s)).orElse(p.some))
 
-  def configure(binder: B)(implicit lift: Lift[P]): ConfiguredFeatureSource[S, U, P] = {
-    lift.liftBinder(underlying, binder, filter)
+  def configure[B <: SourceBinder[S, U, P], P[_] : Lift](binder: B): ConfiguredFeatureSource[S, U, P] = {
+    implicitly[Lift[P]].liftBinder(underlying, binder, filter)
   }
 }
 
@@ -22,13 +21,13 @@ object FeatureSource extends FeatureSourceInstances
 
 trait FeatureSourceInstances {
   implicit def fromFS[S, P[_]](s: From[S]) =
-    FeatureSource[S, From[S], FromBinder[S, P], P](s)
+    FeatureSource[S, From[S]](s)
 
   implicit def joinFS[L, R, J : Ordering, P[_]](s: Joined[L, R, J, Inner]) =
-    FeatureSource[(L, R), Joined[L, R, J, Inner], JoinedBinder[L, R, J, P], P](s)
+    FeatureSource[(L, R), Joined[L, R, J, Inner]](s)
 
   implicit def leftFS[L, R, J : Ordering, P[_]](s: Joined[L, R, J, LeftOuter]) =
-    FeatureSource[(L, Option[R]), Joined[L, R, J, LeftOuter], LeftJoinedBinder[L, R, J, P], P](s)
+    FeatureSource[(L, Option[R]), Joined[L, R, J, LeftOuter]](s)
 }
 
 trait ConfiguredFeatureSource[S, U, P[_]] {
