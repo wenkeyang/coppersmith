@@ -42,8 +42,8 @@ object build extends Build {
    ++ uniform.project("coppersmith-core", "commbank.coppersmith")
    ++ uniformThriftSettings
    ++ Seq(
-          dependencyOverrides += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3",
-          libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs,
+          libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
+            exclude("org.scala-lang.modules", "scala-compiler"),
           libraryDependencies ++= depend.testing(),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
           parallelExecution in Test := false
