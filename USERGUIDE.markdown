@@ -53,10 +53,10 @@ import Feature.Type._, Feature.Value._
 import commbank.coppersmith.example.thrift.Customer
 
 object customerBirthYear extends Feature[Customer, Integral](
-  FeatureMetadata(namespace   = "userguide.examples",
-                  name        = "CUST_BIRTHYEAR",
-                  description = "Calendar year in which the customer was born",
-                  featureType = Continuous)
+  FeatureMetadata[Integral](namespace   = "userguide.examples",
+                            name        = "CUST_BIRTHYEAR",
+                            description = "Calendar year in which the customer was born",
+                            featureType = Continuous)
 ) {
   def generate(cust: Customer) = Some(
     FeatureValue(entity = cust.id,
@@ -165,22 +165,25 @@ import com.twitter.scalding.Config
 import au.com.cba.omnia.maestro.api.{MaestroConfig, HivePartition, Maestro}
 import Maestro._
 
-import commbank.coppersmith.{DataSource, From, HiveTextSource, HydroSink}
-import commbank.coppersmith.{FeatureJobConfig, SimpleFeatureJob}
-import commbank.coppersmith.FeatureSource.fromFS
+import commbank.coppersmith.From
+import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.SourceBinder.from
 
 import commbank.coppersmith.example.thrift.Customer
 
+import commbank.coppersmith.scalding.{FeatureJobConfig, SimpleFeatureJob}
+import commbank.coppersmith.scalding.{ScaldingDataSource, HiveTextSource, HydroSink}
+import commbank.coppersmith.scalding.framework
+
 case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Customer] {
   val partition     = HivePartition.byDay(Fields[Customer].EffectiveDate, "yyyy-MM-dd")
-  val partitionPath = DataSource.PartitionPath(partition, ("2015", "08", "28"))
+  val partitionPath = ScaldingDataSource.PartitionPath(partition, ("2015", "08", "28"))
   val customers     = HiveTextSource(new Path("/data/customers"), partitionPath)
   val maestroConf   = MaestroConfig(conf, "features", "CUST", "birthdays")
   val dbRawPrefix   = conf.getArgs("db-raw-prefix")  // from command-line option
 
-  val featureSource = From[Customer]().configure(from(customers))
-  val featureSink   = HydroSink(HydroSink.config(maestroConf, dbRawPrefix))
+  val featureSource = From[Customer]().bind(from(customers))
+  val featureSink   = HydroSink.configure(maestroConf, dbRawPrefix)
 }
 
 object CustomerFeaturesJob extends SimpleFeatureJob {
@@ -237,7 +240,7 @@ import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
 import Feature.Type._, Feature.Value._
-import commbank.coppersmith.FeatureSource.fromFS
+import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
 object customerFeaturesFluent extends FeatureSet[Customer] {
@@ -318,7 +321,7 @@ import org.joda.time.DateTime
 
 import commbank.coppersmith.{AggregationFeatureSet, Feature}
 import Feature.Type._, Feature.Value._
-import commbank.coppersmith.FeatureSource.fromFS
+import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Account
 
 import Implicits.RichAccount
@@ -357,7 +360,7 @@ import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
 import Feature.Type._, Feature.Value._
-import commbank.coppersmith.FeatureSource.fromFS
+import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
@@ -394,7 +397,7 @@ import org.joda.time.DateTime
 
 import commbank.coppersmith.{QueryFeatureSet, Feature}
 import Feature.Type._, Feature.Value._
-import commbank.coppersmith.FeatureSource.fromFS
+import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
@@ -443,7 +446,6 @@ import org.joda.time.DateTime
 
 import commbank.coppersmith.{AggregationFeatureSet, Feature, Join}
 import Feature.Type._, Feature.Value._
-import commbank.coppersmith.FeatureSource.joinFS
 import commbank.coppersmith.example.thrift.Account
 
 object joinFeatures extends AggregationFeatureSet[(Customer, Account)] {
