@@ -11,8 +11,9 @@ import au.com.cba.omnia.ebenezer.scrooge.ParquetScroogeSource
 import au.com.cba.omnia.maestro.api._
 import au.com.cba.omnia.maestro.core.codec.DecodeOk
 
+import commbank.coppersmith.DataSource
 
-object DataSource {
+object ScaldingDataSource {
   case class PartitionPath[S, P](underlying: Partition[S, P], value: P)(implicit ev: PartitionToPath[P]) {
     def toPath = new Path(underlying.pattern.format(ev.toPathComponents((value)): _*))
   }
@@ -25,16 +26,14 @@ object DataSource {
   implicit val StringTuple4ToPath = PartitionToPath[(String, String, String, String)](_.toList)
 }
 
-trait DataSource[S] {
-  def load: TypedPipe[S]
-}
+import ScaldingDataSource.PartitionPath
 
 case class HiveTextSource[S <: ThriftStruct : Decode, P](
   basePath:  Path,
-  partition: DataSource.PartitionPath[S, P],
+  partition: PartitionPath[S, P],
   delimiter: String = "|",
   filter:    S => Boolean = (_: S) => true
-) extends DataSource[S] {
+) extends DataSource[S, TypedPipe] {
   def filter(f: S => Boolean): HiveTextSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
   def load = {
     val ev = implicitly[Decode[S]]
@@ -50,9 +49,9 @@ case class HiveTextSource[S <: ThriftStruct : Decode, P](
 
 case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter, P](
   basePath:  Path,
-  partition: DataSource.PartitionPath[S, P],
+  partition: PartitionPath[S, P],
   filter:    S => Boolean = (_: S) => true
-) extends DataSource[S] {
+) extends DataSource[S, TypedPipe] {
   def filter(f: S => Boolean): HiveParquetSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
   def load = {
     TypedPipe.from(ParquetScroogeSource[S](new Path(basePath, partition.toPath).toString))
