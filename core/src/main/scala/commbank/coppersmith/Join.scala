@@ -22,18 +22,13 @@ object Join {
 
   class IncompleteJoin[L, R, S] {
     //Write as many of these as we need...
-    def on[J : Ordering](l: L => J, r: R => J): Joined[L, R, J, S] = Joined(l, r)
+    def on[J : Ordering](l: L => J, r: R => J): Joined[L, R, J, S] = Joined(l, r, None)
   }
 
-  case class Joined[L, R, J : Ordering, S](
-    left: L => J,
-    right: R => J,
-    filter: Option[S => Boolean] = None
-  ) extends FeatureSource[S, Joined[L, R, J, S]](None) {
-
+  case class Joined[L, R, J : Ordering, S](left: L => J, right: R => J, filter: Option[S => Boolean])
+      extends FeatureSource[S, Joined[L, R, J, S]](filter) {
     type FS = Joined[L, R, J, S]
-    def copyWithFilter(filter: Option[S => Boolean]) = copy(filter = filter
-    )
+    def copyWithFilter(filter: Option[S => Boolean]) = copy(filter = filter)
   }
 
   def join[T]: InnerJoinableTo[T] = new EmptyInnerJoinableTo[T]
