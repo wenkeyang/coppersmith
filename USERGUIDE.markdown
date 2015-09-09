@@ -315,6 +315,31 @@ Subsequent examples will use concise syntax
 such as `_.birthYear` wherever possible.
 
 
+### Pivoting
+
+The simplest kind of feature is simply the value of a field.
+This pattern is known as "pivoting",
+because it transforms a wide input record
+into the narrow EAVT format.
+
+The `pivotThrift` macro can be used to
+easily create a feature set containing all the input fields
+as separate features.
+
+```scala
+import commbank.coppersmith.{PivotMacro, PivotFeatureSet}
+
+import commbank.coppersmith.example.thrift.Customer
+
+import Implicits.RichCustomer
+
+object example {
+  val customerPivotFeatures: PivotFeatureSet[Customer] =
+    PivotMacro.pivotThrift[Customer]("userguide.examples", _.id, _.timestamp)
+}
+```
+
+
 ### Aggregation (aka GROUP BY)
 
 By subclassing `AggregationFeatureSet`,
