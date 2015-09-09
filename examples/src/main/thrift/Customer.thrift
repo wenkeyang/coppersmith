@@ -22,4 +22,5 @@ struct Customer {
   5  : string sub_cat
   6  : i32    balance
   7  : string effective_date
+  8  : string dob
  }

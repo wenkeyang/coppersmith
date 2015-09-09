@@ -79,7 +79,15 @@ object build extends Build {
     ++ uniformAssemblySettings
     ++ Seq(
          libraryDependencies ++= depend.scalding(),
-         libraryDependencies ++= depend.hadoopClasspath
+         libraryDependencies ++= depend.hadoopClasspath,
+         sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
+           // Poor man's "Literate Scala". (Consider alternatives such as https://github.com/non/literati or
+           // https://github.com/scala-lms/tutorials/blob/master/src/test/scala/lms/tutorial/start.scala)
+           // This is part of the "examples" project because it depends on a thrift spec there.
+           val outfile = outdir / "USERGUIDE.scala"
+           file("USERGUIDE.markdown") #> "sed -n /```scala/,/```/p" #| "grep -v ```" #> outfile ! s.log
+           Seq(outfile)
+         }
        )
   ).dependsOn(core, scalding)
 
