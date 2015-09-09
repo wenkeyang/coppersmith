@@ -44,7 +44,7 @@ as follows:
 ### The `Feature` class
 
 An individual feature is represented by the `Feature[S, V]` class.
-Its two type parameters are
+The two type parameters are
 the *source* (or input) type
 and the *value* (or output) type.
 You can think of it as a function from `S` to `V`:
@@ -54,9 +54,9 @@ You can think of it as a function from `S` to `V`:
 - The value type is one of `Integral`, `Decimal`, or `Str`.
 
 A feature must also define some metadata, including:
-- a *namespace*,
-- a feature *name*,
-- and a feature *type* (`Categorial` or `Continuous`).
+- a feature *namespace*,
+- a feature *name*, and
+- a feature *type* (`Categorial` or `Continuous`).
 
 Below is an example of a feature defined by extending the `Feature` class.
 If this looks complicated, don't worry!
@@ -237,7 +237,7 @@ this also provides the basis for complex joins.
 Since details such as the join condition
 belong together with the feature definition,
 it is good practice to define a `FeatureSource`
-for each `FeatureSet`.
+*as a property* of each `FeatureSet`.
 By convention, we will call it `source`.
 For an example, see the following section.
 
@@ -253,9 +253,10 @@ then the fluent API is generally preferred.
 
 In the example below,
 notice that we create a val called `select`.
+This is the key to accessing the fluent API.
 We then treat `select` as a function,
-using it to define our feature.
-Finally, we call `asFeature` to provide the feature metadata,
+using it to define our features.
+Finally, we call `asFeature` to specify the feature metadata,
 returning a `Feature` object.
 
 ```scala
@@ -376,7 +377,7 @@ Features need not be defined for every input value.
 When defining features using the fluent API,
 one or more filters can be added using the `where` method
 (`andWhere` is also a synonym,
-to improve readability where there are multiple conditions).
+to improve readability when there are multiple conditions).
 
 ```scala
 import org.joda.time.DateTime
@@ -391,7 +392,7 @@ import Implicits.RichCustomer
 object customerBirthFeatures extends FeatureSet[Customer] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
-  def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
+  def time(cust: Customer)   = cust.timestamp
 
   val source = From[Customer]()
   val select = source.featureSetBuilder(namespace, entity(_), time(_))
@@ -428,7 +429,7 @@ import Implicits.RichCustomer
 object customerBirthFlags extends QueryFeatureSet[Customer, Str] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
-  def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
+  def time(cust: Customer)   = cust.timestamp
 
   def value(cust: Customer)  = "Y"
   val featureType            = Categorical
@@ -450,7 +451,7 @@ a feature calculated from two joined tables
 has a pair of thrift structs as its source,
 e.g. `(Customer, Account)`.
 For a left join, the value on the right may be missing,
-e.g. `(Customer, Option[Account)`.
+e.g. `(Customer, Option[Account])`.
 
 As described in the section **Shaping input data**,
 the convention of defining a `source` per feature set
