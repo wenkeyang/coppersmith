@@ -13,10 +13,32 @@ to additional features of the library.
 Basics
 ------
 
+
+### Recommended project structure
+
 Coppersmith separates two key concerns of feature generation:
-the formula or calculation itself,
+the formula or calculation itself (feature definition),
 and the process of executing this calculation
-on some source data.
+on some source data (feature job).
+
+Feature definition requires the `coppersmith-core` package,
+and has no dependencies on any particular execution framework,
+e.g. scalding.
+To turn the feature definition into a Hadoop job
+requires the `coppersmith-scalding` package.
+Other execution frameworks may be supported in the future.
+
+There should be one top-level repo for each *customer*
+(e.g. CEP, CommScore),
+and it is recommended that the repo be divided into subprojects
+as follows:
+
+- **_customer_-features**: feature definitions
+  (depends on `coppersmith-core`)
+- **_customer_-scaffolding**: feature jobs
+  (depends on `coppersmith-scalding`)
+- **_customer_-auxiliary**: Autosys JILs
+  (no dependencies)
 
 
 ### The `Feature` class
@@ -171,6 +193,7 @@ import commbank.coppersmith.SourceBinder.from
 
 import commbank.coppersmith.example.thrift.Customer
 
+// imports from the coppersmith-scalding package
 import commbank.coppersmith.scalding.{FeatureJobConfig, SimpleFeatureJob}
 import commbank.coppersmith.scalding.{ScaldingDataSource, HiveTextSource, HydroSink}
 import commbank.coppersmith.scalding.framework
