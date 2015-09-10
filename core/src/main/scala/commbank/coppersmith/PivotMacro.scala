@@ -35,7 +35,7 @@ object PivotMacro {
           q"""{
               import commbank.coppersmith._
 
-              val featureMetadata = FeatureMetadata[$typ, $featureValueType](
+              val featureMetadata = Metadata[$typ, $featureValueType](
                   $namespace, ${field.toLowerCase}, $fieldDescription,
                   ${ if(continuous) q"Feature.Type.Continuous" else q"Feature.Type.Categorical"})
 

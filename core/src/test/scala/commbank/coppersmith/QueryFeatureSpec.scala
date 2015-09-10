@@ -51,9 +51,9 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      FeatureMetadata[Customer, Decimal](namespace, "youngHeight", "Young Height", Continuous),
-      FeatureMetadata[Customer, Decimal](namespace, "midHeight",   "Middle Height", Continuous),
-      FeatureMetadata[Customer, Decimal](namespace, "oldHeight",  "Old Height", Continuous)
+      Metadata[Customer, Decimal](namespace, "youngHeight", "Young Height", Continuous),
+      Metadata[Customer, Decimal](namespace, "midHeight",   "Middle Height", Continuous),
+      Metadata[Customer, Decimal](namespace, "oldHeight",  "Old Height", Continuous)
     )
   }
 

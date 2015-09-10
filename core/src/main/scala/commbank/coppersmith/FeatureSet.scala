@@ -16,13 +16,13 @@ trait FeatureSet[S] extends MetadataSet[S] {
   def generate(source: S): Iterable[FeatureValue[Value]] = features.flatMap(f =>
     f.generate(source)
   )
-  def metadata: Iterable[FeatureMetadata[S, Value]] = {
+  def metadata: Iterable[Metadata[S, Value]] = {
     features.map(_.metadata)
   }
 }
 
 trait MetadataSet[S] {
-  def metadata: Iterable[FeatureMetadata[S, Value]]
+  def metadata: Iterable[Metadata[S, Value]]
 }
 
 abstract class PivotFeatureSet[S : TypeTag] extends FeatureSet[S] {
@@ -62,7 +62,7 @@ import com.twitter.algebird.{Aggregator, AveragedValue, Monoid, Semigroup}
 
 case class AggregationFeature[S : TypeTag, U, +V <: Value : TypeTag](
   name:        Name,
-  humanDescription: String,
+  description: Description,
   aggregator:  Aggregator[S, U, V],
   featureType: Type = Type.Continuous,
   where:       Option[S => Boolean] = None
@@ -71,7 +71,7 @@ case class AggregationFeature[S : TypeTag, U, +V <: Value : TypeTag](
   // Note: Implementation here to satisfty feature signature. Framework should take advantage of
   // the fact that aggregators should be able to be run natively on the underlying plumbing
   def toFeature(namespace: Namespace, time: S => Time) =
-      new Feature[(EntityId, Iterable[S]), Value](FeatureMetadata(namespace, name, humanDescription, featureType)) {
+      new Feature[(EntityId, Iterable[S]), Value](Metadata(namespace, name, description, featureType)) {
     def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
       val source = s._2.filter(where.getOrElse(_ => true)).toList.toNel
       source.map(nonEmptySource => {
@@ -107,13 +107,12 @@ object AggregationFeature {
   def avg[T](t: T => Double): Aggregator[T, AveragedValue, Double] =
     AveragedValue.aggregator.composePrepare[T](t)
 
-  def max[T, V : Ordering](v: T => V): Aggregator[T, V, V]              = Aggregator.max[V].composePrepare[T](v)
-  def min[T, V : Ordering](v: T => V): Aggregator[T, V, V]              = Aggregator.min[V].composePrepare[T](v)
-  def uniqueCountBy[S, T](f : S => T): Aggregator[S, Set[T], Int]       = Aggregator.uniqueCount[T].composePrepare(f)
+  def max[T, V : Ordering](v: T => V): Aggregator[T, V, V]         = Aggregator.max[V].composePrepare[T](v)
+  def min[T, V : Ordering](v: T => V): Aggregator[T, V, V]         = Aggregator.min[V].composePrepare[T](v)
+  def uniqueCountBy[S, T](f : S => T): Aggregator[S, Set[T], Int]  = Aggregator.uniqueCount[T].composePrepare(f)
 
   // TODO: Would be surprised if this doesn't exist elsewhere
   implicit class AlgebirdSemigroup[T](s: Semigroup[T]) {
     def toScalaz = new scalaz.Semigroup[T] { def append(t1: T, t2: =>T): T = s.plus(t1, t2) }
   }
-
 }

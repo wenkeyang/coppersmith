@@ -43,9 +43,9 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
     import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      FeatureMetadata[Customer, Integral](namespace, "age",       "Age",        Categorical),
-      FeatureMetadata[Customer, Integral](namespace, "tallAge",   "Tall Age",   Continuous),
-      FeatureMetadata[Customer, Decimal] (namespace, "oldHeight", "Old Height", Continuous)
+      Metadata[Customer, Integral](namespace, "age",       "Age",        Categorical),
+      Metadata[Customer, Integral](namespace, "tallAge",   "Tall Age",   Continuous),
+      Metadata[Customer, Decimal] (namespace, "oldHeight", "Old Height", Continuous)
     )
   }
 
@@ -99,13 +99,13 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      FeatureMetadata[Customer, Integral](namespace, "size", "Agg feature",  Categorical),
-      FeatureMetadata[Customer, Integral](namespace, "count","Agg feature",  Continuous),
-      FeatureMetadata[Customer, Decimal] (namespace, "sum",  "Agg feature",  Continuous),
-      FeatureMetadata[Customer, Decimal] (namespace, "max",  "Agg feature",  Continuous),
-      FeatureMetadata[Customer, Decimal] (namespace, "min",  "Agg feature",  Continuous),
-      FeatureMetadata[Customer, Decimal] (namespace, "avg",  "Agg feature",  Continuous),
-      FeatureMetadata[Customer, Integral](namespace, "cu",   "Agg feature",  Continuous)
+      Metadata[Customer, Integral](namespace, "size", "Agg feature",  Categorical),
+      Metadata[Customer, Integral](namespace, "count","Agg feature",  Continuous),
+      Metadata[Customer, Decimal] (namespace, "sum",  "Agg feature",  Continuous),
+      Metadata[Customer, Decimal] (namespace, "max",  "Agg feature",  Continuous),
+      Metadata[Customer, Decimal] (namespace, "min",  "Agg feature",  Continuous),
+      Metadata[Customer, Decimal] (namespace, "avg",  "Agg feature",  Continuous),
+      Metadata[Customer, Integral](namespace, "cu",   "Agg feature",  Continuous)
     )
   }
 

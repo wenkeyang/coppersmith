@@ -44,7 +44,7 @@ object Feature {
   implicit class RichFeature[S : TypeTag, V <: Value : TypeTag](f: Feature[S, V]) {
     def as[T <: Feature.Type](t: T)(implicit ev: Conforms[T, V], neq: T =:!= Nothing) = {
       val oldMetadata = f.metadata
-      val newMetadata = FeatureMetadata[S, V](
+      val newMetadata = Metadata[S, V](
         namespace   = oldMetadata.namespace,
         name        = oldMetadata.name,
         description = oldMetadata.description,
@@ -55,54 +55,54 @@ object Feature {
       }
     }
   }
+
+  object Metadata {
+    sealed trait ValueType
+    object ValueType {
+      case object IntegralType extends ValueType
+      case object DecimalType  extends ValueType
+      case object StringType   extends ValueType
+    }
+
+    implicit class AsHydroPsv[V <: Value](m: Metadata[_, V]) {
+      def asHydroPsv: String = {
+        val valueType = m.valueType match {
+          case ValueType.IntegralType => "int"
+          case ValueType.DecimalType  => "double"
+          case ValueType.StringType   => "string"
+        }
+        val featureType = m.featureType match {
+          case Type.Categorical => "categorical"
+          case Type.Continuous  => "continuous"
+        }
+        List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
+      }
+    }
+  }
+
+  import Metadata.ValueType
+
+  case class Metadata[S : TypeTag, +V <: Value : TypeTag](
+    namespace:   Namespace,
+    name:        Name,
+    description: Description,
+    featureType: Type
+  )(implicit neq: V =:!= Nothing) {
+    def valueType =
+      typeOf[V] match {
+        // Would be nice to get exhaustiveness checking here
+        case t if t =:= typeOf[Value.Integral] => ValueType.IntegralType
+        case t if t =:= typeOf[Value.Decimal] =>  ValueType.DecimalType
+        case t if t =:= typeOf[Value.Str] =>      ValueType.StringType
+      }
+
+    def sourceTag: TypeTag[S] = implicitly
+  }
 }
 
 import Feature._
 
-object FeatureMetadata {
-  sealed trait ValueType
-  object ValueType {
-    case object IntegralType extends ValueType
-    case object DecimalType  extends ValueType
-    case object StringType   extends ValueType
-  }
-
-  implicit class AsHydroPsv[V <: Value](m: FeatureMetadata[_, V]) {
-    def asHydroPsv: String = {
-      val valueType = m.valueType match {
-        case ValueType.IntegralType => "int"
-        case ValueType.DecimalType  => "double"
-        case ValueType.StringType   => "string"
-      }
-      val featureType = m.featureType match {
-        case Type.Categorical => "categorical"
-        case Type.Continuous  => "continuous"
-      }
-      List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
-    }
-  }
-}
-
-import FeatureMetadata.ValueType
-
-case class FeatureMetadata[S : TypeTag, +V <: Value : TypeTag](
-   namespace:   Namespace,
-   name:        Name,
-   description: Description,
-   featureType: Type
-)(implicit neq: V =:!= Nothing) {
-  def valueType =
-    typeOf[V] match {
-      // Would be nice to get exhaustiveness checking here
-      case t if t =:= typeOf[Value.Integral] => ValueType.IntegralType
-      case t if t =:= typeOf[Value.Decimal] =>  ValueType.DecimalType
-      case t if t =:= typeOf[Value.Str] =>      ValueType.StringType
-    }
-
-  def sourceTag: TypeTag[S] = implicitly
-}
-
-abstract class Feature[S, +V <: Value](val metadata: FeatureMetadata[S, V]) {
+abstract class Feature[S, +V <: Value](val metadata: Metadata[S, V]) {
   def generate(source:S): Option[FeatureValue[V]]
 }
 

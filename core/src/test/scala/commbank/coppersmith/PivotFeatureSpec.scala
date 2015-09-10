@@ -7,7 +7,7 @@ import org.specs2._
 import au.com.cba.omnia.maestro.api.{Field, Maestro}, Maestro.Fields
 
 import Feature._, Value._
-import FeatureMetadata.ValueType._
+import Metadata.ValueType._
 
 import Arbitraries._
 
@@ -49,15 +49,15 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     val fields = Fields[Customer]
 
     metadata must_== List(
-      FeatureMetadata[Customer, Str]     (namespace, fields.Name.name,   "Customer name",   Categorical),
-      FeatureMetadata[Customer, Integral](namespace, fields.Age.name,    "Customer age",    Categorical),
-      FeatureMetadata[Customer, Decimal] (namespace, fields.Height.name, "Customer height", Continuous)
+      Metadata[Customer, Str]     (namespace, fields.Name.name,   "Customer name",   Categorical),
+      Metadata[Customer, Integral](namespace, fields.Age.name,    "Customer age",    Categorical),
+      Metadata[Customer, Decimal] (namespace, fields.Height.name, "Customer height", Continuous)
     )
   }
 
   def generateMetadataCompareMacro = {
-    def copyNoDesc(oldMetadata: FeatureMetadata[Customer, Value]) = {
-      FeatureMetadata[Customer, Value](
+    def copyNoDesc(oldMetadata: Metadata[Customer, Value]) = {
+      Metadata[Customer, Value](
         namespace   = oldMetadata.namespace,
         name        = oldMetadata.name,
         description = "",

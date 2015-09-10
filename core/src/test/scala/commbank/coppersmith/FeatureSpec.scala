@@ -7,13 +7,13 @@ import org.specs2.execute._, Typecheck._
 import org.specs2.matcher.TypecheckMatchers._
 
 import Feature._, Value._, Type._
-import FeatureMetadata.ValueType._
+import Metadata.ValueType._
 import Arbitraries._
 
 import test.thrift.Customer
 
-object FeatureMetadataSpec extends Specification with ScalaCheck { def is = s2"""
-  FeatureMetadata
+object MetadataSpec extends Specification with ScalaCheck { def is = s2"""
+  Metadata
   ===========
     All value types are covered $valueTypes
 """
@@ -24,12 +24,12 @@ object FeatureMetadataSpec extends Specification with ScalaCheck { def is = s2""
      * good if warning was raised if instance wasn't added to Arbitraries.
      */
     value match {
-      case Integral(_) => FeatureMetadata[Customer, Integral](namespace, name, desc, fType).valueType.
-                            must_==(IntegralType)
-      case Decimal(_) =>  FeatureMetadata[Customer, Decimal] (namespace, name, desc, fType).valueType.
-                            must_==(DecimalType)
-      case Str(_) =>      FeatureMetadata[Customer, Str]     (namespace, name, desc, fType).valueType.
-                            must_==(StringType)
+      case Integral(_) =>
+        Metadata[Customer, Integral](namespace, name, desc, fType).valueType must_== IntegralType
+      case Decimal(_) =>
+        Metadata[Customer, Decimal] (namespace, name, desc, fType).valueType must_== DecimalType
+      case Str(_) =>
+        Metadata[Customer, Str]     (namespace, name, desc, fType).valueType.must_==(StringType)
     }
   }}
 }
@@ -77,14 +77,14 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 }
 
 object HydroMetadataSpec extends Specification with ScalaCheck { def is = s2"""
-  FeatureMetadata.asHydroPsv creates expected Hydro metadata $hydroPsv
+  Metadata.asHydroPsv creates expected Hydro metadata $hydroPsv
 """
 
   def hydroPsv = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, value: Value) => {
     val (metadata, expectedValueType) = value match {
-      case Integral(_) => (FeatureMetadata[Customer, Integral](namespace, name, desc, fType), "int")
-      case Decimal(_)  => (FeatureMetadata[Customer, Decimal] (namespace, name, desc, fType), "double")
-      case Str(_)      => (FeatureMetadata[Customer, Str]     (namespace, name, desc, fType), "string")
+      case Integral(_) => (Metadata[Customer, Integral](namespace, name, desc, fType), "int")
+      case Decimal(_)  => (Metadata[Customer, Decimal] (namespace, name, desc, fType), "double")
+      case Str(_)      => (Metadata[Customer, Str]     (namespace, name, desc, fType), "string")
     }
 
     val expectedFeatureType = fType match {
