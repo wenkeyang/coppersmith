@@ -40,11 +40,12 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
 
   def generateMetadata = {
     val metadata = CustomerFeatureSet.metadata
+    import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "age",       "Age",        Categorical),
-      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "tallAge",   "Tall Age",   Continuous),
-      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "oldHeight", "Old Height", Continuous)
+      FeatureMetadata[Customer, Integral](namespace, "age",       "Age",        Categorical),
+      FeatureMetadata[Customer, Integral](namespace, "tallAge",   "Tall Age",   Continuous),
+      FeatureMetadata[Customer, Decimal] (namespace, "oldHeight", "Old Height", Continuous)
     )
   }
 
@@ -95,15 +96,16 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
 
   def generateMetadata = {
     val metadata = CustomerFeatureSet.metadata
+    import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "size", "Agg feature",  Categorical),
-      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "count","Agg feature",  Continuous),
-      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "sum",  "Agg feature",  Continuous),
-      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "max",  "Agg feature",  Continuous),
-      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "min",  "Agg feature",  Continuous),
-      FeatureMetadata[Decimal] (CustomerFeatureSet.namespace, "avg",  "Agg feature",  Continuous),
-      FeatureMetadata[Integral](CustomerFeatureSet.namespace, "cu",   "Agg feature",  Continuous)
+      FeatureMetadata[Customer, Integral](namespace, "size", "Agg feature",  Categorical),
+      FeatureMetadata[Customer, Integral](namespace, "count","Agg feature",  Continuous),
+      FeatureMetadata[Customer, Decimal] (namespace, "sum",  "Agg feature",  Continuous),
+      FeatureMetadata[Customer, Decimal] (namespace, "max",  "Agg feature",  Continuous),
+      FeatureMetadata[Customer, Decimal] (namespace, "min",  "Agg feature",  Continuous),
+      FeatureMetadata[Customer, Decimal] (namespace, "avg",  "Agg feature",  Continuous),
+      FeatureMetadata[Customer, Integral](namespace, "cu",   "Agg feature",  Continuous)
     )
   }
 

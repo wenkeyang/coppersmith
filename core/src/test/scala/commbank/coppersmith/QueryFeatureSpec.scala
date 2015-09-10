@@ -48,11 +48,12 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
 
   def generateMetadata = {
     val metadata = CustomerFeatureSet.metadata
+    import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      FeatureMetadata[Decimal](CustomerFeatureSet.namespace, "youngHeight", "Young Height", Continuous),
-      FeatureMetadata[Decimal](CustomerFeatureSet.namespace, "midHeight",   "Middle Height", Continuous),
-      FeatureMetadata[Decimal](CustomerFeatureSet.namespace, "oldHeight",  "Old Height", Continuous)
+      FeatureMetadata[Customer, Decimal](namespace, "youngHeight", "Young Height", Continuous),
+      FeatureMetadata[Customer, Decimal](namespace, "midHeight",   "Middle Height", Continuous),
+      FeatureMetadata[Customer, Decimal](namespace, "oldHeight",  "Old Height", Continuous)
     )
   }
 

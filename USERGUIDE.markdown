@@ -73,10 +73,12 @@ import Feature.Type.Continuous, Feature.Value.Integral
 import commbank.coppersmith.example.thrift.Customer
 
 object CustomerBirthYear extends Feature[Customer, Integral](
-  FeatureMetadata[Integral](namespace   = "userguide.examples",
-                            name        = "CUST_BIRTHYEAR",
-                            description = "Calendar year in which the customer was born",
-                            featureType = Continuous)
+  FeatureMetadata[Customer, Integral](
+    namespace   = "userguide.examples",
+    name        = "CUST_BIRTHYEAR",
+    description = "Calendar year in which the customer was born",
+    featureType = Continuous
+  )
 ) {
   def generate(cust: Customer) = Some(
     FeatureValue(entity = cust.id,

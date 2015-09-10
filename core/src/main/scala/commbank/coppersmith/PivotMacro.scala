@@ -7,7 +7,11 @@ import com.twitter.scrooge.ThriftStruct
 import scala.reflect.macros.whitebox.Context
 
 object PivotMacro {
-  def pivotThrift[A <: ThriftStruct](namespace:Namespace, entity: A => EntityId, time: A => Time):Any = macro pivotImpl[A]
+  def pivotThrift[A <: ThriftStruct](
+    namespace:Namespace,
+    entity: A => EntityId,
+    time: A => Time
+  ): Any = macro pivotImpl[A]
 
   def pivotImpl[A <: ThriftStruct: c.WeakTypeTag]
     (c: Context)
@@ -20,8 +24,6 @@ object PivotMacro {
     val typ        = c.universe.weakTypeOf[A]
     val entries    = Inspect.info[A](c)
 
-
-
     val features = entries.map({
       case (int, field, method) =>
         val returnType = method.returnType
@@ -33,7 +35,7 @@ object PivotMacro {
           q"""{
               import commbank.coppersmith._
 
-              val featureMetadata = FeatureMetadata[$featureValueType](
+              val featureMetadata = FeatureMetadata[$typ, $featureValueType](
                   $namespace, ${field.toLowerCase}, $fieldDescription,
                   ${ if(continuous) q"Feature.Type.Continuous" else q"Feature.Type.Categorical"})
 
@@ -41,14 +43,14 @@ object PivotMacro {
 
                 def generate(source: $typ):Option[FeatureValue[$featureValueType]] = {
                   val v = source.$method
-                  Some(FeatureValue($entity(source), ${field.toLowerCase}, Feature.Value.$mapperFn(v), $time(source)))
+                  Some(FeatureValue($entity(source),
+                                    ${field.toLowerCase},
+                                    Feature.Value.$mapperFn(v),
+                                    $time(source)))
                 }
-
-
              }}"""
 
         q"val ${TermName(field)} : Feature[$typ, $featureValueType] = $feature"
-
     })
 
       val featureRefs = entries.map({

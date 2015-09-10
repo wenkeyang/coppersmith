@@ -8,7 +8,7 @@ import au.com.cba.omnia.maestro.api.Field
 
 import Feature._
 
-trait FeatureSet[S] extends MetadataSet {
+trait FeatureSet[S] extends MetadataSet[S] {
   def namespace: Feature.Namespace
 
   def features: Iterable[Feature[S, Value]]
@@ -16,16 +16,16 @@ trait FeatureSet[S] extends MetadataSet {
   def generate(source: S): Iterable[FeatureValue[Value]] = features.flatMap(f =>
     f.generate(source)
   )
-  def metadata: Iterable[FeatureMetadata[Value]] = {
+  def metadata: Iterable[FeatureMetadata[S, Value]] = {
     features.map(_.metadata)
   }
 }
 
-trait MetadataSet {
-  def metadata: Iterable[FeatureMetadata[Value]]
+trait MetadataSet[S] {
+  def metadata: Iterable[FeatureMetadata[S, Value]]
 }
 
-trait PivotFeatureSet[S] extends FeatureSet[S] {
+abstract class PivotFeatureSet[S : TypeTag] extends FeatureSet[S] {
   def entity(s: S): EntityId
   def time(s: S):   Time
 
@@ -33,7 +33,7 @@ trait PivotFeatureSet[S] extends FeatureSet[S] {
     Patterns.pivot(namespace, featureType, entity, time, field, humanDescription)
 }
 
-abstract class BasicFeatureSet[S] extends FeatureSet[S] {
+abstract class BasicFeatureSet[S : TypeTag] extends FeatureSet[S] {
   def entity(s: S): EntityId
   def time(s: S):   Time
 
@@ -41,7 +41,7 @@ abstract class BasicFeatureSet[S] extends FeatureSet[S] {
     Patterns.general(namespace, featureName, humanDescription, featureType, entity, (s: S) => Some(value(s)), time)
 }
 
-abstract class QueryFeatureSet[S, V <: Value : TypeTag] extends FeatureSet[S] {
+abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends FeatureSet[S] {
   type Filter = S => Boolean
 
   def featureType:  Feature.Type
@@ -60,7 +60,7 @@ import scalaz.syntax.std.option.ToOptionIdOps
 
 import com.twitter.algebird.{Aggregator, AveragedValue, Monoid, Semigroup}
 
-case class AggregationFeature[S, U, +V <: Value : TypeTag](
+case class AggregationFeature[S : TypeTag, U, +V <: Value : TypeTag](
   name:        Name,
   humanDescription: String,
   aggregator:  Aggregator[S, U, V],
