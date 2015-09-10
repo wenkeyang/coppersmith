@@ -4,6 +4,8 @@ import commbank.coppersmith._
 import commbank.coppersmith.Join._
 
 import commbank.coppersmith.Feature.Value
+import shapeless._
+import shapeless.ops.hlist._
 
 trait MemoryLift extends Lift[List] {
   def lift[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[V]] = {
@@ -14,16 +16,24 @@ trait MemoryLift extends Lift[List] {
     s.flatMap(s => fs.generate(s))
   }
 
-  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, Inner ])(a:List[A], b: List[B]): List[(A, B)] = {
-    val aMap: Map[J, List[A]] = a.groupBy(joined.left)
+  type +:[A <: HList, B] =  Prepend[A, B :: HNil]
+
+  def liftJoinHl[HL <: HList, B, J : Ordering]
+    (joined: Joined[HL, B, J, Inner ])
+    (a:List[HL], b: List[B])
+    (implicit prepend: HL :+ B)
+      : List[prepend.Out] = {
+    val aMap: Map[J, List[HL]] = a.groupBy(joined.left)
     val bMap: Map[J, List[B]] = b.groupBy(joined.right)
 
-    for {
+    val result = for {
       (k1,v1) <- aMap.toList
       (k2,v2) <- bMap.toList if k2 == k1
       a <- v1
       b <-v2
-    } yield (a, b)
+    } yield a :+ b
+
+    result
   }
 
   def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter ])(as: List[A], bs: List[B]): List[(A, Option[B])] =

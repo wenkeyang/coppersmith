@@ -5,6 +5,7 @@ import com.twitter.scalding._
 import commbank.coppersmith._, Feature.Value, Join._
 import commbank.coppersmith.scalding.ScaldingConfiguredFeatureSource
 
+import shapeless._
 trait ScaldingLift extends Lift[TypedPipe] {
 
   def lift[S, V <: Value](f:Feature[S,V])(s: TypedPipe[S]): TypedPipe[FeatureValue[V]] = {
@@ -16,10 +17,15 @@ trait ScaldingLift extends Lift[TypedPipe] {
   }
 
 
-  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, Inner])
-                                  (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, B)] =
-    a.groupBy(joined.left).join(b.groupBy(joined.right)).values
 
+  def liftJoinHl[HL <: HList, B, J : Ordering]
+    (joined: Joined[HL, B, J, Inner ])
+    (a:TypedPipe[HL], b: TypedPipe[B])
+    (implicit prepend: HL :+ B)
+    : TypedPipe[prepend.Out] = {
+    val result = a.groupBy(joined.left).join(b.groupBy(joined.right)).values.map {case (hl, r) => hl :+ r }
+    result
+  }
 
   def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter])
                                   (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, Option[B])] =

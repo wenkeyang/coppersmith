@@ -1,5 +1,6 @@
 package commbank.coppersmith
 
+import scalaz.Functor
 import scalaz.syntax.std.option.ToOptionIdOps
 
 import Feature._
@@ -43,7 +44,7 @@ object SourceBinder extends SourceBinderInstances
 trait SourceBinderInstances {
   def from[S, P[_]](dataSource: DataSource[S, P]) = FromBinder(dataSource)
 
-  def join[L, R, J : Ordering, P[_] : Lift](leftSource: DataSource[L, P], rightSource: DataSource[R, P]) =
+  def join[L, R, J : Ordering, P[_] : Lift : Functor](leftSource: DataSource[L, P], rightSource: DataSource[R, P]) =
     JoinedBinder(leftSource, rightSource)
 
   def leftJoin[L, R, J : Ordering, P[_] : Lift](leftSource: DataSource[L, P], rightSource: DataSource[R, P]) =
@@ -56,7 +57,7 @@ case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, Fr
   }
 }
 
-case class JoinedBinder[L, R, J : Ordering, P[_] : Lift](
+case class JoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
   leftSrc:  DataSource[L, P],
   rightSrc: DataSource[R, P]
 ) extends SourceBinder[(L, R), Joined[L, R, J, Inner], P] {

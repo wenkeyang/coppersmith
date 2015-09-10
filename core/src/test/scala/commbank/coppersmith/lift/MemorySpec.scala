@@ -1,5 +1,7 @@
 package commbank.coppersmith.lift
 
+import scalaz._, Scalaz._
+
 import commbank.coppersmith.Join
 import org.specs2.Specification
 import memory._

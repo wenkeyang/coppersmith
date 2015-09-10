@@ -9,12 +9,15 @@ import au.com.cba.omnia.maestro.api._, Maestro._
 
 import com.twitter.scalding.{TypedPsv, Config, MultipleTextLineFiles, Execution}
 import commbank.coppersmith.Feature.Value.Decimal
+import commbank.coppersmith.scalding.lift.ScaldingScalazInstances
 
 import org.joda.time.DateTime
 
 import commbank.coppersmith.scalding.lift.scalding._
 
 import scalaz.{Value => _, _}, Scalaz._
+
+import ScaldingScalazInstances._
 
 object Example2 {
 

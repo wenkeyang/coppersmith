@@ -4,6 +4,12 @@ import commbank.coppersmith.Feature.Value
 import commbank.coppersmith.Join._
 import commbank.coppersmith.Feature.Value
 import commbank.coppersmith.Join.{LeftOuter, Inner, Joined}
+import shapeless._
+import shapeless.ops.hlist.Prepend
+
+import scalaz.{Ordering => _, _}, Scalaz._
+
+//import shapeless._
 
 trait Lift[P[_]] {
   def lift[S, V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[V]]
@@ -11,7 +17,27 @@ trait Lift[P[_]] {
   def lift[S](fs: FeatureSet[S])(s: P[S]): P[FeatureValue[_]]
 
 
-  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, Inner])(a: P[A], b: P[B]): P[(A, B)]
+  type :+ [HL <: HList, A] = Prepend[HL, A :: HNil]
+
+
+
+  //Join stuff
+
+  def liftJoinHl[HL <: HList, B, J : Ordering]
+    (joined: Joined[HL, B, J, Inner ])
+    (a:P[HL], b: P[B])
+    (implicit prepend: HL :+ B)
+    : P[prepend.Out]
+
+
+  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, Inner ])(a:P[A], b: P[B])(implicit functor: Functor[P]): P[(A, B)] = {
+    val result = liftJoinHl(new Joined[A :: HNil, B, J, Inner](
+      left = (hl: A :: HNil) => joined.left(hl.head),
+      right = joined.right
+    ))(a.map(_ :: HNil), b)
+
+    result.map(_.tupled)
+  }
 
   def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter])(a: P[A], b: P[B]): P[(A, Option[B])]
 
