@@ -6,6 +6,7 @@ import commbank.coppersmith.Join._
 import commbank.coppersmith.Feature.Value
 import shapeless._
 import shapeless.ops.hlist._
+import commbank.coppersmith._, Join._, Feature.Value
 
 trait MemoryLift extends Lift[List] {
   def lift[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[V]] = {
@@ -19,7 +20,7 @@ trait MemoryLift extends Lift[List] {
   type +:[A <: HList, B] =  Prepend[A, B :: HNil]
 
   def liftJoinHl[HL <: HList, B, J : Ordering]
-    (joined: Joined[HL, B, J, Inner ])
+    (joined: Joined[HL, B, J, (HL, B) ])
     (a:List[HL], b: List[B])
     (implicit prepend: HL :+ B)
       : List[prepend.Out] = {
@@ -36,7 +37,7 @@ trait MemoryLift extends Lift[List] {
     result
   }
 
-  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, LeftOuter ])(as: List[A], bs: List[B]): List[(A, Option[B])] =
+  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, Option[B])])(as: List[A], bs: List[B]): List[(A, Option[B])] =
     as.flatMap { a =>
       val leftKey = joined.left(a)
       val rightValues = bs.filter {b => joined.right(b) == leftKey}
@@ -47,14 +48,14 @@ trait MemoryLift extends Lift[List] {
       }
     }
 
-  def liftBinder[S, U, B <: SourceBinder[S, U, List]](underlying: U, binder: B, filter: Option[S => Boolean]) =
-    MemoryConfiguredFeatureSource(underlying, binder, filter)
+  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, List]](underlying: U, binder: B, filter: Option[S => Boolean]) =
+    MemoryBoundFeatureSource(underlying, binder, filter)
 
-  case class MemoryConfiguredFeatureSource[S, U](
+  case class MemoryBoundFeatureSource[S, U <: FeatureSource[S, U]](
     underlying: U,
     binder: SourceBinder[S, U, List],
     filter: Option[S => Boolean]
-  ) extends ConfiguredFeatureSource[S, U, List] {
+  ) extends BoundFeatureSource[S, List] {
     def load: List[S] = {
       val pipe = binder.bind(underlying)
       filter.map(f => pipe.filter(f)).getOrElse(pipe)

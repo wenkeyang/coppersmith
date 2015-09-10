@@ -10,7 +10,7 @@ import scalaz.scalacheck.ScalazArbitrary.NonEmptyListArbitrary
 import scalaz.syntax.std.boolean.ToBooleanOpsFromBoolean
 
 import Feature._, Value._, Type._
-import FeatureSource.fromFS
+import FeatureBuilderSource.fromFS
 import Arbitraries._
 import test.thrift.Customer
 

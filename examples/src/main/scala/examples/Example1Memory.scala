@@ -23,7 +23,8 @@ object Example1Memory {
       cat = "333",
       subCat = "444",
       balance = 100,
-      effectiveDate = "01022001"
+      effectiveDate = "01022001",
+      dob = "10091988"
     )
 
     val c2 = Customer(
@@ -32,7 +33,8 @@ object Example1Memory {
       cat = "333",
       subCat = "444",
       balance = 100,
-      effectiveDate = "01022001"
+      effectiveDate = "01022001",
+      dob = "11101999"
     )
 
     val result: List[FeatureValue[Str]] = lift(acct)(List(c1, c2))

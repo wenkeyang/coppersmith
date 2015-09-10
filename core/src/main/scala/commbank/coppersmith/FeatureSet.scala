@@ -29,8 +29,16 @@ trait PivotFeatureSet[S] extends FeatureSet[S] {
   def entity(s: S): EntityId
   def time(s: S):   Time
 
-  def pivot[V <: Value : TypeTag, FV <% V](field: Field[S, FV], humanDescription: String, fType: Feature.Type) =
-    Patterns.pivot(namespace, fType, entity, time, field, humanDescription)
+  def pivot[V <: Value : TypeTag, FV <% V](field: Field[S, FV], humanDescription: String, featureType: Type) =
+    Patterns.pivot(namespace, featureType, entity, time, field, humanDescription)
+}
+
+abstract class BasicFeatureSet[S] extends FeatureSet[S] {
+  def entity(s: S): EntityId
+  def time(s: S):   Time
+
+  def basicFeature[V <: Value : TypeTag](featureName: Name, humanDescription: String, featureType: Type, value: S => V) =
+    Patterns.general(namespace, featureName, humanDescription, featureType, entity, (s: S) => Some(value(s)), time)
 }
 
 abstract class QueryFeatureSet[S, V <: Value : TypeTag] extends FeatureSet[S] {
@@ -42,7 +50,7 @@ abstract class QueryFeatureSet[S, V <: Value : TypeTag] extends FeatureSet[S] {
   def value(s: S):  V
   def time(s: S):   Time
 
-  def queryFeature(featureName: Feature.Name, humanDescription: String, filter: Filter) =
+  def queryFeature(featureName: Name, humanDescription: String, filter: Filter) =
     Patterns.general(namespace, featureName, humanDescription, featureType, entity, (s: S) => filter(s).option(value(s)), time)
 }
 
