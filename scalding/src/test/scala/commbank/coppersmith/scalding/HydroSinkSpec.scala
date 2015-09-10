@@ -61,7 +61,7 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
       withEnvironment(path(getClass.getResource("/").toString)) {
         val sink = HydroSink(hydroConfig)
         val hiveConf = hydroConfig.hiveConfig
-        val query = s"SELECT * FROM ${hiveConf.database}.${hiveConf.tablename}"
+        val query = s"""SELECT * FROM `${hiveConf.database}.${hiveConf.tablename}`"""
 
         executesSuccessfully(sink.write(TypedPipe.from(vs.list)))
         val actual = executesSuccessfully(Execution.fromHive(Hive.query(query)))
