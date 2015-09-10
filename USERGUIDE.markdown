@@ -199,9 +199,11 @@ import commbank.coppersmith.scalding.{ScaldingDataSource, HiveTextSource, HydroS
 import commbank.coppersmith.scalding.framework
 
 case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Customer] {
+  type Partition    = (String, String, String) // (Year, Month, Day)
+
   val partition     = HivePartition.byDay(Fields[Customer].EffectiveDate, "yyyy-MM-dd")
-  val partitionPath = ScaldingDataSource.PartitionPath(partition, ("2015", "08", "28"))
-  val customers     = HiveTextSource(new Path("/data/customers"), partitionPath)
+  val partitions    = ScaldingDataSource.Partitions(partition, ("2015", "08", "28"))
+  val customers     = HiveTextSource[Customer, Partition](new Path("/data/customers"), partitions)
   val maestroConf   = MaestroConfig(conf, "features", "CUST", "birthdays")
   val dbRawPrefix   = conf.getArgs("db-raw-prefix")  // from command-line option
 
