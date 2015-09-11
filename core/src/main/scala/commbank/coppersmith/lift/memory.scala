@@ -37,14 +37,18 @@ trait MemoryLift extends Lift[List] {
     result
   }
 
-  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, Option[B])])(as: List[A], bs: List[B]): List[(A, Option[B])] =
+  def liftLeftJoinHl[HL <: HList, B, J : Ordering]
+    (joined: Joined[HL, B, J, (HL, Option[B])])
+    (as: List[HL], bs: List[B])
+    (implicit prepend: HL :+ Option[B])
+      : List[prepend.Out] =
     as.flatMap { a =>
       val leftKey = joined.left(a)
       val rightValues = bs.filter {b => joined.right(b) == leftKey}
       if (rightValues.isEmpty) {
-        List((a, None))
+        List(a :+ (None : Option[B]))
       } else {
-        rightValues.map {b => (a, Some(b))}
+        rightValues.map {b => a :+ (Some(b) : Option[B])}
       }
     }
 

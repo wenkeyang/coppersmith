@@ -29,6 +29,12 @@ trait Lift[P[_]] {
     (implicit prepend: HL :+ B)
     : P[prepend.Out]
 
+  def liftLeftJoinHl[HL <: HList, B, J : Ordering]
+  (joined: Joined[HL, B, J, (HL, Option[B]) ])
+  (a:P[HL], b: P[B])
+  (implicit prepend: HL :+ Option[B])
+  : P[prepend.Out]
+
 
   def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, B) ])(a:P[A], b: P[B])(implicit functor: Functor[P]): P[(A, B)] = {
     val result = liftJoinHl(new Joined[A :: HNil, B, J, (A :: HNil, B)](
@@ -40,7 +46,15 @@ trait Lift[P[_]] {
     result.map(_.tupled)
   }
 
-  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, Option[B])])(a: P[A], b: P[B]): P[(A, Option[B])]
+  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, Option[B])])(a: P[A], b: P[B])(implicit functor: Functor[P]): P[(A, Option[B])] = {
+    val result = liftLeftJoinHl(new Joined[A :: HNil, B, J, (A :: HNil, Option[B])](
+      left = (hl: A :: HNil) => joined.left(hl.head),
+      right = joined.right,
+      filter = None
+    ))(a.map(_ :: HNil), b)
+
+    result.map(_.tupled)
+  }
 
   def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, P]](
     underlying: U,

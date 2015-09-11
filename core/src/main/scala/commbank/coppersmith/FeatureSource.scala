@@ -33,7 +33,7 @@ trait SourceBinderInstances {
   def join[L, R, J : Ordering, P[_] : Lift : Functor](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     JoinedBinder(leftSrc, rightSrc)
 
-  def leftJoin[L, R, J : Ordering, P[_] : Lift](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
+  def leftJoin[L, R, J : Ordering, P[_] : Lift : Functor](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     LeftJoinedBinder(leftSrc, rightSrc)
 }
 
@@ -50,7 +50,7 @@ case class JoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
   }
 }
 
-case class LeftJoinedBinder[L, R, J : Ordering, P[_] : Lift](
+case class LeftJoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
   leftSrc:  DataSource[L, P],
   rightSrc: DataSource[R, P]
 ) extends SourceBinder[(L, Option[R]), Joined[L, R, J, (L, Option[R])], P] {

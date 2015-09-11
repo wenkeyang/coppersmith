@@ -24,10 +24,13 @@ trait ScaldingLift extends Lift[TypedPipe] {
     val result = a.groupBy(joined.left).join(b.groupBy(joined.right)).values.map {case (hl, r) => hl :+ r }
     result
   }
-
-  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, Option[B])])
-                                  (a:TypedPipe[A], b: TypedPipe[B]): TypedPipe[(A, Option[B])] =
-    a.groupBy(joined.left).leftJoin(b.groupBy(joined.right)).values
+  def liftLeftJoinHl[HL <: HList, B, J : Ordering]
+    (joined: Joined[HL, B, J, (HL, Option[B])])
+    (a:TypedPipe[HL], b: TypedPipe[B])
+    (implicit prepend: HL :+ Option[B])
+      : TypedPipe[prepend.Out] = {
+    a.groupBy(joined.left).leftJoin(b.groupBy(joined.right)).values.map {case (hl, r) => hl :+ r}
+  }
 
   def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, TypedPipe]](
     underlying: U,
