@@ -1,12 +1,12 @@
 Coppersmith User Guide
 ======================
 
-This is a guide to using the Coppersmith library to generate features.
+This is a guide to using the Coppersmith library to define and generate features.
 It is aimed at programmers and data engineers.
-The **Basics** section introduces the fundamental concepts
+The [**Basics**](#basics) section introduces the fundamental concepts
 and should be read in full.
-The **Intermediate** section is also highly recommended.
-The **Advanced** section serves as a reference
+The [**Intermediate**](#intermediate) section is also highly recommended.
+The [**Advanced**](#advanced) section serves as a reference
 to additional features of the library.
 
 
@@ -28,29 +28,27 @@ To turn the feature definition into a Hadoop job
 requires the `coppersmith-scalding` package.
 Other execution frameworks may be supported in the future.
 
-There should be one top-level repo for each *customer*
-(e.g. CEP, CommScore),
-and it is recommended that the repo be divided into subprojects
-as follows:
+Thusly, feature code can be separated into two projects, such
+that feature definitions can be maintained independently of the
+framework code that is use to generate the feature values.
 
-- **_customer_-features**: feature definitions
+An example of how these two projects would be structured is as follows:
+
+- **_my-org_-features**: feature definitions
   (depends on `coppersmith-core`)
-- **_customer_-scaffolding**: feature jobs
-  (depends on `coppersmith-scalding`)
-- **_customer_-auxiliary**: Autosys JILs
-  (no dependencies)
+- **_my-org_-scaffolding**: feature jobs
+  (depends on `my-org-features` and `coppersmith-scalding`)
 
 
 ### The `Feature` class
 
-An individual feature is represented by the `Feature[S, V]` class.
-The two type parameters are
-the *source* (or input) type
-and the *value* (or output) type.
+An individual feature is represented by the `Feature[S, V]` type.
+The two type parameters, `S` and `V`, are the *source* (or input)
+type and the *value* (or output) type respectively.
 You can think of it as a function from `S` to `V`:
 - The source type is typically a thrift struct,
   describing the schema of a raw table
-  or (more likely) an "Analytical Record".
+  or (more likely) an *Analytical Record*.
 - The value type is one of `Integral`, `Decimal`, or `Str`.
 
 A feature must also define some metadata, including:
@@ -71,10 +69,10 @@ we'll see how this can be made a lot easier.
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{Feature, FeatureMetadata, FeatureValue}
-import Feature.Type._, Feature.Value._
+import Feature.Type.Continuous, Feature.Value.Integral
 import commbank.coppersmith.example.thrift.Customer
 
-object customerBirthYear extends Feature[Customer, Integral](
+object CustomerBirthYear extends Feature[Customer, Integral](
   FeatureMetadata[Integral](namespace   = "userguide.examples",
                             name        = "CUST_BIRTHYEAR",
                             description = "Calendar year in which the customer was born",
@@ -94,7 +92,7 @@ object customerBirthYear extends Feature[Customer, Integral](
 
 `FeatureSet[S]` is a group of features
 derived from the same source record type `S`.
-There are several specialised subtypes
+There are several predefined subtypes
 such as `BasicFeatureSet`, `PivotFeatureSet`, and `AggregationFeatureSet`.
 Extending one of these classes is the recommended way of creating features,
 since it avoids duplicating the definition of namespace, entity, etc.
@@ -121,10 +119,10 @@ For details of the other classes available, refer to the **Advanced** section.
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{BasicFeatureSet, Feature}
-import Feature.Type._, Feature.Value._
+import Feature.Type.Continuous, Feature.Value.Integral
 import commbank.coppersmith.example.thrift.Customer
 
-object customerFeatures extends BasicFeatureSet[Customer] {
+object CustomerFeatures extends BasicFeatureSet[Customer] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
   def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
@@ -148,12 +146,12 @@ However, we are not there yet!
 For the moment,
 you still need to create a mainline scalding job
 to execute the features which you have defined,
-and deploy it in the usual way
-with `ops.logical` and Autosys.
+and deploy it in the usual way.
 
 To make this as easy as possible,
 Coppersmith provides a class called `SimpleFeatureJob`,
-which helps turn a `FeatureSet` into a maestro job.
+which helps turn a `FeatureSet` into a
+[maestro](https://github.com/CommBank/maestro) job.
 As with any maestro job,
 you still need to define the `job` function,
 but in many cases
@@ -167,14 +165,16 @@ the *source* and *sink*
 for the feature generation job.
 Coppersmith currently supports the following source types:
 
-- `HiveTextSource`: a delimited file with Hive conventions
-- `HiveParquetSource`: a parquet-encoded file
+- `HiveTextSource`: delimited plain text files
+  under a [Hive](https://hive.apache.org/)-partitioned directory structure
+- `HiveParquetSource`: [Parquet](https://parquet.apache.org/)-encoded
+  files under a Hive-partitioned directory structure
 
 and one sink type:
 
 - `HydroSink`: a file in the format required for ingestion into Hydro
-  (this is currently a text-encoded EAVT format, but will evolve to support
-  future versions of Hydro as well)
+  (CBA's internal feature store, which is currently a text-encoded EAVT
+  format, but will evolve to support future versions of Hydro as well)
 
 Here is an example of a job which materialises the feature set
 which we defined in the previous section:
@@ -185,7 +185,7 @@ import org.apache.hadoop.fs.Path
 import com.twitter.scalding.Config
 
 import au.com.cba.omnia.maestro.api.{MaestroConfig, HivePartition, Maestro}
-import Maestro._
+import Maestro.{DerivedDecode, Fields}
 
 import commbank.coppersmith.From
 import commbank.coppersmith.FeatureBuilderSource.fromFS
@@ -205,14 +205,14 @@ case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Custome
   val partitions    = ScaldingDataSource.Partitions(partition, ("2015", "08", "28"))
   val customers     = HiveTextSource[Customer, Partition](new Path("/data/customers"), partitions)
   val maestroConf   = MaestroConfig(conf, "features", "CUST", "birthdays")
-  val dbRawPrefix   = conf.getArgs("db-raw-prefix")  // from command-line option
+  val dbPrefix      = conf.getArgs("db-prefix")  // from command-line option
 
   val featureSource = From[Customer]().bind(from(customers))
-  val featureSink   = HydroSink.configure(maestroConf, dbRawPrefix)
+  val featureSink   = HydroSink.configure(maestroConf, dbPrefix)
 }
 
 object CustomerFeaturesJob extends SimpleFeatureJob {
-  def job = generate(CustomerFeaturesConfig(_), customerFeatures)
+  def job = generate(CustomerFeaturesConfig(_), CustomerFeatures)
 }
 ```
 
@@ -227,9 +227,7 @@ This section introduces an alternative API for feature definitions.
 
 In the example above,
 we quietly snuck in `From[Customer]()` without explanation.
-The type of this expression
-(or rather, the implicit type, after conversion)
-is `FeatureSource`.
+The type of this expression is `FeatureSource`.
 This is a trivial example,
 since it simply indicates that
 the input source is a stream of `Customer` records.
@@ -265,11 +263,11 @@ returning a `Feature` object.
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
-import Feature.Type._, Feature.Value._
+import Feature.Type.{Categorical, Continuous}
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
-object customerFeaturesFluent extends FeatureSet[Customer] {
+object CustomerFeaturesFluent extends FeatureSet[Customer] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
   def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
@@ -335,22 +333,24 @@ import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
 
-object example {
+object Example {
   val customerPivotFeatures: PivotFeatureSet[Customer] =
     PivotMacro.pivotThrift[Customer]("userguide.examples", _.id, _.timestamp)
 }
 ```
 
 
-### Aggregation (aka GROUP BY)
+### Aggregation (aka `GROUP BY`)
 
 By subclassing `AggregationFeatureSet`,
 you gain access to a number of useful aggregate functions:
 `count`, `avg`, `max`, `min`, `sum`, and `uniqueCountBy`.
-(If you need something that isn't listed here,
-please raise an issue).
+These are convenience methods for creating
+[Algebird `Aggregator`s](https://github.com/twitter/scalding/wiki/Aggregation-using-Algebird-Aggregators).
+Other aggregators can be defined by providing your own
+`Aggregator` instance.
 
-The grouping criteria (in SQL terms, the GROUP BY clause)
+The grouping criteria (in SQL terms, the `GROUP BY` clause)
 is implicitly *the entity and the time*,
 as defined by the `entity` and `time` properties.
 
@@ -371,13 +371,13 @@ as well as the value for "T" in the EAVT output for hydro.
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{AggregationFeatureSet, Feature}
-import Feature.Type._, Feature.Value._
+import Feature.Type.Continuous
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Account
 
 import Implicits.RichAccount
 
-object accountFeatures extends AggregationFeatureSet[Account] {
+object AccountFeatures extends AggregationFeatureSet[Account] {
   val namespace            = "userguide.examples"
   def entity(acc: Account) = acc.id
   def time(acc: Account)   = acc.eventYear
@@ -398,7 +398,7 @@ object accountFeatures extends AggregationFeatureSet[Account] {
 ```
 
 
-### Filtering (aka WHERE)
+### Filtering (aka `WHERE`)
 
 Features need not be defined for every input value.
 When defining features using the fluent API,
@@ -410,13 +410,13 @@ to improve readability when there are multiple conditions).
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
-import Feature.Type._, Feature.Value._
+import Feature.Type.Continuous
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
 
-object customerBirthFeatures extends FeatureSet[Customer] {
+object CustomerBirthFeatures extends FeatureSet[Customer] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
   def time(cust: Customer)   = cust.timestamp
@@ -439,6 +439,43 @@ object customerBirthFeatures extends FeatureSet[Customer] {
 }
 ```
 
+If a filter is common to all features from a single source,
+the filter can be defined on the source itself to prevent
+repetition in the feature definitions.
+
+```scala
+import org.joda.time.DateTime
+
+import commbank.coppersmith.{FeatureSet, Feature}
+import Feature.Type.Continuous
+import commbank.coppersmith.FeatureBuilderSource.fromFS
+import commbank.coppersmith.example.thrift.Customer
+
+import Implicits.RichCustomer
+
+object GenXYCustomerFeatures extends FeatureSet[Customer] {
+  val namespace              = "userguide.examples"
+  def entity(cust: Customer) = cust.id
+  def time(cust: Customer)   = cust.timestamp
+
+  // Common filter applied to all features built from this source
+  val source = From[Customer]().filter(c => Range(1960, 2000).contains(c.birthYear))
+  val select = source.featureSetBuilder(namespace, entity(_), time(_))
+
+  val genXBirthYear  = select(_.birthYear)
+    .where(_.birthYear < 1980)
+    .asFeature(Continuous, "GEN_X_CUST_BIRTH_YEAR",
+               "Year of birth for customers born between 1960 and 1980")
+
+  val genYBirthYear  = select(_.birthYear)
+    .where(_.birthYear >= 1980)
+    .asFeature(Continuous, "GEN_Y_CUST_BIRTH_YEAR",
+               "Year of birth for customers born between 1980 and 2000")
+
+  val features = List(genXBirthYear, genYBirthYear)
+}
+```
+
 In the special case where the value is always the same,
 but the filter varies,
 consider using the `QueryFeatureSet`:
@@ -447,13 +484,13 @@ consider using the `QueryFeatureSet`:
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{QueryFeatureSet, Feature}
-import Feature.Type._, Feature.Value._
+import Feature.Type.Categorical, Feature.Value.Str
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
 
-object customerBirthFlags extends QueryFeatureSet[Customer, Str] {
+object CustomerBirthFlags extends QueryFeatureSet[Customer, Str] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
   def time(cust: Customer)   = cust.timestamp
@@ -496,10 +533,10 @@ for customers born before 1970:
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{AggregationFeatureSet, Feature, Join}
-import Feature.Type._, Feature.Value._
+import Feature.Type.Continuous
 import commbank.coppersmith.example.thrift.Account
 
-object joinFeatures extends AggregationFeatureSet[(Customer, Account)] {
+object JoinFeatures extends AggregationFeatureSet[(Customer, Account)] {
   val namespace                      = "userguide.examples"
   def entity(s: (Customer, Account)) = s._1.id
   def time(s: (Customer, Account))   = s._1.timestamp
