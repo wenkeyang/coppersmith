@@ -2,10 +2,14 @@ package commbank.coppersmith.scalding.lift
 
 import com.twitter.scalding._
 
-import commbank.coppersmith._, Feature.Value, Join._
+import commbank.coppersmith._, Feature.Value
 import commbank.coppersmith.scalding.ScaldingBoundFeatureSource
 
+import TypeHelpers._
+
 import shapeless._
+
+
 trait ScaldingLift extends Lift[TypedPipe] {
 
   def lift[S, V <: Value](f:Feature[S,V])(s: TypedPipe[S]): TypedPipe[FeatureValue[V]] = {

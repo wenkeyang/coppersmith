@@ -2,7 +2,6 @@ package commbank.coppersmith
 import commbank.coppersmith.Feature.Value
 import commbank.coppersmith.Join._
 import commbank.coppersmith.Feature.Value
-import commbank.coppersmith.Join.{Joined}
 import shapeless._
 import shapeless.ops.hlist.Prepend
 
@@ -10,15 +9,12 @@ import scalaz.{Ordering => _, _}, Scalaz._
 
 import Feature.Value
 import Join._
+import TypeHelpers._
 
 trait Lift[P[_]] {
   def lift[S, V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[V]]
 
   def lift[S](fs: FeatureSet[S])(s: P[S]): P[FeatureValue[_]]
-
-
-  type :+ [HL <: HList, A] = Prepend[HL, A :: HNil]
-
 
 
   //Join stuff

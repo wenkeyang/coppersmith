@@ -3,8 +3,6 @@ package commbank.coppersmith
 import scalaz.Functor
 import scalaz.syntax.std.option.ToOptionIdOps
 
-import Join._
-
 abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => Boolean] = None) {
   self: FS =>
 
