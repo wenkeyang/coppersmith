@@ -11,4 +11,10 @@ object LegacyFeatureSetExample extends MetadataSet {
   val legacyFeature2 = FeatureMetadata[Value.Decimal]("cep_features", "lgc_ftr_2", "A decimal feature", Continuous)
 
   def metadata = List(legacyFeature1, legacyFeature2)
+
+  def main(args: Array[String]): Unit = {
+    import MetadataOutput._
+
+    println(metadataString(LegacyFeatureSetExample, Markdown))
+  }
 }
