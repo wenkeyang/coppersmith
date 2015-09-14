@@ -37,7 +37,7 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
 
     val loaded = source.bind(from(TestDataSource(cs))).load
     runsSuccessfully(loaded) must_== cs.filter(filter)
-  }}
+  }}.set(minTestsOk = 10)
 
   def joinFilter = forAll { (customerAccounts: CustomerAccounts) => {
     val cas = customerAccounts.cas
@@ -48,7 +48,7 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     val source = Join[Customer].to[Account].on(_.id, _.customerId).filter(filter)
     val bound = source.bind(join(TestDataSource(cas.map(_.c)), TestDataSource(cas.flatMap(_.as))))
     runsSuccessfully(bound.load).toSet must_== expected.toSet
-  }}
+  }}.set(minTestsOk = 10)
 
   def leftJoinFilter = forAll { (customerAccounts: CustomerAccounts) => {
     val cas = customerAccounts.cas
@@ -63,5 +63,5 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     val source = Join.left[Customer].to[Account].on(_.id, _.customerId).filter(filter)
     val bound = source.bind(leftJoin(TestDataSource(cas.map(_.c)), TestDataSource(cas.flatMap(_.as))))
     runsSuccessfully(bound.load).toSet must_== expected.toSet
-  }}
+  }}.set(minTestsOk = 10)
 }
