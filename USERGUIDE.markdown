@@ -410,7 +410,7 @@ to improve readability when there are multiple conditions).
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
-import Feature.Type.Continuous
+import Feature.Type.Categorical
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
@@ -447,7 +447,7 @@ repetition in the feature definitions.
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
-import Feature.Type.Continuous
+import Feature.Type.Categorical
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
