@@ -68,15 +68,15 @@ we'll see how this can be made a lot easier.
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{Feature, FeatureMetadata, FeatureValue}
-import Feature.Type.Continuous, Feature.Value.Integral
+import commbank.coppersmith.{Feature, FeatureValue}
+import Feature.Metadata, Feature.Type._, Feature.Value._
 import commbank.coppersmith.example.thrift.Customer
 
 object CustomerBirthYear extends Feature[Customer, Integral](
-  FeatureMetadata[Integral](namespace   = "userguide.examples",
-                            name        = "CUST_BIRTHYEAR",
-                            description = "Calendar year in which the customer was born",
-                            featureType = Continuous)
+  Metadata[Customer, Integral](namespace   = "userguide.examples",
+                               name        = "CUST_BIRTHYEAR",
+                               description = "Calendar year in which the customer was born",
+                               featureType = Continuous)
 ) {
   def generate(cust: Customer) = Some(
     FeatureValue(entity = cust.id,
