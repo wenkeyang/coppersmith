@@ -9,7 +9,6 @@ import scalaz.{Ordering => _, _}, Scalaz._
 
 import Feature.Value
 import Join._
-import TypeHelpers._
 
 trait Lift[P[_]] {
   def lift[S, V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[V]]
@@ -19,17 +18,17 @@ trait Lift[P[_]] {
 
   //Join stuff
 
-  def liftJoinHl[HL <: HList, B, J : Ordering]
+  def liftJoinHl[HL <: HList, B, J : Ordering, O <: HList]
     (joined: Joined[HL, B, J, (HL, B) ])
     (a:P[HL], b: P[B])
-    (implicit prepend: HL :+ B)
-    : P[prepend.Out]
+    (implicit pp: Prepend.Aux[HL, B :: HNil, O])
+    : P[O]
 
-  def liftLeftJoinHl[HL <: HList, B, J : Ordering]
+  def liftLeftJoinHl[HL <: HList, B, J : Ordering, O <: HList]
   (joined: Joined[HL, B, J, (HL, Option[B]) ])
   (a:P[HL], b: P[B])
-  (implicit prepend: HL :+ Option[B])
-  : P[prepend.Out]
+  (implicit pp: Prepend.Aux[HL, Option[B] :: HNil, O])
+  : P[O]
 
 
   def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, B) ])(a:P[A], b: P[B])(implicit functor: Functor[P]): P[(A, B)] = {

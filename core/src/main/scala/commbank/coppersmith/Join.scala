@@ -1,9 +1,13 @@
 package commbank.coppersmith
 
 import shapeless._
-import shapeless.ops.hlist._
 
-import TypeHelpers._
+import shapeless.ops.function._
+import shapeless.ops.hlist.Prepend
+import shapeless.syntax.std.function._
+
+
+import shapeless.ops.product.ToHList
 
 object From {
   def apply[S](): From[S] = From(None)
@@ -50,12 +54,22 @@ object Join {
   def multiway[A] = Multiway[A]()
 
   case class Multiway[A]() {
-    def inner[B] = IncompleteJoinedHl[A :: HNil, B, (HNil, B)]()
+    def inner[B] = IncompleteJoinedHl[A :: HNil, B, A :: B :: HNil]()
+    def left[B]  = IncompleteJoinedHl[A :: HNil, Option[B], A :: Option[B] :: HNil]()
   }
-  case class IncompleteJoinedHl[HL <: HList, N, S]()(implicit tupler:Tupler[HL]) {
-    def on[J : Ordering](left: tupler.Out => J, right:N => J)(implicit prepend: HL :+ N): JoinedHl[HL, N, J, S] = JoinedHl[HL, N, J, S](left, right)
+
+  case class IncompleteJoinedHl[HL <: HList, N, O <: HList]() {
+
+    def on[J : Ordering, F](leftFun: F, rightFun: N => J)(implicit fnHLister : FnToProduct[F] {type Out = HL => J}, prepend : Prepend.Aux[HL, N :: HNil, O]) = {
+      val leftHListFun = leftFun.toProduct
+
+      JoinedHl(leftHListFun, rightFun)
+    }
   }
-  case class JoinedHl[HL <: HList, N, J : Ordering, S](left: HL => J, right:N => J)(implicit tupler: Tupler[HL], val prepend : HL :+ N) {
-    def inner[B](implicit pTupler: Tupler[prepend.Out]) = IncompleteJoinedHl[prepend.Out, N, (prepend.Out, B)]
+
+  case class JoinedHl[HL <: HList, N, J : Ordering, S, O <: HList](l: HL => J, r: N => J)(implicit pp1 : Prepend.Aux[HL, N :: HNil, O]) {
+    def inner[B](implicit prepend: Prepend[O, B :: HNil]) = IncompleteJoinedHl[O, B, prepend.Out]()
+    def left[B](implicit prepend: Prepend[O, Option[B] :: HNil]) = IncompleteJoinedHl[O, Option[B], prepend.Out]()
   }
+
 }

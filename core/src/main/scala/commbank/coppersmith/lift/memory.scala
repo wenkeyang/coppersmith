@@ -7,7 +7,6 @@ import shapeless._
 import shapeless.ops.hlist._
 import commbank.coppersmith._, Feature.Value
 
-import TypeHelpers._
 
 trait MemoryLift extends Lift[List] {
   def lift[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[V]] = {
@@ -20,11 +19,11 @@ trait MemoryLift extends Lift[List] {
 
   type +:[A <: HList, B] =  Prepend[A, B :: HNil]
 
-  def liftJoinHl[HL <: HList, B, J : Ordering]
+  def liftJoinHl[HL <: HList, B, J : Ordering, O <: HList]
     (joined: Joined[HL, B, J, (HL, B) ])
     (a:List[HL], b: List[B])
-    (implicit prepend: HL :+ B)
-      : List[prepend.Out] = {
+    (implicit pp: Prepend.Aux[HL, B :: HNil, O])
+      : List[O] = {
     val aMap: Map[J, List[HL]] = a.groupBy(joined.left)
     val bMap: Map[J, List[B]] = b.groupBy(joined.right)
 
@@ -38,11 +37,11 @@ trait MemoryLift extends Lift[List] {
     result
   }
 
-  def liftLeftJoinHl[HL <: HList, B, J : Ordering]
+  def liftLeftJoinHl[HL <: HList, B, J : Ordering, O <: HList]
     (joined: Joined[HL, B, J, (HL, Option[B])])
     (as: List[HL], bs: List[B])
-    (implicit prepend: HL :+ Option[B])
-      : List[prepend.Out] =
+    (implicit pp: Prepend.Aux[HL, Option[B] :: HNil, O])
+      : List[O] =
     as.flatMap { a =>
       val leftKey = joined.left(a)
       val rightValues = bs.filter {b => joined.right(b) == leftKey}
