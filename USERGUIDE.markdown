@@ -464,12 +464,12 @@ object GenXYCustomerFeatures extends FeatureSet[Customer] {
 
   val genXBirthYear  = select(_.birthYear)
     .where(_.birthYear < 1980)
-    .asFeature(Continuous, "GEN_X_CUST_BIRTH_YEAR",
+    .asFeature(Categorical, "GEN_X_CUST_BIRTH_YEAR",
                "Year of birth for customers born between 1960 and 1980")
 
   val genYBirthYear  = select(_.birthYear)
     .where(_.birthYear >= 1980)
-    .asFeature(Continuous, "GEN_Y_CUST_BIRTH_YEAR",
+    .asFeature(Categorical, "GEN_Y_CUST_BIRTH_YEAR",
                "Year of birth for customers born between 1980 and 2000")
 
   val features = List(genXBirthYear, genYBirthYear)
