@@ -35,7 +35,12 @@ object Arbitraries {
 
   def ageGen: Gen[Int] = Gen.chooseNum(0, 150, 17, 18, 19, 64, 65, 66)
   implicit val arbCustomer: Arbitrary[Customer] = Arbitrary(
-    (arbitrary[String] |@| arbitrary[String] |@| ageGen |@| arbitrary[Double] |@| arbitrary[Long])(Customer.apply)
+    (arbitrary[String] |@|
+       arbitrary[String] |@|
+       ageGen |@|
+       arbitrary[Double] |@|
+       arbitrary[Option[Double]] |@|
+       arbitrary[Long])(Customer.apply)
   )
 
   implicit val arbCustomerField: Arbitrary[Field[Customer, _]] = Arbitrary(

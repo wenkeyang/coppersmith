@@ -25,7 +25,7 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
 
   Macro feature set
     must generate same metadata as test example $generateMetadataCompareMacro
-    must generate same values as test example $generateFeatureValuesCompareMacro
+    must generate same values as test example   $generateFeatureValuesCompareMacro
 """
 
   import Type.{Categorical, Continuous}
@@ -36,11 +36,12 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     def entity(c: Customer) = c.id
     def time(c: Customer)   = c.time
 
-    val name:   Feature[Customer, Str]      = pivot(Fields[Customer].Name,  "Customer name", Categorical)
-    val age:    Feature[Customer, Integral] = pivot(Fields[Customer].Age,    "Customer age", Categorical)
+    val name:   Feature[Customer, Str]      = pivot(Fields[Customer].Name,   "Customer name",   Categorical)
+    val age:    Feature[Customer, Integral] = pivot(Fields[Customer].Age,    "Customer age",    Categorical)
     val height: Feature[Customer, Decimal]  = pivot(Fields[Customer].Height, "Customer height", Continuous)
+    val credit: Feature[Customer, Decimal]  = pivot(Fields[Customer].Credit, "Customer credit", Continuous)
 
-    def features = List(name, age, height)
+    def features = List(name, age, height, credit)
   }
 
   def generateMetadata = {
@@ -51,7 +52,8 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     metadata must_== List(
       Metadata[Customer, Str]     (namespace, fields.Name.name,   "Customer name",   Categorical),
       Metadata[Customer, Integral](namespace, fields.Age.name,    "Customer age",    Categorical),
-      Metadata[Customer, Decimal] (namespace, fields.Height.name, "Customer height", Continuous)
+      Metadata[Customer, Decimal] (namespace, fields.Height.name, "Customer height", Continuous),
+      Metadata[Customer, Decimal] (namespace, fields.Credit.name, "Customer credit", Continuous)
     )
   }
 
@@ -88,7 +90,8 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     featureValues must_== List(
       FeatureValue[Str]     (c.id, CustomerFeatureSet.name.metadata.name,   c.name,   c.time),
       FeatureValue[Integral](c.id, CustomerFeatureSet.age.metadata.name,    c.age,    c.time),
-      FeatureValue[Decimal] (c.id, CustomerFeatureSet.height.metadata.name, c.height, c.time)
+      FeatureValue[Decimal] (c.id, CustomerFeatureSet.height.metadata.name, c.height, c.time),
+      FeatureValue[Decimal] (c.id, CustomerFeatureSet.credit.metadata.name, c.credit, c.time)
     )
   }}
 }

@@ -33,7 +33,7 @@ object PivotMacro {
         val fieldDescription = s"Feature auto-pivoted from ${typ.typeSymbol.toString}.${field}"
         val feature =
           q"""{
-              import commbank.coppersmith._
+              import commbank.coppersmith._, Feature.Metadata
 
               val featureMetadata = Metadata[$typ, $featureValueType](
                   $namespace, ${field.toLowerCase}, $fieldDescription,
@@ -74,7 +74,7 @@ object PivotMacro {
 
   def isContinuous(c:Context)(t:c.universe.Type) = {
     import c.universe._
-    t =:= typeOf[Double]
+    t =:= typeOf[Double] || t =:= typeOf[Option[Double]]
   }
 
   def typeMapper(c:Context)(t:c.universe.Type) = {
@@ -86,10 +86,16 @@ object PivotMacro {
       TermName("fromOString")
     } else if (t =:= typeOf[Int]) {
       TermName("fromInt")
+    } else if (t =:= typeOf[Option[Int]]) {
+      TermName("fromOInt")
     } else if (t =:= typeOf[Double]) {
       TermName("fromDouble")
+    } else if (t =:= typeOf[Option[Double]]) {
+      TermName("fromODouble")
     } else if (t =:= typeOf[Long]) {
       TermName("fromLong")
+    } else if (t =:= typeOf[Option[Long]]) {
+      TermName("fromOLong")
     } else {
       throw new RuntimeException(s"no type mapper for $t" )
     }

@@ -5,7 +5,8 @@ struct Customer {
   2 : required string name
   3 : required i32    age
   4 : required double height
-  5 : required i64    time
+  5 : optional double credit
+  6 : required i64    time
 }
 
 // Type with some optional fields
