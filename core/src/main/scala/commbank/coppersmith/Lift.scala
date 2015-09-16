@@ -1,14 +1,12 @@
 package commbank.coppersmith
-import commbank.coppersmith.Feature.Value
-import commbank.coppersmith.Join._
-import commbank.coppersmith.Feature.Value
-import shapeless._
-import shapeless.ops.hlist.Prepend
 
-import scalaz.{Ordering => _, _}, Scalaz._
+import commbank.coppersmith.Join.JoinedHl
+import shapeless._
+import shapeless.ops.hlist._
+
+import scalaz.{Ordering => _, _}
 
 import Feature.Value
-import Join._
 
 trait Lift[P[_]] {
   def lift[S, V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[V]]
@@ -18,42 +16,57 @@ trait Lift[P[_]] {
 
   //Join stuff
 
-  def liftJoinHl[HL <: HList, B, J : Ordering, O <: HList]
-    (joined: Joined[HL, B, J, (HL, B) ])
-    (a:P[HL], b: P[B])
-    (implicit pp: Prepend.Aux[HL, B :: HNil, O])
-    : P[O]
+  def liftJoinHl[LeftSides <: HList, RightSide, J : Ordering, Out <: HList, PrevJoins <: HList]
+    (joined: JoinedHl[LeftSides, RightSide, RightSide, PrevJoins, J, Out] )
+    (a:P[LeftSides], b: P[RightSide])
+    (implicit pp: Prepend.Aux[LeftSides, RightSide :: HNil, Out])
+    : P[Out]
 
-  def liftLeftJoinHl[HL <: HList, B, J : Ordering, O <: HList]
-  (joined: Joined[HL, B, J, (HL, Option[B]) ])
-  (a:P[HL], b: P[B])
-  (implicit pp: Prepend.Aux[HL, Option[B] :: HNil, O])
-  : P[O]
+  def liftLeftJoinHl[LeftSides <: HList,
+    RightFlat,
+    J : Ordering,
+    Out <: HList,
+    PrevJoins <: HList]
+  (joined: JoinedHl[LeftSides, Option[RightFlat], RightFlat, PrevJoins, J, Out])
+  (a:P[LeftSides], b: P[RightFlat])
+  (implicit pp: Prepend.Aux[LeftSides, Option[RightFlat] :: HNil, Out])
+  : P[Out]
 
-
+  //two is a special case, a little easier to do than the general case
   def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, B) ])(a:P[A], b: P[B])(implicit functor: Functor[P]): P[(A, B)] = {
-    val result = liftJoinHl(new Joined[A :: HNil, B, J, (A :: HNil, B)](
-      left = (hl: A :: HNil) => joined.left(hl.head),
-      right = joined.right,
-      filter = None
-    ))(a.map(_ :: HNil), b)
-
-    result.map(_.tupled)
+    ???
   }
 
+  //as above
   def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, Option[B])])(a: P[A], b: P[B])(implicit functor: Functor[P]): P[(A, Option[B])] = {
-    val result = liftLeftJoinHl(new Joined[A :: HNil, B, J, (A :: HNil, Option[B])](
-      left = (hl: A :: HNil) => joined.left(hl.head),
-      right = joined.right,
-      filter = None
-    ))(a.map(_ :: HNil), b)
-
-    result.map(_.tupled)
+   ???
   }
+
+
+
+
+  def liftMultiwayJoin[LeftSides <: HList, RightSide, FlatRight, J : Ordering, Out <: HList, POut <: HList, POutTuple <: Product, OutTuple <: Product, PrevJoins <: HList]
+    (joined: JoinedHl[LeftSides, RightSide, FlatRight, PrevJoins, J, Out])
+    (t: POutTuple)
+    (implicit prepend:      Prepend.Aux[LeftSides, RightSide :: HNil, Out],
+              mapper:       Mapped.Aux[Out, P, POut],
+              pGen:         Generic.Aux[POut, POutTuple],
+              outGen:       Tupler.Aux[Out, OutTuple],
+              consEvidence: IsHCons[POut] //because empty HLists don't make sense in this context
+      ): P[OutTuple] = {
+    val pipeHList: POut = pGen.from(t)
+//    pipeHList.tail.foldRight(pipeHList.head :: HNil)(???)
+    ???
+  }
+
+
 
   def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, P]](
     underlying: U,
     binder: B,
     filter: Option[S => Boolean]
   ): BoundFeatureSource[S, P]
+
+
+
 }

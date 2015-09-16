@@ -1,5 +1,6 @@
 package commbank.coppersmith.lift
 
+import commbank.coppersmith.Join.JoinedHl
 import commbank.coppersmith._
 
 import commbank.coppersmith.Feature.Value
@@ -19,13 +20,13 @@ trait MemoryLift extends Lift[List] {
 
   type +:[A <: HList, B] =  Prepend[A, B :: HNil]
 
-  def liftJoinHl[HL <: HList, B, J : Ordering, O <: HList]
-    (joined: Joined[HL, B, J, (HL, B) ])
-    (a:List[HL], b: List[B])
-    (implicit pp: Prepend.Aux[HL, B :: HNil, O])
-      : List[O] = {
-    val aMap: Map[J, List[HL]] = a.groupBy(joined.left)
-    val bMap: Map[J, List[B]] = b.groupBy(joined.right)
+  override def liftJoinHl[LeftSides <: HList, RightSide, J : Ordering, Out <: HList, PrevJoins <: HList]
+    (joined: JoinedHl[LeftSides, RightSide, RightSide, PrevJoins, J, Out])
+    (a:List[LeftSides], b: List[RightSide])
+    (implicit pp: Prepend.Aux[LeftSides, RightSide :: HNil, Out])
+      : List[Out] = {
+    val aMap: Map[J, List[LeftSides]] = a.groupBy(joined.l)
+    val bMap: Map[J, List[RightSide]] = b.groupBy(joined.r)
 
     val result = for {
       (k1,v1) <- aMap.toList
@@ -37,18 +38,18 @@ trait MemoryLift extends Lift[List] {
     result
   }
 
-  def liftLeftJoinHl[HL <: HList, B, J : Ordering, O <: HList]
-    (joined: Joined[HL, B, J, (HL, Option[B])])
-    (as: List[HL], bs: List[B])
-    (implicit pp: Prepend.Aux[HL, Option[B] :: HNil, O])
-      : List[O] =
+  override def liftLeftJoinHl[LeftSides <: HList, RightSide, J : Ordering, Out <: HList, PrevJoins <: HList]
+    (joined: JoinedHl[LeftSides, Option[RightSide], RightSide, PrevJoins, J, Out])
+    (as: List[LeftSides], bs: List[RightSide])
+    (implicit pp: Prepend.Aux[LeftSides, Option[RightSide] :: HNil, Out])
+      : List[Out] =
     as.flatMap { a =>
-      val leftKey = joined.left(a)
-      val rightValues = bs.filter {b => joined.right(b) == leftKey}
+      val leftKey = joined.l(a)
+      val rightValues = bs.filter {b => joined.r(b) == leftKey}
       if (rightValues.isEmpty) {
-        List(a :+ (None : Option[B]))
+        List(a :+ (None : Option[RightSide]))
       } else {
-        rightValues.map {b => a :+ (Some(b) : Option[B])}
+        rightValues.map {b => a :+ (Some(b) : Option[RightSide])}
       }
     }
 
@@ -65,6 +66,5 @@ trait MemoryLift extends Lift[List] {
       filter.map(f => pipe.filter(f)).getOrElse(pipe)
     }
   }
-
 }
 object memory extends MemoryLift
