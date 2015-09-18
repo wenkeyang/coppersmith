@@ -1,18 +1,19 @@
 package commbank.coppersmith.lift
 
+import shapeless.ops.hlist.IsHCons
+
 import scalaz._, Scalaz._
 
 import commbank.coppersmith.Join
 import org.specs2.Specification
 import memory._
 
-
 class MemorySpec extends Specification {
   def is =
     s2"""
          Joins                   $joins
          Left joins              $leftJoins
-         Three way inner joins   $leftJoins
+         Three way inner joins   $threeWayJoin
       """
 
 
@@ -71,12 +72,18 @@ class MemorySpec extends Specification {
   }
 
   def threeWayJoin = {
-    val join = Join.multiway[A].inner[B].on((a: A) => a.a, (b: B) => b.a).
-                                inner[C].on((a: A, b:B) => b.b, (c: C) => c.b)
+    val join = Join.multiway[A].inner[B].on((a: A) => a.a, (b: B) => b.a)
 
 
-//    val result: List[(A, B, C)] = liftMultiwayJoin(join)((as, bs, cs))
-
+//    liftMultiwayJoin(join.complete)((as, bs))
+//    val expected = List(
+//      (A(2,"2"), B(2, "2"), C("2")),
+//      (A(2,"2"), B(2, "22"), C("2")),
+//      (A(2,"22"), B(2, "2"), C("2")),
+//      (A(2,"22"), B(2, "22"), C("22"))
+//    )
+//
+//    result === expected
     1 === 1
   }
 }

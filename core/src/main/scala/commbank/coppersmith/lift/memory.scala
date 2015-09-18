@@ -20,13 +20,14 @@ trait MemoryLift extends Lift[List] {
 
   type +:[A <: HList, B] =  Prepend[A, B :: HNil]
 
-  override def liftJoinHl[LeftSides <: HList, RightSide, J : Ordering, Out <: HList, PrevJoins <: HList]
-    (joined: JoinedHl[LeftSides, RightSide, RightSide, PrevJoins, J, Out])
-    (a:List[LeftSides], b: List[RightSide])
-    (implicit pp: Prepend.Aux[LeftSides, RightSide :: HNil, Out])
-      : List[Out] = {
-    val aMap: Map[J, List[LeftSides]] = a.groupBy(joined.l)
-    val bMap: Map[J, List[RightSide]] = b.groupBy(joined.r)
+
+  def innerJoinNext[LeftSides <: HList, RightSide, J : Ordering, Out <: HList]
+  (l: LeftSides => J, r: RightSide => J )
+  (a:List[LeftSides], b: List[RightSide])
+  (implicit pp: Prepend.Aux[LeftSides, RightSide :: HNil, Out])
+  : List[Out] = {
+    val aMap: Map[J, List[LeftSides]] = a.groupBy(l)
+    val bMap: Map[J, List[RightSide]] = b.groupBy(r)
 
     val result = for {
       (k1,v1) <- aMap.toList
@@ -38,14 +39,15 @@ trait MemoryLift extends Lift[List] {
     result
   }
 
-  override def liftLeftJoinHl[LeftSides <: HList, RightSide, J : Ordering, Out <: HList, PrevJoins <: HList]
-    (joined: JoinedHl[LeftSides, Option[RightSide], RightSide, PrevJoins, J, Out])
-    (as: List[LeftSides], bs: List[RightSide])
-    (implicit pp: Prepend.Aux[LeftSides, Option[RightSide] :: HNil, Out])
-      : List[Out] =
+
+  override def leftJoinNext[LeftSides <: HList, RightSide, J : Ordering, Out <: HList]
+  (l: LeftSides => J, r: RightSide => J )
+  (as:List[LeftSides], bs: List[RightSide])
+  (implicit pp: Prepend.Aux[LeftSides, Option[RightSide] :: HNil, Out])
+  : List[Out] =
     as.flatMap { a =>
-      val leftKey = joined.l(a)
-      val rightValues = bs.filter {b => joined.r(b) == leftKey}
+      val leftKey = l(a)
+      val rightValues = bs.filter {b => r(b) == leftKey}
       if (rightValues.isEmpty) {
         List(a :+ (None : Option[RightSide]))
       } else {
