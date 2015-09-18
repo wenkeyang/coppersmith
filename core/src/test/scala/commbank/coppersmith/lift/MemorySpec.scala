@@ -72,18 +72,18 @@ class MemorySpec extends Specification {
   }
 
   def threeWayJoin = {
-    val join = Join.multiway[A].inner[B].on((a: A) => a.a, (b: B) => b.a)
+    val join = Join.multiway[A].inner[B].on((a: A) => a.a, (b: B) => b.a).
+                                inner[C].on((a: A, b: B) => b.b, (c: C) => c.b)
 
 
-//    liftMultiwayJoin(join.complete)((as, bs))
-//    val expected = List(
-//      (A(2,"2"), B(2, "2"), C("2")),
-//      (A(2,"2"), B(2, "22"), C("2")),
-//      (A(2,"22"), B(2, "2"), C("2")),
-//      (A(2,"22"), B(2, "22"), C("22"))
-//    )
-//
-//    result === expected
-    1 === 1
+    val result = liftMultiwayJoin(join.complete)((as, bs, cs))
+    val expected = List(
+      (A(2,"2"), B(2, "2"), C("2")),
+      (A(2,"22"), B(2, "2"), C("2")),
+      (A(2,"2"), B(2, "22"), C("22")),
+      (A(2,"22"), B(2, "22"), C("22"))
+    )
+
+    result === expected
   }
 }

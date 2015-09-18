@@ -4,7 +4,6 @@ import commbank.coppersmith.Join.CompleteJoinHl
 import commbank.coppersmith.lift.memory
 import org.specs2.Specification
 import shapeless._
-import shapeless.ops.hlist._
 
 import scalaz._, Scalaz._
 
@@ -97,19 +96,6 @@ class LiftSpec extends Specification {
       A(1) -> B(1, "One"),
       A(1) -> B(1, "One")
     )
-  }
-
-
-
-  def experiment() = {
-    ex((List[A]() :: List[B]() :: HNil))
-  }
-
-  def ex[TupleHL <: HList, Hel, Head, T <: HList](in : TupleHL)(implicit isHCons: IsHCons.Aux[TupleHL, Head, T],
-                                                                       ev1 : List[Hel] =:= Head,
-                                                                       ev2 : Head =:= List[Hel] ) = {
-    val head: List[Hel] = ev2(isHCons.head(in))
-
   }
 
 }
