@@ -74,22 +74,35 @@ trait Lift[P[_]] {
 
   //Lower priority since inner joins have less specific types than left joins
   trait innerFolder extends Poly2 {
-    implicit def doJoin[
+    implicit def doInnerJoin[
       SoFar <: HList,
       Next,
       J : Ordering,
       OutInner <: HList,
       Joins <: HList
     ](implicit prepend: Prepend.Aux[SoFar, Next :: HNil, OutInner]) =
-      at[P[SoFar], (P[Next], (SoFar => J, Next => J))] {
-      (acc: P[SoFar], pipeWithJoin: (P[Next], (SoFar => J, Next => J) )) =>
+      at[P[SoFar], (NextPipe[Next, Next], (SoFar => J, Next => J))] {
+      (acc: P[SoFar], pipeWithJoin: (NextPipe[Next, Next], (SoFar => J, Next => J) )) =>
         val fnSoFar: SoFar => J = pipeWithJoin._2._1
         val fnNext: Next => J = pipeWithJoin._2._2
-        innerJoinNext[SoFar, Next, J, OutInner](fnSoFar, fnNext)(acc, pipeWithJoin._1)
+        innerJoinNext[SoFar, Next, J, OutInner](fnSoFar, fnNext)(acc, pipeWithJoin._1.pipe)
     }
   }
 
   object joinFolder extends innerFolder {
+    implicit def doLeftJoin[
+    SoFar <: HList,
+    Next,
+    J : Ordering,
+    OutInner <: HList,
+    Joins <: HList
+    ](implicit prepend: Prepend.Aux[SoFar, Next :: HNil, OutInner]) =
+      at[P[SoFar], (NextPipe[Next, Option[Next]], (SoFar => J, Next => J))] {
+        (acc: P[SoFar], pipeWithJoin: (NextPipe[Next, Option[Next]], (SoFar => J, Next => J) )) =>
+          val fnSoFar: SoFar => J = pipeWithJoin._2._1
+          val fnNext: Next => J = pipeWithJoin._2._2
+          leftJoinNext[SoFar, Next, J, OutInner](fnSoFar, fnNext)(acc, pipeWithJoin._1.pipe)
+      }
   }
 
   def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, P]](
@@ -99,5 +112,5 @@ trait Lift[P[_]] {
   ): BoundFeatureSource[S, P]
 
 
-
+  case class NextPipe[Next, JoinType](pipe: P[Next])
 }
