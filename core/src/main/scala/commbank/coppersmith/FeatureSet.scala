@@ -65,25 +65,30 @@ import scalaz.syntax.std.option.ToOptionIdOps
 
 import com.twitter.algebird.{Aggregator, AveragedValue, Monoid, Semigroup}
 
-case class AggregationFeature[S : TypeTag, U, +V <: Value : TypeTag](
+case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
   name:        Name,
   description: Description,
-  aggregator:  Aggregator[S, U, V],
+  aggregator:  Aggregator[SV, U, V],
+  view:        PartialFunction[S, SV],
   featureType: Type = Type.Continuous,
-  where:       Option[S => Boolean] = None
+  where:       Option[SV => Boolean] = None
 ) {
   import AggregationFeature.AlgebirdSemigroup
-  // Note: Implementation here to satisfty feature signature. Framework should take advantage of
-  // the fact that aggregators should be able to be run natively on the underlying plumbing
-  def toFeature(namespace: Namespace) =
-      new Feature[(EntityId, Iterable[S]), Value](Metadata(namespace, name, description, featureType)) {
+  // Note: Implementation exists here to satisfty feature signature and enable unit testing.
+  // Framework should take advantage of aggregators that can run natively on the underlying plumbing.
+  def toFeature(namespace: Namespace) = new Feature[(EntityId, Iterable[S]), Value](
+    Metadata(namespace, name, description, featureType)
+  ) {
     def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
-      val source = s._2.filter(where.getOrElse(_ => true)).toList.toNel
-      source.map(nonEmptySource => {
+      val (entity, source) = s
+      val sourceView = source.toList.collect {
+        case sv if view.isDefinedAt(sv) => view(sv)
+      }.filter(sv => where.forall(_(sv))).toNel
+      sourceView.map(nonEmptySource => {
         val value = aggregator.present(
           nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
         )
-        FeatureValue(s._1, name, value)
+        FeatureValue(entity, name, value)
       })
     }
   }
@@ -92,19 +97,9 @@ case class AggregationFeature[S : TypeTag, U, +V <: Value : TypeTag](
 trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
   def entity(s: S): EntityId
 
-  def aggregationFeatures: Iterable[AggregationFeature[S, _, Value]]
+  def aggregationFeatures: Iterable[AggregationFeature[S, _, _, Value]]
 
   def features = aggregationFeatures.map(_.toFeature(namespace))
-
-  // These allow aggregators to be created without specifying type args that
-  // would otherwise be required if calling the delegated methods directly
-  def size: Aggregator[S, Long, Long] = Aggregator.size
-  def count(where: S => Boolean = _ => true): Aggregator[S, Long, Long] = Aggregator.count(where)
-  def avg[V](v: S => Double): Aggregator[S, AveragedValue, Double]      = AggregationFeature.avg[S](v)
-  def max[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.max[S, V](v)
-  def min[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.min[S, V](v)
-  def sum[V : Monoid]  (v: S => V): Aggregator[S, V, V]                 = Aggregator.prepareMonoid(v)
-  def uniqueCountBy[T](f : S => T): Aggregator[S, Set[T], Int]          = AggregationFeature.uniqueCountBy(f)
 }
 
 object AggregationFeature {
