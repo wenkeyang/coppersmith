@@ -91,7 +91,7 @@ class LiftSpec extends Specification {
     type Joins = (A :: HNil => Int, B => Int) :: HNil
 
     val join: CompleteJoinHl[Types, Joins] =
-      Join.multiway[A].inner[B].on((a: A) => a.id, (b: B) => b.id).complete
+      Join.multiway[A].inner[B].on((a: A) => a.id, (b: B) => b.id)
 
     import ToNextPipe._
 
@@ -130,7 +130,7 @@ class LiftSpec extends Specification {
     type Joins = (A :: HNil => Int, B => Int) :: HNil
 
     val join: CompleteJoinHl[Types, Joins] =
-      Join.multiway[A].left[B].on((a: A) => a.id, (b: B) => b.id).complete
+      Join.multiway[A].left[B].on((a: A) => a.id, (b: B) => b.id)
 
     import ToNextPipe._
 
@@ -167,7 +167,7 @@ class LiftSpec extends Specification {
       inner[C].on((a: A, b: B) => b.str, (c: C) => c.str)
 
 
-    val result = liftMultiwayJoin(join.complete)((as, bs, cs))
+    val result = liftMultiwayJoin(join)((as, bs, cs))
     val expected = List(
       (A(2), B(2, "2"), C("2")),
       (A(2), B(2, "2"), C("2")),

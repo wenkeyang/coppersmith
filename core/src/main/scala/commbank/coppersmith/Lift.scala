@@ -1,6 +1,6 @@
 package commbank.coppersmith
 
-import commbank.coppersmith.Join.{CompleteJoinHl, JoinedHl}
+import commbank.coppersmith.Join.{CompleteJoinHl}
 import commbank.coppersmith.lift.memory
 import shapeless._
 import shapeless.ops.function.FnToProduct

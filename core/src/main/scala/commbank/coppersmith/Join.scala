@@ -72,33 +72,18 @@ object Join {
       (implicit
        fnHLister : FnToProduct.Aux[F,  LeftSides => J] ,
        pp1       : Prepend.Aux[LeftSides, RightSide :: HNil, Out],
-       pp2       : Prepend.Aux[PreviousJoins, (LeftSides => J, FlatRight => J) :: HNil, NextJoins]) = {
+       pp2       : Prepend.Aux[PreviousJoins, (LeftSides => J, FlatRight => J) :: HNil, NextJoins]):CompleteJoinHl[Out, NextJoins] = {
       val leftHListFun: LeftSides => J = leftFun.toProduct
-      JoinedHl[LeftSides, RightSide, FlatRight, NextJoins, J, Out](
-        leftHListFun, rightFun, pjs :+ ((leftHListFun, rightFun)))
+      CompleteJoinHl[Out, NextJoins](pjs :+ ((leftHListFun, rightFun)))
     }
   }
 
-
-  case class JoinedHl[
-  LeftSides <: HList,
-  RightSide, //This is either FlatRight or Option[FlatRight]
-  FlatRight,
-  PrevJoins <: HList,
-  JoinColumn: Ordering,
-  Out <: HList](l: LeftSides => JoinColumn,
-                r: FlatRight => JoinColumn,
-                pjs: PrevJoins)
-               (implicit pp1: Prepend.Aux[LeftSides, RightSide :: HNil, Out]) {
-    def inner[B](implicit np: Prepend[Out, B :: HNil]) =
-      IncompleteJoinedHl[Out, B, B, np.Out, PrevJoins](pjs)
-    
-    def left[B] (implicit np: Prepend[Out, Option[B] :: HNil]) =
-      IncompleteJoinedHl[Out, Option[B], B, np.Out, PrevJoins](pjs)
-
-    def complete = CompleteJoinHl[Out, PrevJoins](pjs)
-  }
-
   case class CompleteJoinHl[Types <: HList, Joins<: HList](joins:Joins) {
+    def inner[B](implicit np: Prepend[Types, B :: HNil]) =
+      IncompleteJoinedHl[Types, B, B, np.Out, Joins](joins)
+
+    def left[B] (implicit np: Prepend[Types, Option[B] :: HNil]) =
+      IncompleteJoinedHl[Types, Option[B], B, np.Out, Joins](joins)
+
   }
 }

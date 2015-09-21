@@ -1,7 +1,6 @@
 package commbank.coppersmith.scalding.lift
 
 import com.twitter.scalding._
-import commbank.coppersmith.Join.JoinedHl
 
 import commbank.coppersmith._, Feature.Value
 import commbank.coppersmith.scalding.ScaldingBoundFeatureSource

@@ -1,6 +1,5 @@
 package commbank.coppersmith.lift
 
-import commbank.coppersmith.Join.JoinedHl
 import commbank.coppersmith._
 
 import commbank.coppersmith.Feature.Value
