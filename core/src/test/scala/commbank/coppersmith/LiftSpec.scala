@@ -96,27 +96,29 @@ class LiftSpec extends Specification {
     import ToNextPipe._
 
 
-    val result = liftMultiwayJoin (join)((as, bs))
-    // Keeping the type parameters commented out before as they get tedious to derive by hand, and are required when
-    // debugging type inference
-//      [
-//      (List[A], List[B]),
-//      List[A] :: List[B] :: HNil,
-//      List[A],
-//      A,
-//      List[B] :: HNil,
-//      NextPipe[B,B] :: HNil,
-//      A :: B :: HNil,
-//      A,
-//      B :: HNil,
-//      Joins,
-//      (A,B),
-//      ( NextPipe[B,B], (A :: HNil => Int, B => Int)) :: HNil
-//      ]
+    val resultFixedTypes = liftMultiwayJoin[
+      (List[A], List[B]),
+      List[A] :: List[B] :: HNil,
+      List[A],
+      A,
+      List[B] :: HNil,
+      NextPipe[B,B] :: HNil,
+      A :: B :: HNil,
+      A,
+      B :: HNil,
+      Joins,
+      (A,B),
+      ( NextPipe[B,B], (A :: HNil => Int, B => Int)) :: HNil
+      ] (join)((as, bs))
 
-    result === List(
-      A(1) -> B(1, "One"),
-      A(1) -> B(1, "One")
+    val resultInferredTypes = liftMultiwayJoin (join)((as, bs))
+
+    Seq(
+      resultInferredTypes === List(
+        A(1) -> B(1, "One"),
+        A(1) -> B(1, "One")
+      ),
+      resultFixedTypes === resultInferredTypes
     )
   }
 
