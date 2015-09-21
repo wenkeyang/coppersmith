@@ -90,8 +90,11 @@ object Join {
                 r: FlatRight => JoinColumn,
                 pjs: PrevJoins)
                (implicit pp1: Prepend.Aux[LeftSides, RightSide :: HNil, Out]) {
-    def inner[B](implicit np: Prepend[Out, B :: HNil]) = IncompleteJoinedHl[Out, B,         B, np.Out, PrevJoins](pjs)
-    def left[B] (implicit np: Prepend[Out, B :: HNil]) = IncompleteJoinedHl[Out, Option[B], B, np.Out, PrevJoins](pjs)
+    def inner[B](implicit np: Prepend[Out, B :: HNil]) =
+      IncompleteJoinedHl[Out, B, B, np.Out, PrevJoins](pjs)
+    
+    def left[B] (implicit np: Prepend[Out, Option[B] :: HNil]) =
+      IncompleteJoinedHl[Out, Option[B], B, np.Out, PrevJoins](pjs)
 
     def complete = CompleteJoinHl[Out, PrevJoins](pjs)
   }
