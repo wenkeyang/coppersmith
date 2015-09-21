@@ -13,7 +13,7 @@ class LiftSpec extends Specification {
         Joins a second time $join2
         Folds lengh 0       $fold0
         Folds lengh 1       $fold1
-        Folds lengh 1 left  $fold1Left
+        Left join  $twoWayLeftJoin
       Join
         Can do two way      $twoWayJoin
         Can do three way   $threeWayJoin
@@ -116,6 +116,29 @@ class LiftSpec extends Specification {
     )
   }
 
+  def twoWayLeftJoin = {
+    import shapeless._
+
+    val as = List[A](A(1), A(2), A(1))
+    val bs = List[B](B(1, "One"))
+
+    type Types = A :: Option[B] :: HNil
+    type Joins = (A :: HNil => Int, B => Int) :: HNil
+
+    val join: CompleteJoinHl[Types, Joins] = Join.multiway[A].left[B].on((a: A) => a.id, (b: B) => b.id).complete
+
+    import ToNextPipe._
+
+
+    val result = liftMultiwayJoin (join)((as, bs))
+    val expected = List[(A, Option[B])](
+      A(1) -> Some(B(1, "One")),
+      A(2) -> None,
+      A(1) -> Some(B(1, "One"))
+    )
+    result === expected
+  }
+
   def threeWayJoin = {
     val as = List(
       A(1),
@@ -150,17 +173,5 @@ class LiftSpec extends Specification {
     result === expected
   }
 
-  def fold1Left = {
-    import shapeless._
-
-    val as = List[A]()
-    val bs = List[B]()
-
-    val initial: List[A :: HNil] = as.map(_ :: HNil)
-    val pipeWithJoin = (NextPipe[B,B](bs),  ((a: A :: HNil) => a.head.id, (b: B) => b.id))
-    //
-    val toFold: (NextPipe[B, B], (A ::HNil  => Int, B => Int)) :: HNil = pipeWithJoin :: HNil
-    toFold.foldLeft(initial)(folder) === List[(A,B)]()
-  }
 
 }
