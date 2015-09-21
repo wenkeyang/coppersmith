@@ -41,32 +41,38 @@ trait Lift[P[_]] {
     leftJoinNext[A :: HNil, B, J, A :: Option[B] :: HNil]((l: A :: HNil) => joined.left(l.head), joined.right)(a.map(_ :: HNil), b).map(_.tupled)
   }
 
-  def liftMultiwayJoin[
-  InTuple <: Product,
-  InHList <: HList,
-  InHeadType,
-  InHeadElementType,
-  InTail <: HList,
-  Types <: HList,
-  Joins <: HList,
-  OutTuple <: Product,
-  Zipped <: HList](join: CompleteJoinHl[Types, Joins])
+  def liftMultiwayJoin[ //type examples as comments for better readability
+  InTuple <: Product, // (List[A], List[B], List[C])
+  InHList <: HList, // List[A] :: List[B] :: List[C]
+  InHeadType, //List[A]
+  InHeadElementType, // A
+  InTail <: HList, // List[B] :: List[C]
+  NextPipes <: HList, // NextPipe[B,B] ::  NextPipe[C,C] :: HNil
+  Types <: HList,    // A :: B :: C :: HNil
+  TypesHead, // A
+  TypesTail <: HList, // B :: C :: HNil
+  Joins <: HList, // (A :: HNil => J, B => J) :: (A :: B :: HNil => J, C => J) :: HNil
+  OutTuple <: Product, // (A,B,C)
+  Zipped <: HList //  (NextPipe[B,B], (A :: HNil => J, B => J) :: (NextPipe[C,C], (A :: B :: HNil => J, C => J)) :: HNil)
+  ](join: CompleteJoinHl[Types, Joins])
                   (in : InTuple)
                   (implicit
-                   inToHlist : Generic.Aux[InTuple, InHList],
+                   inToHlist  : Generic.Aux[InTuple, InHList],
                    inIsCons   : IsHCons.Aux[InHList, InHeadType, InTail],
+                   typesIsCons: IsHCons.Aux[Types, TypesHead, TypesTail],
+                   tnp        : ToNextPipe.Aux[InTail, TypesTail, NextPipes],
                    pEl1       : P[InHeadElementType] =:= InHeadType,
                    pEl2       : InHeadType =:= P[InHeadElementType],
-                   zipper     : Zip.Aux[InTail :: Joins :: HNil, Zipped],
+                   zipper     : Zip.Aux[NextPipes :: Joins :: HNil, Zipped],
                    leftFolder : LeftFolder.Aux[Zipped, P[InHeadElementType :: HNil], memory.joinFolder.type, P[Types]],
                    tupler     : Tupler.Aux[Types, OutTuple],
-                   pFunctor   : Functor[P]
-                                          )
+                   pFunctor   : Functor[P])
   : P[OutTuple] = {
     val inHl : InHList = inToHlist.to(in)
     val inHead: P[InHeadElementType] = pEl2(inHl.head)
     val inTail: InTail = inHl.tail
-    val zipped: Zipped = inTail zip join.joins
+    val tailWithJoined: NextPipes = tnp(inTail)
+    val zipped: Zipped = tailWithJoined zip join.joins
     val initial: P[InHeadElementType :: HNil] = inHead.map(_ :: HNil)
     val folded : P[Types] = zipped.foldLeft(initial)(memory.joinFolder)
     folded.map(_.tupled)
@@ -96,7 +102,7 @@ trait Lift[P[_]] {
     J : Ordering,
     OutInner <: HList,
     Joins <: HList
-    ](implicit prepend: Prepend.Aux[SoFar, Next :: HNil, OutInner]) =
+    ](implicit prepend: Prepend.Aux[SoFar, Option[Next] :: HNil, OutInner]) =
       at[P[SoFar], (NextPipe[Next, Option[Next]], (SoFar => J, Next => J))] {
         (acc: P[SoFar], pipeWithJoin: (NextPipe[Next, Option[Next]], (SoFar => J, Next => J) )) =>
           val fnSoFar: SoFar => J = pipeWithJoin._2._1
@@ -113,4 +119,35 @@ trait Lift[P[_]] {
 
 
   case class NextPipe[Next, JoinType](pipe: P[Next])
+
+  trait ToNextPipe[L <: HList, R <: HList] extends DepFn1[L] with Serializable { type Out <: HList }
+
+  object ToNextPipe {
+    def apply[L <: HList, R <: HList](implicit tnp: ToNextPipe[L, R]) = tnp
+
+    type Aux[L <: HList, R <: HList, Out0] = ToNextPipe[L, R] { type Out = Out0 }
+
+    implicit def toNextPipeHNils: ToNextPipe.Aux[HNil, HNil, HNil] = new ToNextPipe[HNil, HNil] {
+      type Out = HNil
+      def apply(in: HNil):HNil = HNil
+    }
+
+    implicit def toNextPipeHLists[L <: HList, R <: HList, LHead, LTail <: HList, RHead, RTail <: HList, LHeadElement, OutTail <: HList]
+    (implicit lIsHCons: IsHCons.Aux[L, LHead, LTail],
+              rIsHCons: IsHCons.Aux[R, RHead, RTail],
+              tailTNP : ToNextPipe.Aux[LTail, RTail, OutTail],
+             pEl1 : P[LHeadElement] =:= LHead,
+             pEl2 : LHead =:= P[LHeadElement]
+
+      ): ToNextPipe.Aux[L, R, NextPipe[LHeadElement, RHead] :: OutTail] = new ToNextPipe[L, R] {
+      type Out = NextPipe[LHeadElement, RHead] :: OutTail
+
+      def apply(l : L): Out = {
+        val lefthead: LHead = l.head
+        val newHead = NextPipe[LHeadElement, RHead](pEl2(lefthead))
+        newHead :: tailTNP(l.tail)
+      }
+    }
+  }
+
 }

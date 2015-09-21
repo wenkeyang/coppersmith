@@ -3,11 +3,10 @@ package commbank.coppersmith
 import commbank.coppersmith.Join.CompleteJoinHl
 import commbank.coppersmith.lift.memory.{joinFolder => folder, _}
 import org.specs2.Specification
-import shapeless._
-
 import scalaz._, Scalaz._
 
 class LiftSpec extends Specification {
+
   def is = s2"""
       Multiway join fold function
         Joins once          $join1
@@ -80,14 +79,36 @@ class LiftSpec extends Specification {
   }
 
   def twoWayJoin = {
+    import shapeless._
+
     val as = List[A](A(1), A(2), A(1))
     val bs = List[B](B(1, "One"))
 
-    val join: CompleteJoinHl[A :: B :: HNil, (A :: HNil => Int, B => Int) :: HNil] = Join.multiway[A].inner[B].on((a: A) => a.id, (b: B) => b.id).complete
+    type Types = A :: B :: HNil
+    type Joins = (A :: HNil => Int, B => Int) :: HNil
+
+    val join: CompleteJoinHl[Types, Joins] = Join.multiway[A].inner[B].on((a: A) => a.id, (b: B) => b.id).complete
+
+    import ToNextPipe._
 
 
-
-    val result = liftMultiwayJoin(join)((as, bs))
+    val result = liftMultiwayJoin (join)((as, bs))
+    // Keeping the type parameters commented out before as they get tedious to derive by hand, and are required when
+    // debugging type inference
+//      [
+//      (List[A], List[B]),
+//      List[A] :: List[B] :: HNil,
+//      List[A],
+//      A,
+//      List[B] :: HNil,
+//      NextPipe[B,B] :: HNil,
+//      A :: B :: HNil,
+//      A,
+//      B :: HNil,
+//      Joins,
+//      (A,B),
+//      ( NextPipe[B,B], (A :: HNil => Int, B => Int)) :: HNil
+//      ]
 
     result === List(
       A(1) -> B(1, "One"),

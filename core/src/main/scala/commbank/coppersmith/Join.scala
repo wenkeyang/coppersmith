@@ -89,5 +89,6 @@ object Join {
     def complete = CompleteJoinHl[Out, PreviousJoins](pjs)
   }
 
-  case class CompleteJoinHl[Types <: HList, Joins<: HList](joins:Joins)
+  case class CompleteJoinHl[Types <: HList, Joins<: HList](joins:Joins) {
+  }
 }
