@@ -33,12 +33,19 @@ trait Lift[P[_]] {
 
 
   //two is a special case, a little easier to do than the general case
-  def liftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, B) ])(a:P[A], b: P[B])(implicit functor: Functor[P]): P[(A, B)] = {
-    innerJoinNext[A :: HNil, B, J, A :: B :: HNil]((l: A :: HNil) => joined.left(l.head), joined.right)(a.map(_ :: HNil), b).map(_.tupled)
+  def liftJoin[A, B, J : Ordering]
+    (joined: Joined[A, B, J, (A, B) ])
+    (a:P[A], b: P[B])
+    (implicit functor: Functor[P]): P[(A, B)] = {
+    innerJoinNext((l: A :: HNil) =>
+      joined.left(l.head), joined.right)(a.map(_ :: HNil), b).map(_.tupled)
   }
 
-  def liftLeftJoin[A, B, J : Ordering](joined: Joined[A, B, J, (A, Option[B])])(a: P[A], b: P[B])(implicit functor: Functor[P]): P[(A, Option[B])] = {
-    leftJoinNext[A :: HNil, B, J, A :: Option[B] :: HNil]((l: A :: HNil) => joined.left(l.head), joined.right)(a.map(_ :: HNil), b).map(_.tupled)
+  def liftLeftJoin[A, B, J : Ordering]
+    (joined: Joined[A, B, J, (A, Option[B])])
+    (a: P[A], b: P[B])(implicit functor: Functor[P]): P[(A, Option[B])] = {
+    leftJoinNext((l: A :: HNil) =>
+      joined.left(l.head), joined.right)(a.map(_ :: HNil), b).map(_.tupled)
   }
 
   def liftMultiwayJoin[ //type examples as comments for better readability
@@ -53,20 +60,21 @@ trait Lift[P[_]] {
   TypesTail <: HList, // B :: C :: HNil
   Joins <: HList, // (A :: HNil => J, B => J) :: (A :: B :: HNil => J, C => J) :: HNil
   OutTuple <: Product, // (A,B,C)
-  Zipped <: HList //  (NextPipe[B,B], (A :: HNil => J, B => J) :: (NextPipe[C,C], (A :: B :: HNil => J, C => J)) :: HNil)
+  Zipped <: HList //  (NextPipe[B,B], (A :: HNil => J, B => J) ::
+                  // (NextPipe[C,C], (A :: B :: HNil => J, C => J)) :: HNil)
   ](join: CompleteJoinHl[Types, Joins])
-                  (in : InTuple)
-                  (implicit
-                   inToHlist  : Generic.Aux[InTuple, InHList],
-                   inIsCons   : IsHCons.Aux[InHList, InHeadType, InTail],
-                   typesIsCons: IsHCons.Aux[Types, TypesHead, TypesTail],
-                   tnp        : ToNextPipe.Aux[InTail, TypesTail, NextPipes],
-                   pEl1       : P[InHeadElementType] =:= InHeadType,
-                   pEl2       : InHeadType =:= P[InHeadElementType],
-                   zipper     : Zip.Aux[NextPipes :: Joins :: HNil, Zipped],
-                   leftFolder : LeftFolder.Aux[Zipped, P[InHeadElementType :: HNil], memory.joinFolder.type, P[Types]],
-                   tupler     : Tupler.Aux[Types, OutTuple],
-                   pFunctor   : Functor[P])
+   (in : InTuple)
+   (implicit inToHlist  : Generic.Aux[InTuple, InHList],
+             inIsCons   : IsHCons.Aux[InHList, InHeadType, InTail],
+             typesIsCons: IsHCons.Aux[Types, TypesHead, TypesTail],
+             tnp        : ToNextPipe.Aux[InTail, TypesTail, NextPipes],
+             pEl1       : P[InHeadElementType] =:= InHeadType,
+             pEl2       : InHeadType =:= P[InHeadElementType],
+             zipper     : Zip.Aux[NextPipes :: Joins :: HNil, Zipped],
+             leftFolder : LeftFolder.Aux[Zipped, P[InHeadElementType :: HNil],
+                                            memory.joinFolder.type, P[Types]],
+             tupler     : Tupler.Aux[Types, OutTuple],
+             pFunctor   : Functor[P])
   : P[OutTuple] = {
     val inHl : InHList = inToHlist.to(in)
     val inHead: P[InHeadElementType] = pEl2(inHl.head)
@@ -106,7 +114,7 @@ trait Lift[P[_]] {
       at[P[SoFar], (NextPipe[Next, Option[Next]], (SoFar => J, Next => J))] {
         (acc: P[SoFar], pipeWithJoin: (NextPipe[Next, Option[Next]], (SoFar => J, Next => J) )) =>
           val fnSoFar: SoFar => J = pipeWithJoin._2._1
-          val fnNext: Next => J = pipeWithJoin._2._2
+          val fnNext: Next   => J = pipeWithJoin._2._2
           leftJoinNext[SoFar, Next, J, OutInner](fnSoFar, fnNext)(acc, pipeWithJoin._1.pipe)
       }
   }
@@ -136,9 +144,8 @@ trait Lift[P[_]] {
     (implicit lIsHCons: IsHCons.Aux[L, LHead, LTail],
               rIsHCons: IsHCons.Aux[R, RHead, RTail],
               tailTNP : ToNextPipe.Aux[LTail, RTail, OutTail],
-             pEl1 : P[LHeadElement] =:= LHead,
-             pEl2 : LHead =:= P[LHeadElement]
-
+              pEl1      : P[LHeadElement] =:= LHead,
+              pEl2      : LHead =:= P[LHeadElement]
       ): ToNextPipe.Aux[L, R, NextPipe[LHeadElement, RHead] :: OutTail] = new ToNextPipe[L, R] {
       type Out = NextPipe[LHeadElement, RHead] :: OutTail
 

@@ -28,10 +28,12 @@ object SourceBinder extends SourceBinderInstances
 trait SourceBinderInstances {
   def from[S, P[_] : Lift](dataSource: DataSource[S, P]) = FromBinder(dataSource)
 
-  def join[L, R, J : Ordering, P[_] : Lift : Functor](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
+  def join[L, R, J : Ordering, P[_] : Lift : Functor]
+    (leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     JoinedBinder(leftSrc, rightSrc)
 
-  def leftJoin[L, R, J : Ordering, P[_] : Lift : Functor](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
+  def leftJoin[L, R, J : Ordering, P[_] : Lift : Functor]
+    (leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     LeftJoinedBinder(leftSrc, rightSrc)
 }
 

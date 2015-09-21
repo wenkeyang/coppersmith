@@ -9,6 +9,7 @@ import scalaz.Functor
  */
 object ScaldingScalazInstances {
   implicit val typedPipeFunctor: Functor[TypedPipe] = new Functor[TypedPipe] {
-    override def map[A, B](fa: TypedPipe[A])(f: (A) => B): TypedPipe[B] = fa.map(f)
+    override def map[A, B](fa: TypedPipe[A])(f: (A) => B): TypedPipe[B] =
+      fa.map(f)
   }
 }

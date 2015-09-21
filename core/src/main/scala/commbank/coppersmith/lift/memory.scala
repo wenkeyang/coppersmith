@@ -55,8 +55,9 @@ trait MemoryLift extends Lift[List] {
       }
     }
 
-  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, List]](underlying: U, binder: B, filter: Option[S => Boolean]) =
-    MemoryBoundFeatureSource(underlying, binder, filter)
+  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, List]]
+    (underlying: U, binder: B, filter: Option[S => Boolean]) =
+      MemoryBoundFeatureSource(underlying, binder, filter)
 
   case class MemoryBoundFeatureSource[S, U <: FeatureSource[S, U]](
     underlying: U,
