@@ -410,7 +410,7 @@ to improve readability when there are multiple conditions).
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
-import Feature.Type.Continuous
+import Feature.Type.Categorical
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
@@ -426,13 +426,13 @@ object CustomerBirthFeatures extends FeatureSet[Customer] {
 
   val ageIn1970  = select(1970 - _.birthYear)
     .where(_.birthYear < 1970)
-    .asFeature(Continuous, "CUST_AGE_1970",
+    .asFeature(Categorical, "CUST_AGE_1970",
                "Age in 1970, for customers born prior to 1970")
 
   val ageIn1980 = select(1980 - _.birthYear)
     .where   (_.birthYear >= 1970)
     .andWhere(_.birthYear <= 1979)
-    .asFeature(Continuous, "CUST_AGE_1980",
+    .asFeature(Categorical, "CUST_AGE_1980",
                "Age in 1980, for customers born between 1970 and 1979")
 
   val features = List(ageIn1970, ageIn1980)
@@ -447,7 +447,7 @@ repetition in the feature definitions.
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
-import Feature.Type.Continuous
+import Feature.Type.Categorical
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
@@ -464,12 +464,12 @@ object GenXYCustomerFeatures extends FeatureSet[Customer] {
 
   val genXBirthYear  = select(_.birthYear)
     .where(_.birthYear < 1980)
-    .asFeature(Continuous, "GEN_X_CUST_BIRTH_YEAR",
+    .asFeature(Categorical, "GEN_X_CUST_BIRTH_YEAR",
                "Year of birth for customers born between 1960 and 1980")
 
   val genYBirthYear  = select(_.birthYear)
     .where(_.birthYear >= 1980)
-    .asFeature(Continuous, "GEN_Y_CUST_BIRTH_YEAR",
+    .asFeature(Categorical, "GEN_Y_CUST_BIRTH_YEAR",
                "Year of birth for customers born between 1980 and 2000")
 
   val features = List(genXBirthYear, genYBirthYear)
