@@ -1,7 +1,6 @@
 package commbank.coppersmith
 
 import commbank.coppersmith.Join.{CompleteJoinHl}
-import commbank.coppersmith.lift.memory
 import shapeless._
 import shapeless.ops.function.FnToProduct
 import shapeless.ops.hlist._
@@ -72,7 +71,7 @@ trait Lift[P[_]] {
              pEl2       : InHeadType =:= P[InHeadElementType],
              zipper     : Zip.Aux[NextPipes :: Joins :: HNil, Zipped],
              leftFolder : LeftFolder.Aux[Zipped, P[InHeadElementType :: HNil],
-                                            memory.joinFolder.type, P[Types]],
+                                            joinFolder.type, P[Types]],
              tupler     : Tupler.Aux[Types, OutTuple],
              pFunctor   : Functor[P])
   : P[OutTuple] = {
@@ -82,7 +81,7 @@ trait Lift[P[_]] {
     val tailWithJoined: NextPipes = tnp(inTail)
     val zipped: Zipped = tailWithJoined zip join.joins
     val initial: P[InHeadElementType :: HNil] = inHead.map(_ :: HNil)
-    val folded : P[Types] = zipped.foldLeft(initial)(memory.joinFolder)
+    val folded : P[Types] = zipped.foldLeft(initial)(joinFolder)
     folded.map(_.tupled)
   }
 
