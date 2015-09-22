@@ -1,4 +1,6 @@
-package commbank.coppersmith.scalding
+package commbank.coppersmith
+
+package scalding
 
 import com.twitter.scalding.typed._
 
@@ -12,6 +14,8 @@ import au.com.cba.omnia.thermometer.core.ThermometerSpec
 import commbank.coppersmith._, SourceBinder._
 import Arbitraries._
 import test.thrift.{Account, Customer}
+
+import lift.ScaldingScalazInstances._
 
 object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
   SelectFeatureSet - Test an example set of features based on selecting fields
