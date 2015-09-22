@@ -119,40 +119,48 @@ trait Lift[P[_]] {
       }
   }
 
+
   def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, P]](
     underlying: U,
     binder: B,
     filter: Option[S => Boolean]
   ): BoundFeatureSource[S, P]
 
+  object comb extends Poly2 {
+    implicit def default[U, V] = at[P[U], V] ( (u: P[U], _: V) => NextPipe[U, V](u) )
+  }
+
+  trait NullHList[HL <: HList] extends DepFn0 {
+    type Out = HL
+  }
+
+  object NullHList {
+    implicit object nullHListHnil extends NullHList[HNil] {
+      def apply() = HNil
+    }
+    implicit def nullHListHcons[H, T <: HList](implicit tailNhl: NullHList[T]) = new NullHList[H :: T] {
+      def apply() = null.asInstanceOf[H] :: tailNhl()
+    }
+  }
 
   case class NextPipe[Next, JoinType](pipe: P[Next])
 
-  trait ToNextPipe[L <: HList, R <: HList] extends DepFn1[L] with Serializable { type Out <: HList }
+  trait ToNextPipe[L <: HList, R <: HList] extends DepFn1[L]
 
   object ToNextPipe {
     def apply[L <: HList, R <: HList](implicit tnp: ToNextPipe[L, R]) = tnp
 
     type Aux[L <: HList, R <: HList, Out0] = ToNextPipe[L, R] { type Out = Out0 }
 
-    implicit def toNextPipeHNils: ToNextPipe.Aux[HNil, HNil, HNil] = new ToNextPipe[HNil, HNil] {
-      type Out = HNil
-      def apply(in: HNil):HNil = HNil
-    }
+    implicit def toNextPipe[L <: HList, R <: HList, Out0 <: HList]
+      (implicit nhl     : NullHList[R],
+                zipWith : ZipWith.Aux[L, R, comb.type, Out0]): ToNextPipe.Aux[L, R, Out0] = new ToNextPipe[L, R] {
+      type Out = Out0
 
-    implicit def toNextPipeHLists[L <: HList, R <: HList, LHead, LTail <: HList, RHead, RTail <: HList, LHeadElement, OutTail <: HList]
-    (implicit lIsHCons: IsHCons.Aux[L, LHead, LTail],
-              rIsHCons: IsHCons.Aux[R, RHead, RTail],
-              tailTNP : ToNextPipe.Aux[LTail, RTail, OutTail],
-              pEl1      : P[LHeadElement] =:= LHead,
-              pEl2      : LHead =:= P[LHeadElement]
-      ): ToNextPipe.Aux[L, R, NextPipe[LHeadElement, RHead] :: OutTail] = new ToNextPipe[L, R] {
-      type Out = NextPipe[LHeadElement, RHead] :: OutTail
+      def apply(l: L) = {
+        val nulls: R = nhl()
 
-      def apply(l : L): Out = {
-        val lefthead: LHead = l.head
-        val newHead = NextPipe[LHeadElement, RHead](pEl2(lefthead))
-        newHead :: tailTNP(l.tail)
+        l.zipWith(nulls)(comb)
       }
     }
   }
