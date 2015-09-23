@@ -85,5 +85,15 @@ object Join {
     def left[B] (implicit np: Prepend[Types, Option[B] :: HNil]) =
       IncompleteJoinedHl[Types, Option[B], B, np.Out, Joins](joins)
 
+    def src[TypesTuple <: Product]
+    (implicit tupler: shapeless.ops.hlist.Tupler.Aux[Types,TypesTuple]):FeatureSource[TypesTuple, CompleteJoinHlFeatureSource[Types, Joins, TypesTuple]] =
+      CompleteJoinHlFeatureSource[Types, Joins, TypesTuple](this, None)
+  }
+
+  case class CompleteJoinHlFeatureSource[Types <: HList, Joins <: HList, TypesTuple <: Product]
+    (join: CompleteJoinHl[Types, Joins], filter: Option[TypesTuple => Boolean])
+    (implicit tupler: Tupler.Aux[Types, TypesTuple])
+    extends FeatureSource[TypesTuple, CompleteJoinHlFeatureSource[Types, Joins, TypesTuple]] {
+    def copyWithFilter(filter: Option[TypesTuple => Boolean]) = copy(filter = filter)
   }
 }
