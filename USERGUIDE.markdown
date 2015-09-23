@@ -518,7 +518,7 @@ For a left join, the value on the right may be missing,
 e.g. `(Customer, Option[Account])`.
 
 Self-joins are possible, yielding `(Customer, Customer)` for an inner self join,
-and `(Customer, Option[Customer])`
+and `(Customer, Option[Customer])` for an left outer self join.
 
 As described in the section **Shaping input data**,
 the convention of defining a `source` per feature set
