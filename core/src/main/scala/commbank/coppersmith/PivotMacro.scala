@@ -7,7 +7,11 @@ import com.twitter.scrooge.ThriftStruct
 import scala.reflect.macros.whitebox.Context
 
 object PivotMacro {
-  def pivotThrift[A <: ThriftStruct](namespace:Namespace, entity: A => EntityId, time: A => Time):Any = macro pivotImpl[A]
+  def pivotThrift[A <: ThriftStruct](
+    namespace:Namespace,
+    entity: A => EntityId,
+    time: A => Time
+  ): Any = macro pivotImpl[A]
 
   def pivotImpl[A <: ThriftStruct: c.WeakTypeTag]
     (c: Context)
@@ -20,8 +24,6 @@ object PivotMacro {
     val typ        = c.universe.weakTypeOf[A]
     val entries    = Inspect.info[A](c)
 
-
-
     val features = entries.map({
       case (int, field, method) =>
         val returnType = method.returnType
@@ -31,9 +33,9 @@ object PivotMacro {
         val fieldDescription = s"Feature auto-pivoted from ${typ.typeSymbol.toString}.${field}"
         val feature =
           q"""{
-              import commbank.coppersmith._
+              import commbank.coppersmith._, Feature.Metadata
 
-              val featureMetadata = FeatureMetadata[$featureValueType](
+              val featureMetadata = Metadata[$typ, $featureValueType](
                   $namespace, ${field.toLowerCase}, $fieldDescription,
                   ${ if(continuous) q"Feature.Type.Continuous" else q"Feature.Type.Categorical"})
 
@@ -41,14 +43,14 @@ object PivotMacro {
 
                 def generate(source: $typ):Option[FeatureValue[$featureValueType]] = {
                   val v = source.$method
-                  Some(FeatureValue($entity(source), ${field.toLowerCase}, Feature.Value.$mapperFn(v), $time(source)))
+                  Some(FeatureValue($entity(source),
+                                    ${field.toLowerCase},
+                                    Feature.Value.$mapperFn(v),
+                                    $time(source)))
                 }
-
-
              }}"""
 
         q"val ${TermName(field)} : Feature[$typ, $featureValueType] = $feature"
-
     })
 
       val featureRefs = entries.map({
@@ -72,7 +74,7 @@ object PivotMacro {
 
   def isContinuous(c:Context)(t:c.universe.Type) = {
     import c.universe._
-    t =:= typeOf[Double]
+    t =:= typeOf[Double] || t =:= typeOf[Option[Double]]
   }
 
   def typeMapper(c:Context)(t:c.universe.Type) = {
@@ -84,10 +86,16 @@ object PivotMacro {
       TermName("fromOString")
     } else if (t =:= typeOf[Int]) {
       TermName("fromInt")
+    } else if (t =:= typeOf[Option[Int]]) {
+      TermName("fromOInt")
     } else if (t =:= typeOf[Double]) {
       TermName("fromDouble")
+    } else if (t =:= typeOf[Option[Double]]) {
+      TermName("fromODouble")
     } else if (t =:= typeOf[Long]) {
       TermName("fromLong")
+    } else if (t =:= typeOf[Option[Long]]) {
+      TermName("fromOLong")
     } else {
       throw new RuntimeException(s"no type mapper for $t" )
     }

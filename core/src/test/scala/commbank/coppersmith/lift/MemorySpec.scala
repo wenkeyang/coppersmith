@@ -1,5 +1,9 @@
 package commbank.coppersmith.lift
 
+import shapeless.ops.hlist.IsHCons
+
+import scalaz._, Scalaz._
+
 import commbank.coppersmith.Join
 import org.specs2.Specification
 import memory._
@@ -7,13 +11,14 @@ import memory._
 class MemorySpec extends Specification {
   def is =
     s2"""
-         Joins        $joins
-         Left joins   $leftJoins
+         Joins                   $joins
+         Left joins              $leftJoins
       """
 
 
   case class A(a:Int, b:String)
   case class B(a:Int, b: String)
+  case class C(b: String)
 
     val as = List(
       A(1, "1"),
@@ -59,4 +64,5 @@ class MemorySpec extends Specification {
 
     liftLeftJoin(Join.left[A].to[B].on(_.a, _.a))(as, bs) === expected
   }
+
 }

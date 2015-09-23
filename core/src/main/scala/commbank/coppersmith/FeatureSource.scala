@@ -1,36 +1,21 @@
 package commbank.coppersmith
 
+import scalaz.Functor
 import scalaz.syntax.std.option.ToOptionIdOps
 
-import Feature._
-import Join._
+abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => Boolean] = None) {
+  self: FS =>
 
-case class FeatureSource[S, U](underlying: U, filter: Option[S => Boolean] = None) {
-  def featureSetBuilder(namespace: Namespace, entity: S => EntityId, time: S => Time) =
-    FeatureSetBuilder(namespace, entity, time)
+  def filter(p: S => Boolean): FS = copyWithFilter(filter.map(f => (s: S) => f(s) && p(s)).orElse(p.some))
 
-  def filter(p: S => Boolean): FeatureSource[S, U] =
-    copy(filter = filter.map(f => (s: S) => f(s) && p(s)).orElse(p.some))
+  def copyWithFilter(filter: Option[S => Boolean]): FS
 
-  def configure[B <: SourceBinder[S, U, P], P[_] : Lift](binder: B): ConfiguredFeatureSource[S, U, P] = {
-    implicitly[Lift[P]].liftBinder(underlying, binder, filter)
+  def bind[P[_] : Lift](binder: SourceBinder[S, FS, P]): BoundFeatureSource[S, P] = {
+    implicitly[Lift[P]].liftBinder(self, binder, filter)
   }
 }
 
-object FeatureSource extends FeatureSourceInstances
-
-trait FeatureSourceInstances {
-  implicit def fromFS[S, P[_]](s: From[S]) =
-    FeatureSource[S, From[S]](s)
-
-  implicit def joinFS[L, R, J : Ordering, P[_]](s: Joined[L, R, J, Inner]) =
-    FeatureSource[(L, R), Joined[L, R, J, Inner]](s)
-
-  implicit def leftFS[L, R, J : Ordering, P[_]](s: Joined[L, R, J, LeftOuter]) =
-    FeatureSource[(L, Option[R]), Joined[L, R, J, LeftOuter]](s)
-}
-
-trait ConfiguredFeatureSource[S, U, P[_]] {
+trait BoundFeatureSource[S, P[_]] {
   def load: P[S]
 }
 
@@ -41,35 +26,35 @@ trait SourceBinder[S, U, P[_]] {
 object SourceBinder extends SourceBinderInstances
 
 trait SourceBinderInstances {
-  def from[S, P[_]](dataSource: DataSource[S, P]) = FromBinder(dataSource)
+  def from[S, P[_] : Lift](dataSource: DataSource[S, P]) = FromBinder(dataSource)
 
-  def join[L, R, J : Ordering, P[_] : Lift](leftSource: DataSource[L, P], rightSource: DataSource[R, P]) =
-    JoinedBinder(leftSource, rightSource)
+  def join[L, R, J : Ordering, P[_] : Lift : Functor]
+    (leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
+    JoinedBinder(leftSrc, rightSrc)
 
-  def leftJoin[L, R, J : Ordering, P[_] : Lift](leftSource: DataSource[L, P], rightSource: DataSource[R, P]) =
-    LeftJoinedBinder(leftSource, rightSource)
+  def leftJoin[L, R, J : Ordering, P[_] : Lift : Functor]
+    (leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
+    LeftJoinedBinder(leftSrc, rightSrc)
 }
 
-case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, From[S], P]{
-  def bind(from: From[S]): P[S] = {
-    src.load
-  }
+case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, From[S], P] {
+  def bind(from: From[S]): P[S] = src.load
 }
 
-case class JoinedBinder[L, R, J : Ordering, P[_] : Lift](
+case class JoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
   leftSrc:  DataSource[L, P],
   rightSrc: DataSource[R, P]
-) extends SourceBinder[(L, R), Joined[L, R, J, Inner], P] {
-  def bind(j: Joined[L, R, J, Inner]): P[(L, R)] = {
+) extends SourceBinder[(L, R), Joined[L, R, J, (L, R)], P] {
+  def bind(j: Joined[L, R, J, (L, R)]): P[(L, R)] = {
     implicitly[Lift[P]].liftJoin(j)(leftSrc.load, rightSrc.load)
   }
 }
 
-case class LeftJoinedBinder[L, R, J : Ordering, P[_] : Lift](
+case class LeftJoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
   leftSrc:  DataSource[L, P],
   rightSrc: DataSource[R, P]
-) extends SourceBinder[(L, Option[R]), Joined[L, R, J, LeftOuter], P] {
-  def bind(j: Joined[L, R, J, LeftOuter]): P[(L, Option[R])] = {
+) extends SourceBinder[(L, Option[R]), Joined[L, R, J, (L, Option[R])], P] {
+  def bind(j: Joined[L, R, J, (L, Option[R])]): P[(L, Option[R])] = {
     implicitly[Lift[P]].liftLeftJoin(j)(leftSrc.load, rightSrc.load)
   }
 }

@@ -1,0 +1,1 @@
+inactive_id|inactive_name|21|1.6|\N|54321

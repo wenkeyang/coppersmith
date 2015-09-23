@@ -5,7 +5,6 @@ import com.twitter.scalding.{Execution, TypedPipe}
 import org.scalacheck.{Arbitrary, Prop}, Arbitrary._, Prop.forAll
 
 import scalaz.NonEmptyList
-import scalaz.scalacheck.ScalazArbitrary.NonEmptyListArbitrary
 
 import org.apache.hadoop.fs.Path
 
@@ -24,6 +23,7 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     Writing features to a HydroSink
       writes all feature values          $featureValuesOnDiskMatch        ${tag("slow")}
       exposes features through hive      $featureValuesInHiveMatch        ${tag("slow")}
+
       writes all partitions with SUCCESS $expectedPartitionsMarkedSuccess ${tag("slow")}
   """
 
@@ -33,6 +33,21 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
                 dbPath <- arbitrary[Path]
                 tableName <- arbNonEmptyAlphaStr
               } yield HydroSink.Config(dbName.value, new Path(dir, dbPath), tableName.value))
+
+  // Current hydro sink implementation lacks support for encoding control characters.
+  // Filter them out of strings for now until Hydro switches to Parquet.
+  implicit val arbFeatureValues: Arbitrary[NonEmptyList[FeatureValue[Value]]] = {
+    import scalaz.scalacheck.ScalazArbitrary.NonEmptyListArbitrary
+    import Feature.Value.Str
+    Arbitrary(
+      NonEmptyListArbitrary[FeatureValue[Value]].arbitrary.map(nel =>
+        nel.map {
+          case v@FeatureValue(_, _, Str(s), _) => v.copy(value = Str(s.map(_.filterNot(_ < 32))))
+          case v => v
+        }
+      )
+    )
+  }
 
   def featureValuesOnDiskMatch =
     forAll { (vs: NonEmptyList[FeatureValue[Value]], hydroConfig: HydroSink.Config) =>  {
@@ -61,7 +76,7 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
       withEnvironment(path(getClass.getResource("/").toString)) {
         val sink = HydroSink(hydroConfig)
         val hiveConf = hydroConfig.hiveConfig
-        val query = s"SELECT * FROM ${hiveConf.database}.${hiveConf.tablename}"
+        val query = s"""SELECT * FROM `${hiveConf.database}.${hiveConf.tablename}`"""
 
         executesSuccessfully(sink.write(TypedPipe.from(vs.list)))
         val actual = executesSuccessfully(Execution.fromHive(Hive.query(query)))

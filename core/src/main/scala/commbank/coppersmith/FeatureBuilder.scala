@@ -9,7 +9,18 @@ import com.twitter.algebird.Aggregator
 
 import Feature.{Conforms, EntityId, Name, Namespace, Time, Type, Value}
 
-case class FeatureSetBuilder[S](namespace: Namespace, entity: S => EntityId, time: S => Time) {
+abstract class FeatureBuilderSource[S : TypeTag] {
+  def featureSetBuilder(namespace: Namespace, entity: S => EntityId, time: S => Time) =
+    FeatureSetBuilder(namespace, entity, time)
+}
+
+object FeatureBuilderSource extends FeatureBuilderSourceInstances
+
+trait FeatureBuilderSourceInstances {
+  implicit def fromFS[S : TypeTag](fs: FeatureSource[S, _]) = new FeatureBuilderSource[S] {}
+}
+
+case class FeatureSetBuilder[S : TypeTag](namespace: Namespace, entity: S => EntityId, time: S => Time) {
   def apply[FV <% V, V <: Value : TypeTag](value : S => FV): FeatureBuilder[S, FV, V] =
     FeatureBuilder(this, value)
 
@@ -18,7 +29,7 @@ case class FeatureSetBuilder[S](namespace: Namespace, entity: S => EntityId, tim
     AggregationFeatureBuilder(this, aggregator)
 }
 
-case class FeatureBuilder[S, FV <% V, V <: Value : TypeTag](
+case class FeatureBuilder[S : TypeTag, FV <% V, V <: Value : TypeTag](
   fsBuilder: FeatureSetBuilder[S],
   value:     S => FV,
   filter:    Option[S => Boolean] = None
@@ -37,7 +48,7 @@ case class FeatureBuilder[S, FV <% V, V <: Value : TypeTag](
                                fsBuilder.time)
 }
 
-case class AggregationFeatureBuilder[S, T, U <% V, V <: Value : TypeTag](
+case class AggregationFeatureBuilder[S : TypeTag, T, U <% V, V <: Value : TypeTag](
   fsBuilder:  FeatureSetBuilder[S],
   aggregator: Aggregator[S, T, U],
   filter:     Option[S => Boolean] = None

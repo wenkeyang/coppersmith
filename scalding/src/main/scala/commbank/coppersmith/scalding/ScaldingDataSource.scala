@@ -14,32 +14,38 @@ import au.com.cba.omnia.maestro.core.codec.DecodeOk
 import commbank.coppersmith.DataSource
 
 object ScaldingDataSource {
-  case class PartitionPath[S, P](underlying: Partition[S, P], value: P)(implicit ev: PartitionToPath[P]) {
-    def toPath = new Path(underlying.pattern.format(ev.toPathComponents((value)): _*))
+  object Partitions {
+    def apply[P : PathComponents](underlying: Partition[_, P], values: P*): Partitions[P] =
+      Partitions(underlying.pattern, values: _*)
+  }
+  case class Partitions[P : PathComponents](pattern: String, values: P*) {
+    def toPaths(basePath: Path): List[Path] = values.map(value =>
+      new Path(basePath, pattern.format(implicitly[PathComponents[P]].toComponents((value)): _*))
+    ).toList
   }
 
-  case class PartitionToPath[P](toPathComponents: P => List[String])
+  case class PathComponents[P](toComponents: P => List[String])
   import shapeless.syntax.std.tuple.productTupleOps
-  implicit val StringToPath       = PartitionToPath[String](List(_))
-  implicit val StringTuple2ToPath = PartitionToPath[(String, String)](_.toList)
-  implicit val StringTuple3ToPath = PartitionToPath[(String, String, String)](_.toList)
-  implicit val StringTuple4ToPath = PartitionToPath[(String, String, String, String)](_.toList)
+  implicit val StringToPath       = PathComponents[String](List(_))
+  implicit val StringTuple2ToPath = PathComponents[(String, String)](_.toList)
+  implicit val StringTuple3ToPath = PathComponents[(String, String, String)](_.toList)
+  implicit val StringTuple4ToPath = PathComponents[(String, String, String, String)](_.toList)
 }
 
-import ScaldingDataSource.PartitionPath
+import ScaldingDataSource.Partitions
 
 case class HiveTextSource[S <: ThriftStruct : Decode, P](
-  basePath:  Path,
-  partition: PartitionPath[S, P],
-  delimiter: String = "|",
-  filter:    S => Boolean = (_: S) => true
+  basePath:   Path,
+  partitions: Partitions[P],
+  delimiter:  String = "|",
+  filter:     S => Boolean = (_: S) => true
 ) extends DataSource[S, TypedPipe] {
   def filter(f: S => Boolean): HiveTextSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
   def load = {
-    val ev = implicitly[Decode[S]]
-    val input: TextLineScheme = MultipleTextLineFiles(new Path(basePath, partition.toPath).toString)
+    val decoder = implicitly[Decode[S]]
+    val input: TextLineScheme = MultipleTextLineFiles(partitions.toPaths(basePath).map(_.toString): _*)
     input.map { raw =>
-      ev.decode(none = "\\N", Splitter.delimited(delimiter).run(raw).toList)
+      decoder.decode(none = "\\N", Splitter.delimited(delimiter).run(raw).toList)
     }.collect {
       // FIXME: This implementation completely ignores errors
       case DecodeOk(row) if filter(row) => row
@@ -48,12 +54,12 @@ case class HiveTextSource[S <: ThriftStruct : Decode, P](
 }
 
 case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter, P](
-  basePath:  Path,
-  partition: PartitionPath[S, P],
-  filter:    S => Boolean = (_: S) => true
+  basePath:   Path,
+  partitions: Partitions[P],
+  filter:     S => Boolean = (_: S) => true
 ) extends DataSource[S, TypedPipe] {
   def filter(f: S => Boolean): HiveParquetSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
   def load = {
-    TypedPipe.from(ParquetScroogeSource[S](new Path(basePath, partition.toPath).toString))
+    TypedPipe.from(ParquetScroogeSource[S](partitions.toPaths(basePath).map(_.toString): _*))
   }
 }
