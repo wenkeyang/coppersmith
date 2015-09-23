@@ -11,14 +11,14 @@ object MetadataOutput {
     s"""
        |# ${md.name}
        |
-       |## ${md.namespace}
-       |
-       | ${md.description}
-       |
-       | Source: ${md.sourceTag.tpe}
-       |
-       | Feature type: ${md.featureType}
-       | Value Type: ${md.valueType}
+       |Meta          Value
+       |------------  ------------------------
+       |Identifier    ${md.name}
+       |Namespace     ${md.namespace}
+       |Description   ${md.description}
+       |Source        ${md.sourceTag.tpe}
+       |Feature type  ${md.featureType}
+       |Value Type    ${md.valueType}
        |
      """.stripMargin
   trait HasMetadata[S] {
