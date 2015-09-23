@@ -18,4 +18,10 @@ object LegacyFeatureSetExample extends MetadataSet[Customer] {
   )
 
   def metadata = List(legacyFeature1, legacyFeature2)
+
+  def main(args: Array[String]): Unit = {
+    import MetadataOutput._
+
+    println(metadataString(LegacyFeatureSetExample, Markdown))
+  }
 }
