@@ -20,6 +20,15 @@ trait FeatureBuilderSourceInstances {
   implicit def fromFS[S : TypeTag](fs: FeatureSource[S, _]) = new FeatureBuilderSource[S] {}
 }
 
+object FeatureSetBuilder {
+  // PartialFunction composition (see http://stackoverflow.com/a/23024859/78398)
+  implicit class ComposePartial[A, B](pf: PartialFunction[A, B]) {
+    def andThenPartial[C](that: PartialFunction[B, C]): PartialFunction[A, C] =
+      Function.unlift(pf.lift(_) flatMap that.lift)
+  }
+}
+import FeatureSetBuilder.ComposePartial
+
 /**
   * @tparam S Feature set Source
   * @tparam SV View of Source from which to generate feature
@@ -32,16 +41,13 @@ case class FeatureSetBuilder[S : TypeTag, SV](
   def map[SVV](f: Function[SV, SVV]): FeatureSetBuilder[S, SVV] = copy(view = view.andThen(f))
 
   def collect[SVV](pf: PartialFunction[SV, SVV]): FeatureSetBuilder[S, SVV] =
-    copy(view =
-      // PartialFunction composition. Adapted from http://stackoverflow.com/a/23024859/78398
-      Function.unlift(view.lift(_).flatMap(pf.lift))
-    )
+    copy(view = view.andThenPartial(pf))
 
   def apply[FV <% V, V <: Value : TypeTag](value : SV => FV): FeatureBuilder[S, SV, FV, V] =
     FeatureBuilder(this, value, view)
 
-  def apply[T, U <% V, V <: Value : TypeTag](
-      aggregator: Aggregator[SV, T, U]): AggregationFeatureBuilder[S, SV, T, U, V] =
+  def apply[T, FV <% V, V <: Value : TypeTag](
+      aggregator: Aggregator[SV, T, FV]): AggregationFeatureBuilder[S, SV, T, FV, V] =
     AggregationFeatureBuilder(this, aggregator, view)
 
   def select = this
@@ -71,12 +77,10 @@ case class FeatureSetBuilder[S : TypeTag, SV](
 case class FeatureBuilder[S : TypeTag, SV, FV <% V, V <: Value : TypeTag](
   fsBuilder: FeatureSetBuilder[S, SV],
   value:     SV => FV,
-  view:      PartialFunction[S, SV],
-  filter:    Option[SV => Boolean] = None
+  view:      PartialFunction[S, SV]
 ) {
   def andWhere(condition: SV => Boolean) = where(condition)
-  def where(condition: SV => Boolean) =
-    copy(filter = filter.map(f => (s: SV) => f(s) && condition(s)).orElse(condition.some))
+  def where(condition: SV => Boolean) = copy(view = view.andThenPartial { case s if condition(s) => s })
 
   def asFeature[T <: Type](featureType: T, name: Name, desc: Description)(implicit ev: Conforms[T, V]) =
     Patterns.general[S, V, FV](fsBuilder.namespace,
@@ -84,7 +88,7 @@ case class FeatureBuilder[S : TypeTag, SV, FV <% V, V <: Value : TypeTag](
                                desc,
                                featureType,
                                fsBuilder.entity,
-                               (s: S) => view.lift(s).filter(sv => filter.forall(_(sv))).map(value(_): V))
+                               (s: S) => view.lift(s).map(value(_): V))
 }
 
 /**
@@ -97,13 +101,11 @@ case class FeatureBuilder[S : TypeTag, SV, FV <% V, V <: Value : TypeTag](
 case class AggregationFeatureBuilder[S : TypeTag, SV, T, FV <% V, V <: Value : TypeTag](
   fsBuilder:  FeatureSetBuilder[S, SV],
   aggregator: Aggregator[SV, T, FV],
-  view:       PartialFunction[S, SV],
-  filter:     Option[SV => Boolean] = None
+  view:       PartialFunction[S, SV]
 ) {
   def andWhere(condition: SV => Boolean) = where(condition)
-  def where(condition: SV => Boolean) =
-    copy(filter = filter.map(f => (s: SV) => f(s) && condition(s)).orElse(condition.some))
+  def where(condition: SV => Boolean) = copy(view = view.andThenPartial { case s if condition(s) => s })
 
   def asFeature[FT <: Type](featureType: FT, name: Name, desc: Description)(implicit ev: Conforms[FT, V]) =
-    AggregationFeature(name, desc, aggregator.andThenPresent(fv => fv: V), view, featureType, filter)
+    AggregationFeature(name, desc, aggregator.andThenPresent(fv => fv: V), view, featureType)
 }

@@ -70,8 +70,7 @@ case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
   description: Description,
   aggregator:  Aggregator[SV, U, V],
   view:        PartialFunction[S, SV],
-  featureType: Type = Type.Continuous,
-  where:       Option[SV => Boolean] = None
+  featureType: Type = Type.Continuous
 ) {
   import AggregationFeature.AlgebirdSemigroup
   // Note: Implementation exists here to satisfty feature signature and enable unit testing.
@@ -81,9 +80,7 @@ case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
   ) {
     def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
       val (entity, source) = s
-      val sourceView = source.toList.collect {
-        case sv if view.isDefinedAt(sv) => view(sv)
-      }.filter(sv => where.forall(_(sv))).toNel
+      val sourceView = source.toList.collect(view).toNel
       sourceView.map(nonEmptySource => {
         val value = aggregator.present(
           nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)

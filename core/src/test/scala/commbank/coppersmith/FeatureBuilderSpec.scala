@@ -42,7 +42,11 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
                           case (c, Some(score)) => (c, score)
                         }.select(_._2).asFeature(Continuous, "credit", "Credit Score")
 
-    def features = List(age, tallAge, oldHeight, credit)
+    val altCredit: CF = builder.map(_.credit).collect {
+                          case Some(score) => score
+                        }.selectSource.asFeature(Continuous, "altCredit", "Alternate Impl")
+
+    def features = List(age, tallAge, oldHeight, credit, altCredit)
   }
 
   def generateMetadata = {
@@ -50,10 +54,11 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
     import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      Metadata[Customer, Integral](namespace, "age",       "Age",          Ordinal),
-      Metadata[Customer, Integral](namespace, "tallAge",   "Tall Age",     Continuous),
-      Metadata[Customer, Decimal] (namespace, "oldHeight", "Old Height",   Continuous),
-      Metadata[Customer, Decimal] (namespace, "credit",    "Credit Score", Continuous)
+      Metadata[Customer, Integral](namespace, "age",       "Age",            Ordinal),
+      Metadata[Customer, Integral](namespace, "tallAge",   "Tall Age",       Continuous),
+      Metadata[Customer, Decimal] (namespace, "oldHeight", "Old Height",     Continuous),
+      Metadata[Customer, Decimal] (namespace, "credit",    "Credit Score",   Continuous),
+      Metadata[Customer, Decimal] (namespace, "altCredit", "Alternate Impl", Continuous)
     )
   }
 
@@ -68,7 +73,8 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
                         Some(FeatureValue[Integral](c.id, "age",       c.age)),
       expectTallAge.option(  FeatureValue[Integral](c.id, "tallAge",   c.age)),
       expectOldHieght.option(FeatureValue[Decimal] (c.id, "oldHeight", c.height)),
-      expectCredit.option(   FeatureValue[Decimal] (c.id, "credit",    c.credit))
+      expectCredit.option(   FeatureValue[Decimal] (c.id, "credit",    c.credit)),
+      expectCredit.option(   FeatureValue[Decimal] (c.id, "altCredit", c.credit))
     ).flatten
   }}
 }
@@ -89,7 +95,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     def time(c: Customer, ctx: FeatureContext)   = ctx.generationTime.getMillis
 
     val source  = From[Customer]()
-    val select = source.featureSetBuilder(namespace, entity)
+    val select  = source.featureSetBuilder(namespace, entity)
 
     type CAF = AggregationFeature[Customer, Customer, _, Value]
 
@@ -104,7 +110,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val collect: AggregationFeature[Customer, Double, _, Value] =
       select.map(c => (c, c.credit)).collect {
         case (c, Some(credit)) => credit
-      }.min(identity).asFeature(Continuous,  "collect",   "Agg feature")
+      }.min(identity).asFeature(Continuous, "collect", "Agg feature")
 
     def aggregationFeatures = List(sizeF, countF, sumF, maxF, minF, avgF, cuF, collect)
   }

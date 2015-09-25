@@ -52,21 +52,6 @@ abstract class SimpleFeatureJob extends MaestroJob {
   private def generateAggregate[S](
     features: AggregationFeatureSet[S]
   )(input: TypedPipe[S], ctx: FeatureContext): TypedPipe[(FeatureValue[_], Time)] = {
-/*
-<<<<<<< HEAD
-    val grouped: Grouped[EntityId, S] = input.groupBy(s => features.entity(s))
-    features.aggregationFeatures.map(feature => {
-      val name = feature.name
-      // TODO: Unnecessarily traverses grouped when feature.where is None, however, there doesn't
-      // appear to be a common supertype of Grouped and UnsortedGrouped with aggregate. One option
-      // might be Either[Grouped, UnsortedGrouped].fold(_.aggregate(...), _.aggregate(...)).merge
-      val filtered = grouped.filter { case (_, s) => feature.where.map(_(s)).getOrElse(true) }
-      filtered.aggregate(feature.aggregator).toTypedPipe.map { case (e, v) =>
-        (FeatureValue(e, name, v), ctx.generationTime.getMillis)
-      }
-    }).foldLeft(TypedPipe.from(List[(FeatureValue[_], Time)]()))(_ ++ _)
-=======
-*/
     val grouped: Grouped[EntityId, S] = input.groupBy(s => features.entity(s))
     features.aggregationFeatures.map(
       aggregate(grouped, _, ctx)
@@ -79,12 +64,9 @@ abstract class SimpleFeatureJob extends MaestroJob {
     ctx:     FeatureContext
   ) = {
     val name = feature.name
-    // TODO: Unnecessarily traverses grouped when feature.where is None, however, there doesn't
-    // appear to be a common supertype of Grouped and UnsortedGrouped with aggregate. One option
-    // might be Either[Grouped, UnsortedGrouped].fold(_.aggregate(...), _.aggregate(...)).merge
     val view = grouped.toTypedPipe.collect {
       case (e, s) if feature.view.isDefinedAt(s) => (e, feature.view(s))
-    }.group.filter { case (_, s) => feature.where.forall(_(s))}
+    }.group
     view.aggregate(feature.aggregator).toTypedPipe.map { case (e, v) =>
       (FeatureValue(e, name, v), ctx.generationTime.getMillis)
     }
