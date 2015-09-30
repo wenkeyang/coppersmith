@@ -1,5 +1,7 @@
 package commbank.coppersmith
 
+import commbank.coppersmith.Join.CompleteJoinHl
+import shapeless.{Generic, HList}
 import scalaz.Functor
 import scalaz.syntax.std.option.ToOptionIdOps
 
@@ -35,6 +37,8 @@ trait SourceBinderInstances {
   def leftJoin[L, R, J : Ordering, P[_] : Lift : Functor]
     (leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     LeftJoinedBinder(leftSrc, rightSrc)
+
+  def joinMulti[Tuple <: Product](dataSourceTuple: Tuple) = MultiJoinedBinder(dataSourceTuple)
 }
 
 case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, From[S], P] {
@@ -57,4 +61,20 @@ case class LeftJoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
   def bind(j: Joined[L, R, J, (L, Option[R])]): P[(L, Option[R])] = {
     implicitly[Lift[P]].liftLeftJoin(j)(leftSrc.load, rightSrc.load)
   }
+}
+
+case class MultiJoinedBinder[
+  Tuple <: Product, P[_],
+  Types <: HList,
+  Joins <: HList,
+  TypesTuple <: Product]
+  (in: Tuple)
+  (implicit typesTupleGen: Generic.Aux[TypesTuple, Types]) extends SourceBinder[TypesTuple, CompleteJoinHl[Types, Joins], P] {
+  def bind(j: CompleteJoinHl[Types, Joins]) = {
+    ???
+  }
+}
+
+object MultiJoinedBinder {
+
 }

@@ -28,6 +28,8 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
 
   A LeftJoin feature source
     must apply filter $leftJoinFilter ${tag("slow")}
+
+
 """
 
   // FIXME: Pull up to test project for use by client apps
@@ -68,4 +70,20 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     val bound = source.bind(leftJoin(TestDataSource(cas.map(_.c)), TestDataSource(cas.flatMap(_.as))))
     runsSuccessfully(bound.load).toSet must_== expected.toSet
   }}.set(minTestsOk = 10)
+
+  def multiwayFilter =  {
+    def filter(ca: (Customer, Account)) = ca._1.age < 18
+
+
+    val source = Join.multiway[Customer].inner[Account] .on((c: Customer) => c.id, (a: Account) => a.customerId).src
+
+
+    val customers: Seq[Customer] = Seq()
+    val accounts : Seq[Account] = Seq()
+
+
+    val bound = source.bind(joinMulti((TestDataSource(customers), TestDataSource(accounts))))
+
+    1 === 1
+  }
 }
