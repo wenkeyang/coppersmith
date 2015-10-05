@@ -82,7 +82,7 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     val accounts : Seq[Account] = Seq()
 
 
-    val bound = source.bind(joinMulti((TestDataSource(customers), TestDataSource(accounts))))
+//    val bound = source.bind(joinMulti((TestDataSource(customers), TestDataSource(accounts))))
 
     1 === 1
   }

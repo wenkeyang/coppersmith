@@ -129,18 +129,7 @@ trait Lift[P[_]] {
     implicit def default[U, V] = at[P[U], V] ( (u: P[U], _: V) => NextPipe[U, V](u) )
   }
 
-  trait NullHList[HL <: HList] extends DepFn0 {
-    type Out = HL
-  }
 
-  object NullHList {
-    implicit object nullHListHnil extends NullHList[HNil] {
-      def apply() = HNil
-    }
-    implicit def nullHListHcons[H, T <: HList](implicit tailNhl: NullHList[T]) = new NullHList[H :: T] {
-      def apply() = null.asInstanceOf[H] :: tailNhl()
-    }
-  }
 
   case class NextPipe[Next, JoinType](pipe: P[Next])
 
@@ -165,3 +154,15 @@ trait Lift[P[_]] {
   }
 }
 
+trait NullHList[HL <: HList] extends DepFn0 {
+  type Out = HL
+}
+
+object NullHList {
+  implicit object nullHListHnil extends NullHList[HNil] {
+    def apply() = HNil
+  }
+  implicit def nullHListHcons[H, T <: HList](implicit tailNhl: NullHList[T]) = new NullHList[H :: T] {
+    def apply() = null.asInstanceOf[H] :: tailNhl()
+  }
+}

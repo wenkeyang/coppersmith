@@ -38,7 +38,7 @@ trait SourceBinderInstances {
     (leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     LeftJoinedBinder(leftSrc, rightSrc)
 
-  def joinMulti[Tuple <: Product](dataSourceTuple: Tuple) = MultiJoinedBinder(dataSourceTuple)
+//  def joinMulti[Tuple <: Product](dataSourceTuple: Tuple) = MultiJoinedBinder(dataSourceTuple)
 }
 
 case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, From[S], P] {
