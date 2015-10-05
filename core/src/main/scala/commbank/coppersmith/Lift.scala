@@ -94,8 +94,8 @@ trait Lift[P[_]] {
       OutInner <: HList,
       Joins <: HList
     ](implicit prepend: Prepend.Aux[SoFar, Next :: HNil, OutInner]) =
-      at[P[SoFar], (NextPipe[Next, Next], (SoFar => J, Next => J))] {
-      (acc: P[SoFar], pipeWithJoin: (NextPipe[Next, Next], (SoFar => J, Next => J) )) =>
+      at[P[SoFar], (NextPipe[P, Next, Next], (SoFar => J, Next => J))] {
+      (acc: P[SoFar], pipeWithJoin: (NextPipe[P, Next, Next], (SoFar => J, Next => J) )) =>
         val fnSoFar: SoFar => J = pipeWithJoin._2._1
         val fnNext: Next => J = pipeWithJoin._2._2
         innerJoinNext[SoFar, Next, J, OutInner](fnSoFar, fnNext)(acc, pipeWithJoin._1.pipe)
@@ -110,8 +110,8 @@ trait Lift[P[_]] {
     OutInner <: HList,
     Joins <: HList
     ](implicit prepend: Prepend.Aux[SoFar, Option[Next] :: HNil, OutInner]) =
-      at[P[SoFar], (NextPipe[Next, Option[Next]], (SoFar => J, Next => J))] {
-        (acc: P[SoFar], pipeWithJoin: (NextPipe[Next, Option[Next]], (SoFar => J, Next => J) )) =>
+      at[P[SoFar], (NextPipe[P, Next, Option[Next]], (SoFar => J, Next => J))] {
+        (acc: P[SoFar], pipeWithJoin: (NextPipe[P, Next, Option[Next]], (SoFar => J, Next => J) )) =>
           val fnSoFar: SoFar => J = pipeWithJoin._2._1
           val fnNext: Next   => J = pipeWithJoin._2._2
           leftJoinNext[SoFar, Next, J, OutInner](fnSoFar, fnNext)(acc, pipeWithJoin._1.pipe)
@@ -125,33 +125,6 @@ trait Lift[P[_]] {
     filter: Option[S => Boolean]
   ): BoundFeatureSource[S, P]
 
-  object comb extends Poly2 {
-    implicit def default[U, V] = at[P[U], V] ( (u: P[U], _: V) => NextPipe[U, V](u) )
-  }
-
-
-
-  case class NextPipe[Next, JoinType](pipe: P[Next])
-
-  trait ToNextPipe[L <: HList, R <: HList] extends DepFn1[L]
-
-  object ToNextPipe {
-    def apply[L <: HList, R <: HList](implicit tnp: ToNextPipe[L, R]) = tnp
-
-    type Aux[L <: HList, R <: HList, Out0] = ToNextPipe[L, R] { type Out = Out0 }
-
-    implicit def toNextPipe[L <: HList, R <: HList, Out0 <: HList]
-      (implicit nhl     : NullHList[R],
-                zipWith : ZipWith.Aux[L, R, comb.type, Out0]): ToNextPipe.Aux[L, R, Out0] = new ToNextPipe[L, R] {
-      type Out = Out0
-
-      def apply(l: L) = {
-        val nulls: R = nhl()
-
-        l.zipWith(nulls)(comb)
-      }
-    }
-  }
 }
 
 trait NullHList[HL <: HList] extends DepFn0 {
@@ -164,5 +137,32 @@ object NullHList {
   }
   implicit def nullHListHcons[H, T <: HList](implicit tailNhl: NullHList[T]) = new NullHList[H :: T] {
     def apply() = null.asInstanceOf[H] :: tailNhl()
+  }
+}
+
+case class NextPipe[P[_], Next, JoinType](pipe: P[Next])
+
+trait ToNextPipe[L <: HList, R <: HList] extends DepFn1[L]
+
+object ToNextPipe {
+  def apply[L <: HList, R <: HList](implicit tnp: ToNextPipe[L, R]) = tnp
+
+  type Aux[L <: HList, R <: HList, Out0] = ToNextPipe[L, R] { type Out = Out0 }
+
+
+  object nextPipeComb extends Poly2 {
+    implicit def default[P[_], U, V] = at[P[U], V] ( (u: P[U], _: V) => NextPipe[P, U, V](u) )
+  }
+
+  implicit def toNextPipe[L <: HList, R <: HList, Out0 <: HList]
+  (implicit nhl     : NullHList[R],
+   zipWith : ZipWith.Aux[L, R, nextPipeComb.type, Out0]): ToNextPipe.Aux[L, R, Out0] = new ToNextPipe[L, R] {
+    type Out = Out0
+
+    def apply(l: L) = {
+      val nulls: R = nhl()
+
+      l.zipWith(nulls)(nextPipeComb)
+    }
   }
 }
