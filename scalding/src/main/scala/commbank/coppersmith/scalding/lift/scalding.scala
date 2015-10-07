@@ -24,8 +24,9 @@ trait ScaldingLift extends Lift[TypedPipe] {
   (l: LeftSides => J, r: RightSide => J )
   (a:TypedPipe[LeftSides], b: TypedPipe[RightSide])
   (implicit pp: Prepend.Aux[LeftSides, RightSide :: HNil, Out])
-  : TypedPipe[Out] = a.groupBy(l).join(b.groupBy(r)).values.map {case (hl, r) => hl :+ r }
-
+  : TypedPipe[Out] = {
+    a.groupBy(l).join(b.groupBy(r)).values.map { case (hl, r) => hl :+ r }
+  }
   def leftJoinNext[LeftSides <: HList, RightSide, J : Ordering, Out <: HList]
   (l: LeftSides => J, r: RightSide => J )
   (a:TypedPipe[LeftSides], b: TypedPipe[RightSide])
