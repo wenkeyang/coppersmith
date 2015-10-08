@@ -1,6 +1,6 @@
 package commbank.coppersmith
 
-import commbank.coppersmith.Join.{IncompleteJoinedHl, CompleteJoinHl}
+import commbank.coppersmith.Join.{CompleteJoinHlFeatureSource, IncompleteJoinedHl, CompleteJoinHl}
 import shapeless._
 import shapeless.ops.hlist._
 import scalaz.Functor
@@ -70,7 +70,7 @@ trait SourceBinderInstances {
   Zipped <: HList,
 
   TypesTuple <: Product]
-    ( in: Tuple, j: CompleteJoinHl[Types, Joins])
+    ( in: Tuple, j: CompleteJoinHlFeatureSource[Types, Joins, TypesTuple])
     (implicit
      //Map data source tuple to pipes tuple
      dshlGen     : Generic.Aux[Tuple, DSHL],
@@ -97,7 +97,7 @@ trait SourceBinderInstances {
      //and finally turning to tuple
      typesTupler: Tupler.Aux[Types, TypesTuple]
 
-      ) = MultiJoinedBinder(in, j)
+      ) = MultiJoinedBinder(in, j.join, j.filter)
 }
 
 case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, From[S], P] {
@@ -154,7 +154,7 @@ case class MultiJoinedBinder[
 
 
   TypesTuple <: Product]
-  (in: Tuple, j: CompleteJoinHl[Types, Joins])
+  (in: Tuple, j: CompleteJoinHl[Types, Joins], filter: Option[TypesTuple => Boolean])
   (implicit
    //Map data source tuple to pipes tuple
    dshlGen         : Generic.Aux[Tuple, DSHL],
@@ -187,7 +187,9 @@ case class MultiJoinedBinder[
   def bind(u: Unit): P[TypesTuple] = {
     val lift = implicitly[Lift[P]]
     val inPipes: PipesTuple = DataSourcesToPipes.convert(in)
-    lift.liftMultiwayJoin(j)(inPipes)
+    val joined = lift.liftMultiwayJoin(j)(inPipes)
+    val filtered = filter.fold(joined)(f => lift.liftFilter(joined, f))
+    filtered
   }
 }
 

@@ -94,6 +94,8 @@ trait Lift[P[_]] {
     filter: Option[S => Boolean]
   ): BoundFeatureSource[S, P]
 
+  def liftFilter[S](p: P[S], f: S => Boolean): P[S]
+
 }
 
 trait NullHList[HL <: HList] extends DepFn0 {

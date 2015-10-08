@@ -40,6 +40,8 @@ trait ScaldingLift extends Lift[TypedPipe] {
     binder: B,
     filter: Option[S => Boolean]
   ) = ScaldingBoundFeatureSource(underlying, binder, filter)
+
+  def liftFilter[S](p: TypedPipe[S], f: S => Boolean) = p.filter(f)
 }
 
 object scalding extends ScaldingLift

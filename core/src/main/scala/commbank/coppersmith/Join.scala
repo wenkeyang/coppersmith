@@ -86,7 +86,7 @@ object Join {
       IncompleteJoinedHl[Types, Option[B], B, np.Out, Joins](joins)
 
     def src[TypesTuple <: Product]
-    (implicit tupler: shapeless.ops.hlist.Tupler.Aux[Types,TypesTuple]):FeatureSource[TypesTuple, CompleteJoinHlFeatureSource[Types, Joins, TypesTuple]] =
+    (implicit tupler: shapeless.ops.hlist.Tupler.Aux[Types,TypesTuple]):CompleteJoinHlFeatureSource[Types, Joins, TypesTuple] =
       CompleteJoinHlFeatureSource[Types, Joins, TypesTuple](this, None)
   }
 
