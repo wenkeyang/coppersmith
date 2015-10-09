@@ -30,6 +30,7 @@ object HydroSink {
   type TableName    = String
 
   val NullValue = "\\N"
+  val Delimiter = "|"
 
   import HiveSupport.HiveConfig
 
@@ -51,7 +52,8 @@ object HydroSink {
     )
 
   case class Config(dbName: DatabaseName, tablePath: Path, tableName: TableName) {
-    def hiveConfig = HiveConfig[Eavt, (String, String, String)](partition, dbName, tablePath, tableName)
+    def hiveConfig =
+      HiveConfig[Eavt, (String, String, String)](partition, dbName, tablePath, tableName, Delimiter)
   }
 
   def toEavt(fv: FeatureValue[_]) = {
@@ -96,7 +98,7 @@ object HiveSupport {
     database:  String,
     path:      Path,
     tablename: String,
-    delimiter: String = "\u0001"
+    delimiter: String
   )
 
   def writeTextTable[T <: ThriftStruct with Product : Manifest, P : TupleSetter : TupleConverter](
