@@ -5,6 +5,7 @@ package scalding
 import com.twitter.scalding.typed._
 
 import org.scalacheck.Prop.forAll
+import shapeless.Generic
 
 import scalaz.syntax.std.list.ToListOpsFromList
 import scalaz.syntax.std.option.ToOptionIdOps
@@ -28,6 +29,10 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
 
   A LeftJoin feature source
     must apply filter $leftJoinFilter ${tag("slow")}
+
+  A multiway join feature source
+    must have correct results $multiwayJoin  ${tag("slow")}
+    must apply filter $multiwayJoinFilter  ${tag("slow")}
 """
 
   // FIXME: Pull up to test project for use by client apps
@@ -68,4 +73,49 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     val bound = source.bind(leftJoin(TestDataSource(cas.map(_.c)), TestDataSource(cas.flatMap(_.as))))
     runsSuccessfully(bound.load).toSet must_== expected.toSet
   }}.set(minTestsOk = 10)
+
+
+  def multiwayJoin = forAll { (customerAccounts: CustomerAccounts) => {
+    //shadow accidentally imported implicit
+    implicit val genMonad = 1
+
+    val cas = customerAccounts.cas
+
+    val expected = cas.flatMap(ca => ca.as.map(a => (ca.c, a)))
+
+    val source = Join.multiway[Customer].inner[Account] .on((c: Customer) => c.id, (a: Account) => a.customerId).src
+
+
+    val customersDs: DataSource[Customer, TypedPipe] = TestDataSource(cas.map(_.c))
+    val accountsDs: DataSource[Account, TypedPipe] = TestDataSource(cas.flatMap(_.as))
+
+    val bound = joinMulti((customersDs, accountsDs), source).bind(())
+    runsSuccessfully(bound).toSet must_== expected.toSet
+
+  }}.set(minTestsOk = 10)
+
+  def multiwayJoinFilter = forAll { (customerAccounts: CustomerAccounts) => {
+    //shadow accidentally imported implicit
+    implicit val genMonad = 1
+
+    val cas = customerAccounts.cas
+    def filter(ca: (Customer, Account)) = ca._1.age < 18
+
+    val expected = cas.flatMap(ca => ca.as.map(a => (ca.c, a))).filter(filter)
+
+    val source = Join.multiway[Customer].inner[Account] .on((c: Customer) => c.id, (a: Account) => a.customerId).src.filter(filter)
+
+
+    val customersDs: DataSource[Customer, TypedPipe] = TestDataSource(cas.map(_.c))
+    val accountsDs: DataSource[Account, TypedPipe] = TestDataSource(cas.flatMap(_.as))
+
+    val binder = joinMulti((customersDs, accountsDs), source)
+
+    val bound = binder.bind(())
+
+    runsSuccessfully(bound).toSet must_== expected.toSet
+
+  }}.set(minTestsOk = 10)
+
+
 }

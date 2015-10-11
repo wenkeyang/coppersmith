@@ -6,6 +6,8 @@ import shapeless.ops.function.FnToProduct
 import shapeless.ops.hlist._
 import shapeless.ops.nat.Pred
 
+import util.Conversion
+
 import scalaz.{Ordering => _, Length => _, Zip => _, _}, Scalaz._
 
 import Feature.Value
@@ -63,7 +65,7 @@ trait Lift[P[_]] {
                   // (NextPipe[C,C], (A :: B :: HNil => J, C => J)) :: HNil)
   ](join: CompleteJoinHl[Types, Joins])
    (in : InTuple)
-   (implicit inToHlist  : Generic.Aux[InTuple, InHList],
+   (implicit inToHlist  : Conversion.Aux[InTuple, InHList],
              inIsCons   : IsHCons.Aux[InHList, InHeadType, InTail],
              typesIsCons: IsHCons.Aux[Types, TypesHead, TypesTail],
              tnp        : ToNextPipe.Aux[InTail, TypesTail, NextPipes],
@@ -71,7 +73,7 @@ trait Lift[P[_]] {
              pEl2       : InHeadType =:= P[InHeadElementType],
              zipper     : Zip.Aux[NextPipes :: Joins :: HNil, Zipped],
              leftFolder : LeftFolder.Aux[Zipped, P[InHeadElementType :: HNil],
-                                            joinFolder.type, P[Types]],
+                                            JoinFolders.joinFolder.type, P[Types]],
              tupler     : Tupler.Aux[Types, OutTuple],
              pFunctor   : Functor[P])
   : P[OutTuple] = {
@@ -81,41 +83,8 @@ trait Lift[P[_]] {
     val tailWithJoined: NextPipes = tnp(inTail)
     val zipped: Zipped = tailWithJoined zip join.joins
     val initial: P[InHeadElementType :: HNil] = inHead.map(_ :: HNil)
-    val folded : P[Types] = zipped.foldLeft(initial)(joinFolder)
+    val folded : P[Types] = zipped.foldLeft(initial)(JoinFolders.joinFolder)
     folded.map(_.tupled)
-  }
-
-  //Lower priority since inner joins have less specific types than left joins
-  trait innerFolder extends Poly2 {
-    implicit def doInnerJoin[
-      SoFar <: HList,
-      Next,
-      J : Ordering,
-      OutInner <: HList,
-      Joins <: HList
-    ](implicit prepend: Prepend.Aux[SoFar, Next :: HNil, OutInner]) =
-      at[P[SoFar], (NextPipe[Next, Next], (SoFar => J, Next => J))] {
-      (acc: P[SoFar], pipeWithJoin: (NextPipe[Next, Next], (SoFar => J, Next => J) )) =>
-        val fnSoFar: SoFar => J = pipeWithJoin._2._1
-        val fnNext: Next => J = pipeWithJoin._2._2
-        innerJoinNext[SoFar, Next, J, OutInner](fnSoFar, fnNext)(acc, pipeWithJoin._1.pipe)
-    }
-  }
-
-  object joinFolder extends innerFolder {
-    implicit def doLeftJoin[
-    SoFar <: HList,
-    Next,
-    J : Ordering,
-    OutInner <: HList,
-    Joins <: HList
-    ](implicit prepend: Prepend.Aux[SoFar, Option[Next] :: HNil, OutInner]) =
-      at[P[SoFar], (NextPipe[Next, Option[Next]], (SoFar => J, Next => J))] {
-        (acc: P[SoFar], pipeWithJoin: (NextPipe[Next, Option[Next]], (SoFar => J, Next => J) )) =>
-          val fnSoFar: SoFar => J = pipeWithJoin._2._1
-          val fnNext: Next   => J = pipeWithJoin._2._2
-          leftJoinNext[SoFar, Next, J, OutInner](fnSoFar, fnNext)(acc, pipeWithJoin._1.pipe)
-      }
   }
 
 
@@ -125,43 +94,83 @@ trait Lift[P[_]] {
     filter: Option[S => Boolean]
   ): BoundFeatureSource[S, P]
 
-  object comb extends Poly2 {
-    implicit def default[U, V] = at[P[U], V] ( (u: P[U], _: V) => NextPipe[U, V](u) )
+  def liftFilter[S](p: P[S], f: S => Boolean): P[S]
+
+}
+
+trait NullHList[HL <: HList] extends DepFn0 {
+  type Out = HL
+}
+
+object NullHList {
+  implicit object nullHListHnil extends NullHList[HNil] {
+    def apply() = HNil
+  }
+  implicit def nullHListHcons[H, T <: HList](implicit tailNhl: NullHList[T]) = new NullHList[H :: T] {
+    def apply() = null.asInstanceOf[H] :: tailNhl()
+  }
+}
+
+case class NextPipe[P[_], Next, JoinType](pipe: P[Next])
+
+trait ToNextPipe[L <: HList, R <: HList] extends DepFn1[L]
+
+object ToNextPipe {
+  def apply[L <: HList, R <: HList](implicit tnp: ToNextPipe[L, R]) = tnp
+
+  type Aux[L <: HList, R <: HList, Out0] = ToNextPipe[L, R] { type Out = Out0 }
+
+
+  object nextPipeComb extends Poly2 {
+    implicit def default[P[_], U, V] = at[P[U], V] ( (u: P[U], _: V) => NextPipe[P, U, V](u) )
   }
 
-  trait NullHList[HL <: HList] extends DepFn0 {
-    type Out = HL
-  }
+  implicit def toNextPipe[L <: HList, R <: HList, Out0 <: HList]
+  (implicit nhl     : NullHList[R],
+   zipWith : ZipWith.Aux[L, R, nextPipeComb.type, Out0]): ToNextPipe.Aux[L, R, Out0] = new ToNextPipe[L, R] {
+    type Out = Out0
 
-  object NullHList {
-    implicit object nullHListHnil extends NullHList[HNil] {
-      def apply() = HNil
+    def apply(l: L) = {
+      val nulls: R = nhl()
+
+      l.zipWith(nulls)(nextPipeComb)
     }
-    implicit def nullHListHcons[H, T <: HList](implicit tailNhl: NullHList[T]) = new NullHList[H :: T] {
-      def apply() = null.asInstanceOf[H] :: tailNhl()
-    }
   }
+}
 
-  case class NextPipe[Next, JoinType](pipe: P[Next])
-
-  trait ToNextPipe[L <: HList, R <: HList] extends DepFn1[L]
-
-  object ToNextPipe {
-    def apply[L <: HList, R <: HList](implicit tnp: ToNextPipe[L, R]) = tnp
-
-    type Aux[L <: HList, R <: HList, Out0] = ToNextPipe[L, R] { type Out = Out0 }
-
-    implicit def toNextPipe[L <: HList, R <: HList, Out0 <: HList]
-      (implicit nhl     : NullHList[R],
-                zipWith : ZipWith.Aux[L, R, comb.type, Out0]): ToNextPipe.Aux[L, R, Out0] = new ToNextPipe[L, R] {
-      type Out = Out0
-
-      def apply(l: L) = {
-        val nulls: R = nhl()
-
-        l.zipWith(nulls)(comb)
+object JoinFolders {
+  //Lower priority since inner joins have less specific types than left joins
+  trait innerFolder extends Poly2 {
+    implicit def doInnerJoin[
+    P[_] : Functor : Lift,
+    SoFar <: HList,
+    Next,
+    J : Ordering,
+    OutInner <: HList,
+    Joins <: HList
+    ](implicit prepend: Prepend.Aux[SoFar, Next :: HNil, OutInner]) =
+      at[P[SoFar], (NextPipe[P, Next, Next], (SoFar => J, Next => J))] {
+        (acc: P[SoFar], pipeWithJoin: (NextPipe[P, Next, Next], (SoFar => J, Next => J) )) =>
+          val fnSoFar: SoFar => J = pipeWithJoin._2._1
+          val fnNext: Next => J = pipeWithJoin._2._2
+          implicitly[Lift[P]].innerJoinNext[SoFar, Next, J, OutInner](fnSoFar, fnNext)(acc, pipeWithJoin._1.pipe)
       }
-    }
   }
 
+  object joinFolder extends innerFolder {
+    implicit def doLeftJoin[
+    P[_]: Functor : Lift,
+    SoFar <: HList,
+    Next,
+    J : Ordering,
+    OutInner <: HList,
+    Joins <: HList
+    ](implicit prepend: Prepend.Aux[SoFar, Option[Next] :: HNil, OutInner]) =
+      at[P[SoFar], (NextPipe[P, Next, Option[Next]], (SoFar => J, Next => J))] {
+        (acc: P[SoFar], pipeWithJoin: (NextPipe[P, Next, Option[Next]], (SoFar => J, Next => J) )) =>
+          val fnSoFar: SoFar => J = pipeWithJoin._2._1
+          val fnNext: Next   => J = pipeWithJoin._2._2
+          implicitly[Lift[P]].leftJoinNext[SoFar, Next, J, OutInner](fnSoFar, fnNext)(acc, pipeWithJoin._1.pipe)
+      }
+  }
 }

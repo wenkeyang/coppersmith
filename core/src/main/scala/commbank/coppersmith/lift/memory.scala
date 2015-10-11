@@ -68,5 +68,7 @@ trait MemoryLift extends Lift[List] {
       filter.map(f => pipe.filter(f)).getOrElse(pipe)
     }
   }
+
+  def liftFilter[S](p: List[S], f: S => Boolean) = p.filter(f)
 }
 object memory extends MemoryLift

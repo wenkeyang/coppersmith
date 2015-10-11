@@ -1,11 +1,13 @@
 package commbank.coppersmith
 
 import commbank.coppersmith.Join.CompleteJoinHl
-import commbank.coppersmith.lift.memory.{joinFolder => folder, _}
+import commbank.coppersmith.lift.memory._
 import org.specs2.Specification
 import scalaz._, Scalaz._
 
 class LiftSpec extends Specification {
+  implicit val lift = commbank.coppersmith.lift.memory
+
 
   def is = s2"""
       Multiway join fold function
@@ -27,17 +29,16 @@ class LiftSpec extends Specification {
   def join1 = {
     import shapeless._
 
-
     val as = List[A]()
     val bs = List[B]()
 
     val soFar: List[A :: HNil] = as.map(_ :: HNil)
-    val pipeWithJoin: (NextPipe[B, B], (A :: HNil => Int, B => Int)) =
-      (NextPipe[B, B](bs), ((a: A :: HList) => a.head.id, (b: B) => b.id))
+    val pipeWithJoin: (NextPipe[List, B, B], (A :: HNil => Int, B => Int)) =
+      (NextPipe[List, B, B](bs), ((a: A :: HList) => a.head.id, (b: B) => b.id))
 
-    val result:List[(A,B)] = folder(soFar, pipeWithJoin).map(_.tupled)
+    val result:List[(A,B)] = JoinFolders.joinFolder(soFar, pipeWithJoin).map(_.tupled)
 
-    result === List()
+    result must_== List()
   }
 
   def join2 = {
@@ -48,10 +49,10 @@ class LiftSpec extends Specification {
     val cs = List[C]()
 
     val soFar: List[A :: B :: HNil] = abs.map { case (a, b) => a :: b :: HNil }
-    val pipeWithJoin: (NextPipe[C,C], (A :: B :: HNil => String, C => String)) =
-      (NextPipe[C, C](cs), ((x : A :: B :: HNil) => x.tail.head.str, (c: C) => c.str))
+    val pipeWithJoin: (NextPipe[List, C,C], (A :: B :: HNil => String, C => String)) =
+      (NextPipe[List, C, C](cs), ((x : A :: B :: HNil) => x.tail.head.str, (c: C) => c.str))
 
-    val result:List[A :: B :: C :: HNil] = folder(soFar, pipeWithJoin)
+    val result:List[A :: B :: C :: HNil] = JoinFolders.joinFolder(soFar, pipeWithJoin)
 
     result.map(_.tupled) === List[(A,B,C)]()
   }
@@ -64,7 +65,7 @@ class LiftSpec extends Specification {
     val initial: List[A :: HNil] = as.map(_ :: HNil)
     val toFold : HNil = HNil
 
-    toFold.foldLeft(initial)(folder).map(_.tupled) === as
+    toFold.foldLeft(initial)(JoinFolders.joinFolder).map(_.tupled) === as
   }
 
   def fold1 = {
@@ -74,11 +75,11 @@ class LiftSpec extends Specification {
     val bs = List[B]()
 
     val initial: List[A :: HNil] = as.map(_ :: HNil)
-    val pipeWithJoin: (NextPipe[B, B], (A :: HNil => Int, B => Int) ) =
-      (NextPipe[B,B](bs),  ((a: A :: HNil) => a.head.id, (b: B) => b.id))
+    val pipeWithJoin: (NextPipe[List, B, B], (A :: HNil => Int, B => Int) ) =
+      (NextPipe[List, B,B](bs),  ((a: A :: HNil) => a.head.id, (b: B) => b.id))
 
-    val toFold: (NextPipe[B, B], (A ::HNil  => Int, B => Int)) :: HNil = pipeWithJoin :: HNil
-    toFold.foldLeft(initial)(folder) === List[(A,B)]()
+    val toFold: (NextPipe[List, B, B], (A ::HNil  => Int, B => Int)) :: HNil = pipeWithJoin :: HNil
+    toFold.foldLeft(initial)(JoinFolders.joinFolder) === List[(A,B)]()
   }
 
   def twoWayJoin = {
@@ -102,13 +103,13 @@ class LiftSpec extends Specification {
       List[A],
       A,
       List[B] :: HNil,
-      NextPipe[B,B] :: HNil,
+      NextPipe[List, B,B] :: HNil,
       A :: B :: HNil,
       A,
       B :: HNil,
       Joins,
       (A,B),
-      ( NextPipe[B,B], (A :: HNil => Int, B => Int)) :: HNil
+      ( NextPipe[List, B,B], (A :: HNil => Int, B => Int)) :: HNil
       ] (join)((as, bs))
 
     val resultInferredTypes = liftMultiwayJoin (join)((as, bs))
