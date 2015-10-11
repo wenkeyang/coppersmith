@@ -90,10 +90,11 @@ object Join {
       CompleteJoinHlFeatureSource[Types, Joins, TypesTuple](this, None)
   }
 
-  case class CompleteJoinHlFeatureSource[Types <: HList, Joins <: HList, TypesTuple <: Product]
-    (join: CompleteJoinHl[Types, Joins], filter: Option[TypesTuple => Boolean])
-    (implicit tupler: Tupler.Aux[Types, TypesTuple])
-    extends FeatureSource[TypesTuple, CompleteJoinHlFeatureSource[Types, Joins, TypesTuple]] {
-    def copyWithFilter(filter: Option[TypesTuple => Boolean]) = copy(filter = filter)
+  case class CompleteJoinHlFeatureSource[Types <: HList, Joins <: HList, TypesTuple <: Product](
+      join: CompleteJoinHl[Types, Joins],
+      filter: Option[TypesTuple => Boolean])
+     (implicit tupler: Tupler.Aux[Types, TypesTuple])
+        extends FeatureSource[TypesTuple, CompleteJoinHlFeatureSource[Types, Joins, TypesTuple]] {
+      def copyWithFilter(filter: Option[TypesTuple => Boolean]) = copy(filter = filter)
   }
 }

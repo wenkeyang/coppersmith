@@ -575,24 +575,24 @@ import commbank.coppersmith.example.thrift.Account
 
 
 object JoinFeatures2 extends AggregationFeatureSet[(Customer, Account, Option[Customer])] {
-  val namespace                      = "userguide.examples"
+  val namespace = "userguide.examples"
+  
   def entity(s: (Customer, Account, Option[Customer])) = s._1.id
   def time  (s: (Customer, Account, Option[Customer])) = s._1.timestamp
 
-  val source = Join.multiway[Customer].inner[Account].on(
-    (cust: Customer) => cust.acct,
-    (acc: Account)   => acc.id
-  ).left[Customer].on(
-    (c1: Customer, acc: Account) => acc.id,
-    (c2: Customer)               => c2.acct
-    ).src  //Note the use of the .src call above. Awkward implementation detail
+  val source = Join.multiway[Customer]
+      .inner[Account].on((cust: Customer)             => cust.acct,
+                         (acc: Account)               => acc.id)
+      .left[Customer].on((c1: Customer, acc: Account) => acc.id,
+                         (c2: Customer)               => c2.acct)
+      .src  //Note the use of the .src call. Awkward implementation detail
   
   val select = source.featureSetBuilder(namespace, entity(_), time(_))
 
   //make sure the other customer is defined and not us (in reality this would have 
-  //been an inner join but for the sake of education, we are showing the left
+  //been an inner join but for the sake of education, we are showing the left)
   val totalBalanceForCustomersWithJointAccounts = select(sum(_._2.balance))
-    .where(row => row._3.isDefined && row._1.id != row._3.get.id)  
+    .where(row => row._3.exists(_ != row._1.id))  
     .asFeature(Continuous, "CUST_JOINT_TOT_BALANCE",
                "Total balance for customer with joint account")
 
@@ -603,7 +603,7 @@ object JoinFeatures2 extends AggregationFeatureSet[(Customer, Account, Option[Cu
 
 Notice that for multiway joins, we need to hint the types of the join functions
 to the compiler. Each stage of the join needs two functions: one producing
-a join column for all of the left values so far, and one for the curent right 
+a join column for all of the left values so far, and one for the current right 
 value.
 
 ### Testing

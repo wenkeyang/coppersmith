@@ -3,8 +3,6 @@ package commbank.coppersmith.util
 import shapeless._
 import shapeless.ops.hlist.Tupler
 
-//import shapeless.ops.hlist._
-
 /**
  * Typeclass for conversion between tuples and HLists in both directions. The
  * idea is to infer either the left or right types. Somewhere betwen `Tupler` and

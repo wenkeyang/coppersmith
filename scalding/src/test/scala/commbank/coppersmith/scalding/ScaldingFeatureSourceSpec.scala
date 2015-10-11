@@ -80,7 +80,6 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     implicit val genMonad = 1
 
     val cas = customerAccounts.cas
-    def filter(ca: (Customer, Account)) = ca._1.age < 18
 
     val expected = cas.flatMap(ca => ca.as.map(a => (ca.c, a)))
 
@@ -96,17 +95,15 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
   }}.set(minTestsOk = 10)
 
   def multiwayJoinFilter = forAll { (customerAccounts: CustomerAccounts) => {
-    def flter(ca: (Customer, Account)) = ca._1.age < 18
-
     //shadow accidentally imported implicit
     implicit val genMonad = 1
 
     val cas = customerAccounts.cas
     def filter(ca: (Customer, Account)) = ca._1.age < 18
 
-    val expected = cas.flatMap(ca => ca.as.map(a => (ca.c, a))).filter(flter)
+    val expected = cas.flatMap(ca => ca.as.map(a => (ca.c, a))).filter(filter)
 
-    val source = Join.multiway[Customer].inner[Account] .on((c: Customer) => c.id, (a: Account) => a.customerId).src.filter(flter)
+    val source = Join.multiway[Customer].inner[Account] .on((c: Customer) => c.id, (a: Account) => a.customerId).src.filter(filter)
 
 
     val customersDs: DataSource[Customer, TypedPipe] = TestDataSource(cas.map(_.c))

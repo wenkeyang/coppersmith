@@ -42,34 +42,34 @@ trait SourceBinderInstances {
     LeftJoinedBinder(leftSrc, rightSrc)
 
   def joinMulti[  //These come from parameters
-  P[_] : Functor : Lift,
-  Tuple <: Product,
-  Types <: HList,
-  Joins <: HList,
+    P[_] : Functor : Lift,
+    Tuple <: Product,
+    Types <: HList,
+    Joins <: HList,
 
-  //For mapping data sources to pipes
-  DSHL <:HList,
-  PipesHL <: HList,
-  PipesTuple <: Product,
+    //For mapping data sources to pipes
+    DSHL <:HList,
+    PipesHL <: HList,
+    PipesTuple <: Product,
 
-  //Proving that pipes is cons
-  PipesHead,
-  PipesTail <: HList,
+    //Proving that pipes is cons
+    PipesHead,
+    PipesTail <: HList,
 
-  //Proving that types is cons
-  TypesHead,
-  TypesTail <: HList,
+    //Proving that types is cons
+    TypesHead,
+    TypesTail <: HList,
 
-  // Zip everything together
-  NextPipes <: HList,
+    // Zip everything together
+    NextPipes <: HList,
 
-  //Element of head
-  HeadElement,
+    //Element of head
+    HeadElement,
 
-  // (NextPipes, Joins)
-  Zipped <: HList,
+    // (NextPipes, Joins)
+    Zipped <: HList,
 
-  TypesTuple <: Product]
+    TypesTuple <: Product]
     ( in: Tuple, j: CompleteJoinHlFeatureSource[Types, Joins, TypesTuple])
     (implicit
      //Map data source tuple to pipes tuple
@@ -151,8 +151,6 @@ case class MultiJoinedBinder[
   // (NextPipes, Joins)
   Zipped <: HList,
 
-
-
   TypesTuple <: Product]
   (in: Tuple, j: CompleteJoinHl[Types, Joins], filter: Option[TypesTuple => Boolean])
   (implicit
@@ -212,8 +210,7 @@ object DataSourcesToPipes {
   object dataSourceToPipe extends Poly1 {
 
     implicit def extractPipe[S, P[_]] = at[DataSource[S,P]] { (ds: DataSource[S, P]) =>
-      val result: P[S] = ds.load
-      result
+      ds.load
     }
   }
 
