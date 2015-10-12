@@ -37,10 +37,8 @@ import ScaldingDataSource.Partitions
 case class HiveTextSource[S <: ThriftStruct : Decode, P](
   basePath:   Path,
   partitions: Partitions[P],
-  delimiter:  String = "|",
-  filter:     S => Boolean = (_: S) => true
+  delimiter:  String = "|"
 ) extends DataSource[S, TypedPipe] {
-  def filter(f: S => Boolean): HiveTextSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
   def load = {
     val decoder = implicitly[Decode[S]]
     val input: TextLineScheme = MultipleTextLineFiles(partitions.toPaths(basePath).map(_.toString): _*)
@@ -48,17 +46,15 @@ case class HiveTextSource[S <: ThriftStruct : Decode, P](
       decoder.decode(none = "\\N", Splitter.delimited(delimiter).run(raw).toList)
     }.collect {
       // FIXME: This implementation completely ignores errors
-      case DecodeOk(row) if filter(row) => row
+      case DecodeOk(row) => row
     }
   }
 }
 
 case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter, P](
   basePath:   Path,
-  partitions: Partitions[P],
-  filter:     S => Boolean = (_: S) => true
+  partitions: Partitions[P]
 ) extends DataSource[S, TypedPipe] {
-  def filter(f: S => Boolean): HiveParquetSource[S, P] = copy(filter = (s: S) => filter(s) && f(s))
   def load = {
     TypedPipe.from(ParquetScroogeSource[S](partitions.toPaths(basePath).map(_.toString): _*))
   }
