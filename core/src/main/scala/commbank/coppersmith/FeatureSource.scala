@@ -18,6 +18,15 @@ abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => 
   def bind[P[_] : Lift](binder: SourceBinder[S, FS, P]): BoundFeatureSource[S, P] = {
     implicitly[Lift[P]].liftBinder(self, binder, filter)
   }
+
+  def withContext[C] = ContextSensitiveFeatureSource[S, C, FS](this)
+}
+
+// FIXME: See if it is possible to extend FeatureSource directly here to remove
+// additional FeatureBuilderSourceInstances.fromCFS implicit method
+case class ContextSensitiveFeatureSource[S, C, FS <: FeatureSource[S, FS]](underlying: FeatureSource[S, FS]) {
+  def bindWithContext[P[_] : Lift](binder: SourceBinder[S, FS, P], ctx: C): BoundFeatureSource[(S, C), P] =
+ ???
 }
 
 trait BoundFeatureSource[S, P[_]] {
@@ -215,5 +224,3 @@ object DataSourcesToPipes {
   }
 
 }
-
-
