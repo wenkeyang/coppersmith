@@ -28,7 +28,7 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     must generate same values as test example   $generateFeatureValuesCompareMacro
 """
 
-  import Type.{Categorical, Continuous}
+  import Type._
 
   object CustomerFeatureSet extends PivotFeatureSet[Customer] {
     val namespace = "test.namespace"
@@ -36,8 +36,8 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     def entity(c: Customer) = c.id
     def time(c: Customer)   = c.time
 
-    val name:   Feature[Customer, Str]      = pivot(Fields[Customer].Name,   "Customer name",   Categorical)
-    val age:    Feature[Customer, Integral] = pivot(Fields[Customer].Age,    "Customer age",    Categorical)
+    val name:   Feature[Customer, Str]      = pivot(Fields[Customer].Name,   "Customer name",   Nominal)
+    val age:    Feature[Customer, Integral] = pivot(Fields[Customer].Age,    "Customer age",    Nominal)
     val height: Feature[Customer, Decimal]  = pivot(Fields[Customer].Height, "Customer height", Continuous)
     val credit: Feature[Customer, Decimal]  = pivot(Fields[Customer].Credit, "Customer credit", Continuous)
 
@@ -50,8 +50,8 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     val fields = Fields[Customer]
 
     metadata must_== List(
-      Metadata[Customer, Str]     (namespace, fields.Name.name,   "Customer name",   Categorical),
-      Metadata[Customer, Integral](namespace, fields.Age.name,    "Customer age",    Categorical),
+      Metadata[Customer, Str]     (namespace, fields.Name.name,   "Customer name",   Nominal),
+      Metadata[Customer, Integral](namespace, fields.Age.name,    "Customer age",    Nominal),
       Metadata[Customer, Decimal] (namespace, fields.Height.name, "Customer height", Continuous),
       Metadata[Customer, Decimal] (namespace, fields.Credit.name, "Customer credit", Continuous)
     )

@@ -11,7 +11,7 @@ import commbank.coppersmith.example.thrift.Customer
  */
 object LegacyFeatureSetExample extends MetadataSet[Customer] {
   val legacyFeature1 = Metadata[Customer, Value.Str](
-    "cep_features", "lgc_ftr_1", "A string feature", Categorical
+    "cep_features", "lgc_ftr_1", "A string feature", Nominal
   )
   val legacyFeature2 = Metadata[Customer, Value.Decimal](
     "cep_features", "lgc_ftr_2", "A decimal feature", Continuous
