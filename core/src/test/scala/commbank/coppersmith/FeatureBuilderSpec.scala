@@ -25,10 +25,10 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
   object CustomerFeatureSet extends FeatureSet[Customer] {
     val namespace           = "test.namespace"
     def entity(c: Customer) = c.id
-    def time(c: Customer)   = c.time
+    def time(c: Customer, ctx: FeatureContext)   = c.time
 
     val source = From[Customer]()
-    val select = source.featureSetBuilder(namespace, entity(_), time(_))
+    val select = source.featureSetBuilder(namespace, entity, time)
 
     type CF = Feature[Customer, Value]
     val age:       CF = select(_.age)                      .asFeature(Categorical, "age",       "Age")
@@ -50,7 +50,7 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
   }
 
   def generateFeatureValues = forAll { (c: Customer) => {
-    val featureValues = CustomerFeatureSet.generate(c)
+    val featureValues = CustomerFeatureSet.generate(c, NoContext)
 
     val expectTallAge   = c.height > 2.0
     val expectOldHieght = c.age > 65
@@ -76,10 +76,10 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
   object CustomerFeatureSet extends AggregationFeatureSet[Customer] {
     val namespace           = "test.namespace"
     def entity(c: Customer) = c.id
-    def time(c: Customer)   = c.time
+    def time(c: Customer, ctx: FeatureContext)   = c.time
 
     val source = From[Customer]()
-    val select = source.featureSetBuilder(namespace, entity(_), time(_))
+    val select = source.featureSetBuilder(namespace, entity, time)
 
     type CAF = AggregationFeature[Customer, _, Value]
 
@@ -110,7 +110,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
   }
 
   def generateFeatureValues = forAll { (cs: NonEmptyList[Customer]) => {
-    val featureValues = CustomerFeatureSet.generate((cs.head.id, cs.list)).map(_.asEavt).toList
+    val featureValues = CustomerFeatureSet.generate((cs.head.id, cs.list), NoContext).map(_.asEavt).toList
 
     val c = cs.head
     val heights = cs.map(_.height).list

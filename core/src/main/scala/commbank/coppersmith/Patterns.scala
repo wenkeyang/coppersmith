@@ -16,11 +16,11 @@ object Patterns {
     fType:     Type,
     entity:    S => EntityId,
     value:     S => Option[V],
-    time:      S => Time
+    time:      (S, FeatureContext) => Time
   ) =
     new Feature[S, V](Metadata[S, V](namespace, name, desc, fType)) {
-      def generate(source: S) = value(source).map(
-        FeatureValue(entity(source), name, _, time(source))
+      def generate(source: S, c: FeatureContext) = value(source).map(
+        FeatureValue(entity(source), name, _, time(source, c))
       )
     }
 
@@ -28,7 +28,7 @@ object Patterns {
     namespace: Namespace,
     fType:     Type,
     entity:    S => EntityId,
-    time:      S => Time,
+    time:      (S, FeatureContext) => Time,
     field:     Field[S, FV],
     desc:      Description
   ) = general[S, V, FV](namespace, field.name, desc, fType, entity, (s: S) => Option(field.get(s): V), time)

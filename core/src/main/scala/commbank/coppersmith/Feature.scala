@@ -11,6 +11,9 @@ object Feature {
   type EntityId    = String
   type Time        = Long
 
+
+  def defaultTime[S](s: S, ctx: FeatureContext) = ctx.generationTime.getMillis
+
   sealed trait Type
   object Type {
     case object Categorical extends Type
@@ -51,7 +54,7 @@ object Feature {
         featureType = t
       )
       new Feature[S, V](newMetadata) {
-        def generate(source: S) = f.generate(source)
+        def generate(source: S, c: FeatureContext) = f.generate(source, c)
       }
     }
   }
@@ -103,7 +106,7 @@ object Feature {
 import Feature._
 
 abstract class Feature[S, +V <: Value](val metadata: Metadata[S, V]) {
-  def generate(source:S): Option[FeatureValue[V]]
+  def generate(source:S, context: FeatureContext): Option[FeatureValue[V]]
 }
 
 case class FeatureValue[+V <: Value](

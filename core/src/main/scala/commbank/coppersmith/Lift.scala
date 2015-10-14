@@ -13,9 +13,9 @@ import scalaz.{Ordering => _, Length => _, Zip => _, _}, Scalaz._
 import Feature.Value
 
 trait Lift[P[_]] {
-  def lift[S, V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[V]]
+  def lift[S, V <: Value](f:Feature[S,V])(s: P[S], c: FeatureContext): P[FeatureValue[V]]
 
-  def lift[S](fs: FeatureSet[S])(s: P[S]): P[FeatureValue[_]]
+  def lift[S](fs: FeatureSet[S])(s: P[S], c: FeatureContext): P[FeatureValue[_]]
 
 
   //Join stuff

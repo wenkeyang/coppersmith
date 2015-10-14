@@ -34,7 +34,7 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     val namespace = "test.namespace"
 
     def entity(c: Customer) = c.id
-    def time(c: Customer)   = c.time
+    def time(c: Customer, ctx: FeatureContext)   = c.time
 
     val name:   Feature[Customer, Str]      = pivot(Fields[Customer].Name,   "Customer name",   Categorical)
     val age:    Feature[Customer, Integral] = pivot(Fields[Customer].Age,    "Customer age",    Categorical)
@@ -78,14 +78,14 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
   }
 
   def generateFeatureValuesCompareMacro = forAll { (c:Customer) =>
-    val values = CustomerFeatureSet.generate(c)
-    val macroValues = PivotMacro.pivotThrift[Customer](CustomerFeatureSet.namespace, CustomerFeatureSet.entity, CustomerFeatureSet.time).generate(c)
+    val values = CustomerFeatureSet.generate(c, NoContext)
+    val macroValues = PivotMacro.pivotThrift[Customer](CustomerFeatureSet.namespace, CustomerFeatureSet.entity, CustomerFeatureSet.time).generate(c, NoContext)
 
     macroValues.map(it => (it.entity, it.value, it.time)) must containAllOf(values.toSeq.map(it => (it.entity, it.value, it.time)))
   }
 
   def generateFeatureValues = forAll { (c: Customer) => {
-    val featureValues = CustomerFeatureSet.generate(c)
+    val featureValues = CustomerFeatureSet.generate(c, NoContext)
 
     featureValues must_== List(
       FeatureValue[Str]     (c.id, CustomerFeatureSet.name.metadata.name,   c.name,   c.time),
@@ -118,7 +118,7 @@ object PivotFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     desc:  Description,
     ft:    Type,
     e:     Customer => EntityId,
-    t:     Customer => Time,
+    t:     (Customer, FeatureContext) => Time,
     field: Field[Customer, _]
   ) = {
     // Work around fact that Patterns.pivot requires field's value type,
@@ -134,35 +134,35 @@ object PivotFeatureSpec extends Specification with ScalaCheck { def is = s2"""
 
   def metadataNamespace = forAll {
     (namespace: Namespace, desc: Description, fType: Type, field: Field[Customer, _]) => {
-      val feature = pivot(namespace, desc, fType, _.id, _.time, field)
+      val feature = pivot(namespace, desc, fType, _.id, (c, ctx)=> c.time, field)
       feature.metadata.namespace must_== namespace
     }
   }
 
   def metadataName = forAll {
     (namespace: Namespace, desc: Description, fType: Type, field: Field[Customer, _]) => {
-      val feature = pivot(namespace, desc, fType, _.id, _.time, field)
+      val feature = pivot(namespace, desc, fType, _.id, (c, ctx)=> c.time, field)
       feature.metadata.name must_== field.name
     }
   }
 
   def metadataDescription = forAll {
     (namespace: Namespace, desc: Description, fType: Type, field: Field[Customer, _]) => {
-      val feature = pivot(namespace, desc, fType, _.id, _.time, field)
+      val feature = pivot(namespace, desc, fType, _.id, (c, ctx)=> c.time, field)
       feature.metadata.description must_== desc
     }
   }
 
   def metadataFeatureType = forAll {
     (namespace: Namespace, desc: Description, fType: Type, field: Field[Customer, _]) => {
-      val feature = pivot(namespace, desc, fType, _.id, _.time, field)
+      val feature = pivot(namespace, desc, fType, _.id, (c, ctx)=> c.time, field)
       feature.metadata.featureType must_== fType
     }
   }
 
   def metadataValueType = forAll {
     (namespace: Namespace, desc: Description, fType: Type, field: Field[Customer, _]) => {
-      val feature = pivot(namespace, desc, fType, _.id, _.time, field)
+      val feature = pivot(namespace, desc, fType, _.id, (c, ctx)=> c.time, field)
 
       val expectedValueType = field match {
         case f if f == Fields[Customer].Name => StringType
@@ -175,35 +175,35 @@ object PivotFeatureSpec extends Specification with ScalaCheck { def is = s2"""
 
   def valueEntity = forAll {
     (namespace: Namespace, desc: Description, fType: Type, field: Field[Customer, _], c: Customer) => {
-      val feature = pivot(namespace, desc, fType, _.id, _.time, field)
-      feature.generate(c) must beSome.like { case v => v.entity must_== c.id }
+      val feature = pivot(namespace, desc, fType, _.id, (c, ctx)=> c.time, field)
+      feature.generate(c, NoContext) must beSome.like { case v => v.entity must_== c.id }
     }
   }
 
   def valueName = forAll {
     (namespace: Namespace, desc: Description, fType: Type, field: Field[Customer, _], c: Customer) => {
-      val feature = pivot(namespace, desc, fType, _.id, _.time, field)
-      feature.generate(c) must beSome.like { case v => v.name must_== field.name }
+      val feature = pivot(namespace, desc, fType, _.id, (c, ctx)=> c.time, field)
+      feature.generate(c, NoContext) must beSome.like { case v => v.name must_== field.name }
     }
   }
 
   def valueValue = forAll {
     (namespace: Namespace, desc: Description, fType: Type, field: Field[Customer, _], c: Customer) => {
-      val feature = pivot(namespace, desc, fType, _.id, _.time, field)
+      val feature = pivot(namespace, desc, fType, _.id, (c, ctx)=> c.time, field)
 
       val expectedValue = field match {
         case f if f == Fields[Customer].Name => Str(Option(c.name))
         case f if f == Fields[Customer].Age => Integral(Option(c.age))
         case f if f == Fields[Customer].Height => Decimal(Option(c.height))
       }
-      feature.generate(c) must beSome.like { case v => v.value must_== expectedValue }
+      feature.generate(c, NoContext) must beSome.like { case v => v.value must_== expectedValue }
     }
   }
 
   def valueTime = forAll {
     (namespace: Namespace, desc: Description, fType: Type, field: Field[Customer, _], c: Customer) => {
-      val feature = pivot(namespace, desc, fType, _.id, _.time, field)
-      feature.generate(c) must beSome.like { case v => v.time must_== c.time }
+      val feature = pivot(namespace, desc, fType, _.id, (c, ctx) => c.time, field)
+      feature.generate(c, NoContext) must beSome.like { case v => v.time must_== c.time }
     }
   }
 }

@@ -10,7 +10,7 @@ import org.joda.time.DateTime
 
 
 object Example1Memory {
-  val pivoted = pivotThrift[Customer]("namespace", _.id, c => DateTime.parse(c.effectiveDate).getMillis())
+  val pivoted = pivotThrift[Customer]("namespace", _.id, (c, ctx) => DateTime.parse(c.effectiveDate).getMillis())
   val pivotedAsFeatureSet: PivotFeatureSet[Customer] = pivoted
   val acct: Feature[Customer, Value.Str] = pivoted.acct
   val cat: Feature[Customer, Value.Str] = pivoted.cat
@@ -37,7 +37,7 @@ object Example1Memory {
       dob = "11101999"
     )
 
-    val result: List[FeatureValue[Str]] = lift(acct)(List(c1, c2))
+    val result: List[FeatureValue[Str]] = lift(acct)(List(c1, c2), ParameterisedFeatureContext(new DateTime))
   }
 
 }

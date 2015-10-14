@@ -13,8 +13,8 @@ trait FeatureSet[S] extends MetadataSet[S] {
 
   def features: Iterable[Feature[S, Value]]
 
-  def generate(source: S): Iterable[FeatureValue[Value]] = features.flatMap(f =>
-    f.generate(source)
+  def generate(source: S, c: FeatureContext): Iterable[FeatureValue[Value]] = features.flatMap(f =>
+    f.generate(source, c)
   )
   def metadata: Iterable[Metadata[S, Value]] = {
     features.map(_.metadata)
@@ -27,7 +27,7 @@ trait MetadataSet[S] {
 
 abstract class PivotFeatureSet[S : TypeTag] extends FeatureSet[S] {
   def entity(s: S): EntityId
-  def time(s: S):   Time
+  def time(s: S, c: FeatureContext):   Time
 
   def pivot[V <: Value : TypeTag, FV <% V](field: Field[S, FV], humanDescription: String, featureType: Type) =
     Patterns.pivot(namespace, featureType, entity, time, field, humanDescription)
@@ -35,7 +35,7 @@ abstract class PivotFeatureSet[S : TypeTag] extends FeatureSet[S] {
 
 abstract class BasicFeatureSet[S : TypeTag] extends FeatureSet[S] {
   def entity(s: S): EntityId
-  def time(s: S):   Time
+  def time(s: S, c: FeatureContext): Time
 
   def basicFeature[V <: Value : TypeTag](featureName: Name, humanDescription: String, featureType: Type, value: S => V) =
     Patterns.general(namespace, featureName, humanDescription, featureType, entity, (s: S) => Some(value(s)), time)
@@ -48,7 +48,7 @@ abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends Featur
 
   def entity(s: S): EntityId
   def value(s: S):  V
-  def time(s: S):   Time
+  def time(s: S, c: FeatureContext):  Time
 
   def queryFeature(featureName: Name, humanDescription: String, filter: Filter) =
     Patterns.general(namespace, featureName, humanDescription, featureType, entity, (s: S) => filter(s).option(value(s)), time)
@@ -70,15 +70,15 @@ case class AggregationFeature[S : TypeTag, U, +V <: Value : TypeTag](
   import AggregationFeature.AlgebirdSemigroup
   // Note: Implementation here to satisfty feature signature. Framework should take advantage of
   // the fact that aggregators should be able to be run natively on the underlying plumbing
-  def toFeature(namespace: Namespace, time: S => Time) =
+  def toFeature(namespace: Namespace, time: (S, FeatureContext) => Time) =
       new Feature[(EntityId, Iterable[S]), Value](Metadata(namespace, name, description, featureType)) {
-    def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
+    def generate(s: (EntityId, Iterable[S]), c: FeatureContext): Option[FeatureValue[Value]] = {
       val source = s._2.filter(where.getOrElse(_ => true)).toList.toNel
       source.map(nonEmptySource => {
         val value = aggregator.present(
           nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
         )
-        FeatureValue(s._1, name, value, time(nonEmptySource.head))
+        FeatureValue(s._1, name, value, time(nonEmptySource.head, c))
       })
     }
   }
@@ -86,7 +86,7 @@ case class AggregationFeature[S : TypeTag, U, +V <: Value : TypeTag](
 
 trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
   def entity(s: S): EntityId
-  def time(s: S):   Time
+  def time(s: S, c: FeatureContext):   Time
 
   def aggregationFeatures: Iterable[AggregationFeature[S, _, Value]]
 

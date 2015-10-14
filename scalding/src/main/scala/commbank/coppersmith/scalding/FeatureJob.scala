@@ -9,8 +9,9 @@ import commbank.coppersmith.Feature._
 import commbank.coppersmith._
 
 trait FeatureJobConfig[S] {
-  def featureSource: BoundFeatureSource[S, TypedPipe]
-  def featureSink:   FeatureSink
+  def featureSource:  BoundFeatureSource[S, TypedPipe]
+  def featureSink:    FeatureSink
+  def featureContext: FeatureContext
 }
 
 abstract class SimpleFeatureJob extends MaestroJob {
@@ -26,29 +27,29 @@ abstract class SimpleFeatureJob extends MaestroJob {
 
   def generate[S](
     cfg:      Config => FeatureJobConfig[S],
-    transform: TypedPipe[S] => TypedPipe[FeatureValue[_]]
+    transform: (TypedPipe[S], FeatureContext) => TypedPipe[FeatureValue[_]]
   ): Execution[JobStatus] = {
     for {
       conf     <- Execution.getConfig.map(cfg)
       source    = conf.featureSource
       input     = source.load
-      values    = transform(input)
+      values    = transform(input, conf.featureContext)
       _        <- conf.featureSink.write(values)
     } yield JobFinished
   }
 
   private def generateOneToMany[S](features: FeatureSet[S])
-                                  (input: TypedPipe[S]): TypedPipe[FeatureValue[_]] =
-    input.flatMap(features.generate(_))
+                                  (input: TypedPipe[S], context: FeatureContext): TypedPipe[FeatureValue[_]] =
+    input.flatMap(features.generate(_, context))
 
   // Should be able to take advantage of shapless' tuple support in combination with Aggregator.join
   // in order to run the aggregators in one pass over the input. Need to consider that features may
   // have different filter conditions though.
   // TODO: Where unable to join aggregators, might be possible to run in parallel instead
   private def generateAggregate[S](features: AggregationFeatureSet[S])
-                                  (input: TypedPipe[S]): TypedPipe[FeatureValue[_]] = {
+                                  (input: TypedPipe[S], ctx: FeatureContext): TypedPipe[FeatureValue[_]] = {
 
-    val grouped: Grouped[(EntityId, Time), S] = input.groupBy(s => (features.entity(s), features.time(s)))
+    val grouped: Grouped[(EntityId, Time), S] = input.groupBy(s => (features.entity(s), features.time(s, ctx)))
     features.aggregationFeatures.map(feature => {
       val name = feature.name
       // TODO: Unnecessarily traverses grouped when feature.where is None, however, there doesn't

@@ -33,7 +33,7 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
 
     def entity(c: Customer) = c.id
     def value(c: Customer)  = c.height
-    def time(c: Customer)   = c.time
+    def time(c: Customer, ctx: FeatureContext)   = c.time
 
     def feature(name: String, humanDescription: String, condition: Customer => Boolean) = {
       queryFeature(name, humanDescription, condition)
@@ -58,7 +58,7 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
   }
 
   def generateFeatureValues = forAll { (c: Customer) => {
-    val featureValues = CustomerFeatureSet.generate(c)
+    val featureValues = CustomerFeatureSet.generate(c, NoContext)
 
     import CustomerFeatureSet._
     val expectedFeature = if (c.age < 18) youngHeight else if (c.age >= 65) oldHeight else midHeight

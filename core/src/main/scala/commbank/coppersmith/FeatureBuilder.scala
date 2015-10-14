@@ -10,7 +10,7 @@ import com.twitter.algebird.Aggregator
 import Feature.{Conforms, EntityId, Name, Namespace, Time, Type, Value}
 
 abstract class FeatureBuilderSource[S : TypeTag] {
-  def featureSetBuilder(namespace: Namespace, entity: S => EntityId, time: S => Time) =
+  def featureSetBuilder(namespace: Namespace, entity: S => EntityId, time: (S, FeatureContext) => Time) =
     FeatureSetBuilder(namespace, entity, time)
 }
 
@@ -20,7 +20,7 @@ trait FeatureBuilderSourceInstances {
   implicit def fromFS[S : TypeTag](fs: FeatureSource[S, _]) = new FeatureBuilderSource[S] {}
 }
 
-case class FeatureSetBuilder[S : TypeTag](namespace: Namespace, entity: S => EntityId, time: S => Time) {
+case class FeatureSetBuilder[S : TypeTag](namespace: Namespace, entity: S => EntityId, time: (S, FeatureContext) => Time) {
   def apply[FV <% V, V <: Value : TypeTag](value : S => FV): FeatureBuilder[S, FV, V] =
     FeatureBuilder(this, value)
 
