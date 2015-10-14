@@ -21,6 +21,8 @@ import commbank.coppersmith.Feature.Value._
 import commbank.coppersmith.FeatureValue
 import commbank.coppersmith.thrift.Eavt
 
+import HiveSupport.{DelimiterConflictStrategy, FailJob}
+
 trait FeatureSink {
   def write(features: TypedPipe[FeatureValue[_]]): Execution[Unit]
 }
@@ -36,24 +38,33 @@ object HydroSink {
 
   val partition = HivePartition.byDay(Fields[Eavt].Time, "yyyy-MM-dd")
 
-  def configure(maestro: MaestroConfig, dbRawPrefix: String): HydroSink =
-    configure(dbRawPrefix, new Path(maestro.hdfsRoot), maestro.tablename, maestro.source.some)
+  def configure(maestro: MaestroConfig,
+                dbPrefix: String,
+                dcs: DelimiterConflictStrategy[Eavt]): HydroSink =
+    configure(dbPrefix, new Path(maestro.hdfsRoot), maestro.tablename, maestro.source.some, dcs)
 
-  def configure(dbRawPrefix: String,
-                dbRoot:      Path,
-                tableName:   TableName,
-                group:       Option[String] = None): HydroSink =
+  def configure(dbPrefix:  String,
+                dbRoot:    Path,
+                tableName: TableName,
+                group:     Option[String] = None,
+                dcs:       DelimiterConflictStrategy[Eavt] = FailJob[Eavt]()): HydroSink =
     HydroSink(
       Config(
-        s"${dbRawPrefix}_features",
+        s"${dbPrefix}_features",
         new Path(dbRoot, s"view/warehouse/features/${group.map(_ + "/").getOrElse("")}$tableName"),
-        tableName
+        tableName,
+        dcs
       )
     )
 
-  case class Config(dbName: DatabaseName, tablePath: Path, tableName: TableName) {
+  case class Config(
+    dbName:    DatabaseName,
+    tablePath: Path,
+    tableName: TableName,
+    dcs:       DelimiterConflictStrategy[Eavt] = FailJob[Eavt]()
+  ) {
     def hiveConfig =
-      HiveConfig[Eavt, (String, String, String)](partition, dbName, tablePath, tableName, Delimiter)
+      HiveConfig[Eavt, (String, String, String)](partition, dbName, tablePath, tableName, Delimiter, dcs)
   }
 
   def toEavt(fv: FeatureValue[_]) = {
@@ -93,12 +104,22 @@ case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
 // code from different feature gen projects, which supports storing the final EAVT records as text.
 // Won't be required once Hydro moves to Parquet format
 object HiveSupport {
+  trait DelimiterConflictStrategy[T] {
+    def handle(row: T, result: String, sep: String): Option[String]
+  }
+  // Use if field values are assumed to never contain the separator character
+  case class FailJob[T]() extends DelimiterConflictStrategy[T] {
+    def handle(row: T, result: String, sep: String) =
+      sys.error(s"field '$result' in '$row' contains the specified delimiter '$sep'")
+  }
+
   case class HiveConfig[T <: ThriftStruct with Product : Manifest, P](
     partition: Partition[T, P],
     database:  String,
     path:      Path,
     tablename: String,
-    delimiter: String
+    delimiter: String,
+    dcs:       DelimiterConflictStrategy[T]
   )
 
   def writeTextTable[T <: ThriftStruct with Product : Manifest, P : TupleSetter : TupleConverter](
@@ -108,7 +129,7 @@ object HiveSupport {
 
     import conf.partition
     val partitioned: TypedPipe[(P, String)] = pipe.map(v =>
-      partition.extract(v) -> serialise[T](v, conf.delimiter, "\\N")
+      partition.extract(v) -> serialise[T](v, conf.delimiter, "\\N")(conf.dcs)
     )
     for {
       _          <- partitioned.writeExecution(PartitionedTextLine(conf.path.toString, partition.pattern))
@@ -130,17 +151,29 @@ object HiveSupport {
     } yield ()
 
   // Adapted from ParseUtils in util.etl project
-  private def serialise[T <: Product](row: T, sep: String, none: String): String =
-    row.productIterator.map(value => {
+  private def serialise[T <: Product](row: T, sep: String, none: String)
+                                     (implicit dcs: DelimiterConflictStrategy[T]): String = {
+
+    def delimiterConflict(s: String) = s.contains(sep)
+
+    row.productIterator.flatMap(value => {
       val result = value match {
         case Some(x) => x
         case None    => none
         case any     => any
       }
-      if (result.toString.contains(sep)) {
-        sys.error((s"field $result in $row contains the specified delimiter $sep"))
+      if (delimiterConflict(result.toString)) {
+        dcs.handle(row, value.toString, sep).map(r =>
+          if (delimiterConflict(r)) {
+            sys.error(("Delimiter conflict not handled adequately: " +
+                       s"result '$r' from '$row' still contains the specified delimiter '$sep'"))
+          } else {
+            r
+          }
+        )
       } else {
-        result
+        Option(result)
       }
     }).mkString(sep)
+  }
 }
