@@ -31,7 +31,7 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
     val select = source.featureSetBuilder(namespace, entity(_), time(_))
 
     type CF = Feature[Customer, Value]
-    val age:       CF = select(_.age)                      .asFeature(Categorical, "age",       "Age")
+    val age:       CF = select(_.age)                      .asFeature(Ordinal,     "age",       "Age")
     val tallAge:   CF = select(_.age).where(_.height > 2.0).asFeature(Continuous,  "tallAge",   "Tall Age")
     val oldHeight: CF = select(_.height).where(_.age > 65) .asFeature(Continuous,  "oldHeight", "Old Height")
 
@@ -43,7 +43,7 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
     import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      Metadata[Customer, Integral](namespace, "age",       "Age",        Categorical),
+      Metadata[Customer, Integral](namespace, "age",       "Age",        Ordinal),
       Metadata[Customer, Integral](namespace, "tallAge",   "Tall Age",   Continuous),
       Metadata[Customer, Decimal] (namespace, "oldHeight", "Old Height", Continuous)
     )
@@ -71,7 +71,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     must generate expected feature values $generateFeatureValues
 """
 
-  import Type.{Categorical, Continuous}
+  import Type._
 
   object CustomerFeatureSet extends AggregationFeatureSet[Customer] {
     val namespace           = "test.namespace"
@@ -83,7 +83,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
 
     type CAF = AggregationFeature[Customer, _, Value]
 
-    val sizeF:  CAF = select(size )                     .asFeature(Categorical, "size",  "Agg feature")
+    val sizeF:  CAF = select(size )                     .asFeature(Discrete,    "size",  "Agg feature")
     val countF: CAF = select(count(where = _.age >= 18)).asFeature(Continuous,  "count", "Agg feature")
     val sumF:   CAF = select(sum(_.height))             .asFeature(Continuous,  "sum",   "Agg feature")
     val maxF:   CAF = select(max(_.age))                .asFeature(Continuous,  "max",   "Agg feature")
@@ -99,7 +99,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      Metadata[Customer, Integral](namespace, "size", "Agg feature",  Categorical),
+      Metadata[Customer, Integral](namespace, "size", "Agg feature",  Discrete),
       Metadata[Customer, Integral](namespace, "count","Agg feature",  Continuous),
       Metadata[Customer, Decimal] (namespace, "sum",  "Agg feature",  Continuous),
       Metadata[Customer, Decimal] (namespace, "max",  "Agg feature",  Continuous),

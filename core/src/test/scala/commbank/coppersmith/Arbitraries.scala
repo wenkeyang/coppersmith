@@ -14,7 +14,7 @@ import Feature.{Value, Type}, Value._, Type._
 import test.thrift.{Account, Customer}
 
 object Arbitraries {
-  implicit val arbFeatureType: Arbitrary[Type] = Arbitrary(oneOf(Categorical, Continuous))
+  implicit val arbFeatureType: Arbitrary[Type] = Arbitrary(oneOf(Nominal, Continuous, Ordinal, Discrete))
 
   implicit val integralValueGen: Gen[Integral] = arbitrary[Option[Long]].map(Integral(_))
   implicit val decimalValueGen: Gen[Decimal] = arbitrary[Option[Double]].map(Decimal(_))

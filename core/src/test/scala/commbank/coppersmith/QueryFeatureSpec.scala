@@ -25,7 +25,7 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     must generate expected feature values $generateFeatureValues
 """
 
-  import Type.{Categorical, Continuous}
+  import Type._
 
   object CustomerFeatureSet extends QueryFeatureSet[Customer, Decimal] {
     val namespace   = "test.namespace"

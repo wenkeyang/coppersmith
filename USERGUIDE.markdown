@@ -263,7 +263,7 @@ returning a `Feature` object.
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
-import Feature.Type.{Categorical, Continuous}
+import Feature.Type.{Nominal, Continuous}
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
@@ -276,7 +276,7 @@ object CustomerFeaturesFluent extends FeatureSet[Customer] {
   val select = source.featureSetBuilder(namespace, entity(_), time(_))
 
   val customerBirthDay  = select(_.dob)
-    .asFeature(Categorical, "CUST_BIRTHDAY", "Day on which the customer was born")
+    .asFeature(Nominal, "CUST_BIRTHDAY", "Day on which the customer was born")
   val customerBirthYear = select(cust => DateTime.parse(cust.dob).getYear)
     .asFeature(Continuous, "CUST_BIRTHYEAR", "Calendar year in which the customer was born")
 
@@ -410,7 +410,7 @@ to improve readability when there are multiple conditions).
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
-import Feature.Type.Categorical
+import Feature.Type.Nominal
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
@@ -426,13 +426,13 @@ object CustomerBirthFeatures extends FeatureSet[Customer] {
 
   val ageIn1970  = select(1970 - _.birthYear)
     .where(_.birthYear < 1970)
-    .asFeature(Categorical, "CUST_AGE_1970",
+    .asFeature(Discrete, "CUST_AGE_1970",
                "Age in 1970, for customers born prior to 1970")
 
   val ageIn1980 = select(1980 - _.birthYear)
     .where   (_.birthYear >= 1970)
     .andWhere(_.birthYear <= 1979)
-    .asFeature(Categorical, "CUST_AGE_1980",
+    .asFeature(Discrete, "CUST_AGE_1980",
                "Age in 1980, for customers born between 1970 and 1979")
 
   val features = List(ageIn1970, ageIn1980)
@@ -447,7 +447,7 @@ repetition in the feature definitions.
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{FeatureSet, Feature}
-import Feature.Type.Categorical
+import Feature.Type.Nominal
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
@@ -464,12 +464,12 @@ object GenXYCustomerFeatures extends FeatureSet[Customer] {
 
   val genXBirthYear  = select(_.birthYear)
     .where(_.birthYear < 1980)
-    .asFeature(Categorical, "GEN_X_CUST_BIRTH_YEAR",
+    .asFeature(Discrete, "GEN_X_CUST_BIRTH_YEAR",
                "Year of birth for customers born between 1960 and 1980")
 
   val genYBirthYear  = select(_.birthYear)
     .where(_.birthYear >= 1980)
-    .asFeature(Categorical, "GEN_Y_CUST_BIRTH_YEAR",
+    .asFeature(Ordinal, "GEN_Y_CUST_BIRTH_YEAR",
                "Year of birth for customers born between 1980 and 2000")
 
   val features = List(genXBirthYear, genYBirthYear)
@@ -484,7 +484,7 @@ consider using the `QueryFeatureSet`:
 import org.joda.time.DateTime
 
 import commbank.coppersmith.{QueryFeatureSet, Feature}
-import Feature.Type.Categorical, Feature.Value.Str
+import Feature.Type.Nominal, Feature.Value.Str
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.example.thrift.Customer
 
@@ -496,7 +496,7 @@ object CustomerBirthFlags extends QueryFeatureSet[Customer, Str] {
   def time(cust: Customer)   = cust.timestamp
 
   def value(cust: Customer)  = "Y"
-  val featureType            = Categorical
+  val featureType            = Nominal
 
   val source = From[Customer]()
 

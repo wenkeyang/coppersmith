@@ -37,7 +37,7 @@ object PivotMacro {
 
               val featureMetadata = Metadata[$typ, $featureValueType](
                   $namespace, ${field.toLowerCase}, $fieldDescription,
-                  ${ if(continuous) q"Feature.Type.Continuous" else q"Feature.Type.Categorical"})
+                  ${ if(continuous) q"Feature.Type.Continuous" else q"Feature.Type.Nominal"})
 
               new Feature[$typ, $featureValueType](featureMetadata) { self =>
 
