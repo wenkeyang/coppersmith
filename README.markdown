@@ -18,3 +18,6 @@ This library is originated from the Feature Engineering squad within Analytics
 @triggerNZ, and @toddmowen.
 
 
+We have a user guide at [USERGUIDE.markdown] (https://github.com/CommBank/coppersmith/blob/master/USERGUIDE.markdown), 
+which we consider a good introduction to coppersmith. PR's to the user guide as you become familiar
+with the library are especially encouraged!!!
