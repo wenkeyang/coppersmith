@@ -45,33 +45,33 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def integralConversions = {
     val feature = Patterns.general[Customer, Value.Integral, Value.Integral](
-      "ns", "name", "Desc", Type.Categorical, _.id, c => Some(c.age), (customer, ctx) => customer.time
+      "ns", "name", "Desc", Type.Nominal, _.id, c => Some(c.age), (customer, ctx) => customer.time
     )
     Seq(
-      feature.metadata.featureType === Type.Categorical,
+      feature.metadata.featureType === Type.Nominal,
       feature.as(Continuous).metadata.featureType === Type.Continuous,
-      feature.as(Categorical).metadata.featureType === Type.Categorical,
-      feature.as(Categorical).as(Continuous).metadata.featureType === Type.Continuous
+      feature.as(Ordinal).metadata.featureType === Type.Ordinal,
+      feature.as(Ordinal).as(Continuous).metadata.featureType === Type.Continuous
     )
   }
 
   def decimalConversions = {
     val feature = Patterns.general[Customer, Value.Decimal, Value.Decimal](
-      "ns", "name", "Description", Type.Categorical, _.id, c => Some(c.age.toDouble), (customer, ctx) => customer.time
+      "ns", "name", "Description", Type.Ordinal, _.id, c => Some(c.age.toDouble), (customer, ctx) => customer.time
     )
     Seq(
-      feature.metadata.featureType === Type.Categorical,
+      feature.metadata.featureType === Type.Ordinal,
       feature.as(Continuous).metadata.featureType === Type.Continuous,
-      feature.as(Categorical).metadata.featureType === Type.Categorical,
-      feature.as(Categorical).as(Continuous).metadata.featureType === Type.Continuous
+      feature.as(Ordinal).metadata.featureType === Type.Ordinal,
+      feature.as(Ordinal).as(Continuous).metadata.featureType === Type.Continuous
     )
   }
 
   def stringConversions = {
     val feature = Patterns.general[Customer, Value.Str, Value.Str](
-      "ns", "name", "Description", Type.Categorical, _.id, c => Some(c.name), (c, ctx) => c.time
+      "ns", "name", "Description", Type.Nominal, _.id, c => Some(c.name), (c, ctx) => c.time
     )
-    feature.metadata.featureType === Type.Categorical
+    feature.metadata.featureType === Type.Nominal
     typecheck("feature.as(Continuous)") must not succeed
   }
 }
@@ -88,8 +88,8 @@ object HydroMetadataSpec extends Specification with ScalaCheck { def is = s2"""
     }
 
     val expectedFeatureType = fType match {
-      case Continuous  => "continuous"
-      case Categorical => "categorical"
+      case n : Numeric    => "continuous"
+      case c: Categorical => "categorical"
     }
 
     val hydroMetadata = metadata.asHydroPsv

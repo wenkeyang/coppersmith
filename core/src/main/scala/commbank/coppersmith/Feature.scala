@@ -2,6 +2,7 @@ package commbank.coppersmith
 
 import shapeless.=:!=
 
+import scala.annotation.implicitNotFound
 import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
 object Feature {
@@ -16,8 +17,14 @@ object Feature {
 
   sealed trait Type
   object Type {
-    case object Categorical extends Type
-    case object Continuous  extends Type
+    sealed trait Categorical extends Type
+    sealed trait Numeric extends Type
+
+    case object Continuous  extends Numeric
+    case object Discrete  extends Numeric
+
+    case object Ordinal extends Categorical
+    case object Nominal extends Categorical
   }
 
   sealed trait Value
@@ -37,12 +44,17 @@ object Feature {
   }
 
   // Legal type/value combinations
+  @implicitNotFound("Features with value type ${V} cannot be ${T}")
   sealed trait Conforms[T <: Type, V <: Value]
-  implicit object CategoricalStr      extends Conforms[Type.Categorical.type, Value.Str]
-  implicit object CategoricalIntegral extends Conforms[Type.Categorical.type, Value.Integral]
-  implicit object CategoricalDecimal  extends Conforms[Type.Categorical.type, Value.Decimal]
-  implicit object ContinuousIntegral  extends Conforms[Type.Continuous.type,  Value.Integral]
+  implicit object NominalStr          extends Conforms[Type.Nominal.type, Value.Str]
+
+  implicit object OrdinalDecimal      extends Conforms[Type.Ordinal.type, Value.Decimal]
   implicit object ContinuousDecimal   extends Conforms[Type.Continuous.type,  Value.Decimal]
+
+  implicit object OrdinalIntegral     extends Conforms[Type.Ordinal.type, Value.Integral]
+  implicit object ContinuousIntegral  extends Conforms[Type.Continuous.type,  Value.Integral]
+
+  implicit object DiscreteIntegral    extends Conforms[Type.Discrete.type, Value.Integral]
 
   implicit class RichFeature[S : TypeTag, V <: Value : TypeTag](f: Feature[S, V]) {
     def as[T <: Feature.Type](t: T)(implicit ev: Conforms[T, V], neq: T =:!= Nothing) = {
@@ -75,8 +87,8 @@ object Feature {
           case ValueType.StringType   => "string"
         }
         val featureType = m.featureType match {
-          case Type.Categorical => "categorical"
-          case Type.Continuous  => "continuous"
+          case t : Type.Categorical => "categorical"
+          case t : Type.Numeric     => "continuous"   //Assumption hydro interprets all numeric as continuous
         }
         List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
       }

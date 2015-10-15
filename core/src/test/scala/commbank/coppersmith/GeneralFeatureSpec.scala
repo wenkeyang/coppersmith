@@ -37,7 +37,7 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     namespace: Namespace             = "",
     name:      Name                  = "",
     desc:      Description           = "",
-    fType:     Type                  = Categorical,
+    fType:     Type                  = Nominal,
     entity:    Customer => EntityId  = _.id,
     fValue:    Customer => Option[V] = (_: Customer) => Some(null),
     time:      (Customer, FeatureContext) => Time      = (c, _) => c.time
