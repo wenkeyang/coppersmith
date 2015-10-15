@@ -78,11 +78,10 @@ object CustomerBirthYear extends Feature[Customer, Integral](
                                description = "Calendar year in which the customer was born",
                                featureType = Continuous)
 ) {
-  def generate(cust: Customer, ctx: FeatureContext) = Some(
+  def generate(cust: Customer) = Some(
     FeatureValue(entity = cust.id,
                  name   = "CUST_BIRTHYEAR",
-                 value  = DateTime.parse(cust.dob).getYear,
-                 time   = ctx.generationTime.getMillis)
+                 value  = DateTime.parse(cust.dob).getYear)
   )
 }
 ```
@@ -275,7 +274,7 @@ object CustomerFeaturesFluent extends FeatureSet[Customer] {
   def time(cust: Customer, ctx: FeatureContext)   = DateTime.parse(cust.effectiveDate).getMillis
 
   val source = From[Customer]()  // FeatureSource (see above)
-  val select = source.featureSetBuilder(namespace, entity, time)
+  val select = source.featureSetBuilder(namespace, entity)
 
   val customerBirthDay  = select(_.dob)
     .asFeature(Nominal, "CUST_BIRTHDAY", "Day on which the customer was born")
@@ -385,7 +384,7 @@ object AccountFeatures extends AggregationFeatureSet[Account] {
   def time(acc: Account, ctx: FeatureContext)   = acc.eventYear
 
   val source = From[Account]()
-  val select = source.featureSetBuilder(namespace, entity, time)
+  val select = source.featureSetBuilder(namespace, entity)
 
   val minBalance = select(min(_.balance))
     .asFeature(Continuous, "ACC_ANNUAL_MIN_BALANCE",
@@ -424,7 +423,7 @@ object CustomerBirthFeatures extends FeatureSet[Customer] {
   def time(cust: Customer, ctx: FeatureContext)   = cust.timestamp
 
   val source = From[Customer]()
-  val select = source.featureSetBuilder(namespace, entity, time)
+  val select = source.featureSetBuilder(namespace, entity)
 
   val ageIn1970  = select(1970 - _.birthYear)
     .where(_.birthYear < 1970)
@@ -462,7 +461,7 @@ object GenXYCustomerFeatures extends FeatureSet[Customer] {
 
   // Common filter applied to all features built from this source
   val source = From[Customer]().filter(c => Range(1960, 2000).contains(c.birthYear))
-  val select = source.featureSetBuilder(namespace, entity, time)
+  val select = source.featureSetBuilder(namespace, entity)
 
   val genXBirthYear  = select(_.birthYear)
     .where(_.birthYear < 1980)
@@ -550,7 +549,7 @@ object JoinFeatures extends AggregationFeatureSet[(Customer, Account)] {
     cust => cust.id,
     acc  => acc.customer
   )
-  val select = source.featureSetBuilder(namespace, entity, time)
+  val select = source.featureSetBuilder(namespace, entity)
 
   val totalBalanceForCustomersBornPre1970 = select(sum(_._2.balance))
     .where(_._1.birthYear < 1970)
@@ -589,7 +588,7 @@ object JoinFeatures2 extends AggregationFeatureSet[(Customer, Account, Option[Cu
                          (c2: Customer)               => c2.acct)
       .src  //Note the use of the .src call. Awkward implementation detail
   
-  val select = source.featureSetBuilder(namespace, entity, time)
+  val select = source.featureSetBuilder(namespace, entity)
 
   //make sure the other customer is defined and not us (in reality this would have 
   //been an inner join but for the sake of education, we are showing the left)

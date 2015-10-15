@@ -7,11 +7,11 @@ import scalaz.syntax.std.option.ToOptionIdOps
 
 import com.twitter.algebird.Aggregator
 
-import Feature.{Conforms, EntityId, Name, Namespace, Time, Type, Value}
+import Feature.{Conforms, EntityId, Name, Namespace, Type, Value}
 
 abstract class FeatureBuilderSource[S : TypeTag] {
-  def featureSetBuilder(namespace: Namespace, entity: S => EntityId, time: (S, FeatureContext) => Time) =
-    FeatureSetBuilder(namespace, entity, time)
+  def featureSetBuilder(namespace: Namespace, entity: S => EntityId) =
+    FeatureSetBuilder(namespace, entity)
 }
 
 object FeatureBuilderSource extends FeatureBuilderSourceInstances
@@ -20,7 +20,7 @@ trait FeatureBuilderSourceInstances {
   implicit def fromFS[S : TypeTag](fs: FeatureSource[S, _]) = new FeatureBuilderSource[S] {}
 }
 
-case class FeatureSetBuilder[S : TypeTag](namespace: Namespace, entity: S => EntityId, time: (S, FeatureContext) => Time) {
+case class FeatureSetBuilder[S : TypeTag](namespace: Namespace, entity: S => EntityId) {
   def apply[FV <% V, V <: Value : TypeTag](value : S => FV): FeatureBuilder[S, FV, V] =
     FeatureBuilder(this, value)
 
@@ -44,8 +44,7 @@ case class FeatureBuilder[S : TypeTag, FV <% V, V <: Value : TypeTag](
                                description,
                                featureType,
                                fsBuilder.entity,
-                               (s: S) => filter.map(_(s)).getOrElse(true).option(value(s): V),
-                               fsBuilder.time)
+                               (s: S) => filter.map(_(s)).getOrElse(true).option(value(s): V))
 }
 
 case class AggregationFeatureBuilder[S : TypeTag, T, U <% V, V <: Value : TypeTag](

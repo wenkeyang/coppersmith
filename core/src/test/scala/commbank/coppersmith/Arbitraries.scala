@@ -28,8 +28,7 @@ object Arbitraries {
   implicit val arbFeatureValue: Arbitrary[FeatureValue[Value]] = Arbitrary(
     (arbNonEmptyAlphaStr.map(_.value) |@|
        arbNonEmptyAlphaStr.map(_.value) |@|
-       arbitrary[Value] |@|
-       arbTime
+       arbitrary[Value]
     )(FeatureValue.apply _)
   )
 

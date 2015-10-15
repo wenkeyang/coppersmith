@@ -30,7 +30,6 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     must use specified id as entity      $valueEntity
     must use specified name as name      $valueName
     must use value as defined            $valueValue
-    must use specified time as time      $valueTime
 """
 
   def general[V <: Value : TypeTag](
@@ -39,9 +38,8 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     desc:      Description           = "",
     fType:     Type                  = Nominal,
     entity:    Customer => EntityId  = _.id,
-    fValue:    Customer => Option[V] = (_: Customer) => Some(null),
-    time:      (Customer, FeatureContext) => Time      = (c, _) => c.time
-  ) = Patterns.general(namespace, name, desc, fType, entity, fValue, time)
+    fValue:    Customer => Option[V] = (_: Customer) => Some(null)
+  ) = Patterns.general(namespace, name, desc, fType, entity, fValue)
 
   def metadataNamespace = forAll { (namespace: Namespace) => {
     val feature = general(namespace = namespace)
@@ -65,12 +63,12 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
 
   def valueEntity = forAll { (c: Customer) => {
     val feature = general(entity = _.id)
-    feature.generate(c, NoContext) must beSome.like { case v => v.entity must_== c.id }
+    feature.generate(c) must beSome.like { case v => v.entity must_== c.id }
   }}
 
   def valueName = forAll { (namespace: Namespace, name: String, fType: Type, c: Customer) => {
     val feature = general(name = name)
-    feature.generate(c, NoContext) must beSome.like { case v => v.name must_== name }
+    feature.generate(c) must beSome.like { case v => v.name must_== name }
   }}
 
   def valueValue = forAll { (c: Customer, field: Field[Customer, _], filter: Boolean) => {
@@ -86,12 +84,7 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
       case f if f == Fields[Customer].Height => Decimal(Option(c.height))
     }
 
-    val featureValue = feature.generate(c, NoContext)
+    val featureValue = feature.generate(c)
     if (!filter) featureValue must beNone else featureValue must beSome.like { case v => v.value must_== expectedValue }
-  }}
-
-  def valueTime = forAll { (c: Customer) => {
-    val feature = general(time = (cust, ctx) => cust.time)
-    feature.generate(c, NoContext) must beSome.like { case v => v.time must_== c.time }
   }}
 }

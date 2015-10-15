@@ -9,12 +9,12 @@ import commbank.coppersmith._, Feature.Value
 
 
 trait MemoryLift extends Lift[List] {
-  def lift[S,V <: Value](f:Feature[S,V])(s: List[S], c: FeatureContext): List[FeatureValue[V]] = {
-    s.flatMap(s => f.generate(s, c))
+  def lift[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[V]] = {
+    s.flatMap(s => f.generate(s))
   }
 
-  def lift[S](fs: FeatureSet[S])(s: List[S], c: FeatureContext): List[FeatureValue[_]] = {
-    s.flatMap(s => fs.generate(s, c))
+  def lift[S](fs: FeatureSet[S])(s: List[S]): List[FeatureValue[_]] = {
+    s.flatMap(s => fs.generate(s))
   }
 
   type +:[A <: HList, B] =  Prepend[A, B :: HNil]

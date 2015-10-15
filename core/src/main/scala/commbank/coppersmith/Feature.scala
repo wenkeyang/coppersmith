@@ -66,7 +66,7 @@ object Feature {
         featureType = t
       )
       new Feature[S, V](newMetadata) {
-        def generate(source: S, c: FeatureContext) = f.generate(source, c)
+        def generate(source: S) = f.generate(source)
       }
     }
   }
@@ -118,18 +118,17 @@ object Feature {
 import Feature._
 
 abstract class Feature[S, +V <: Value](val metadata: Metadata[S, V]) {
-  def generate(source:S, context: FeatureContext): Option[FeatureValue[V]]
+  def generate(source:S): Option[FeatureValue[V]]
 }
 
 case class FeatureValue[+V <: Value](
   entity:  EntityId,
   name:    Name,
-  value:   V,
-  time:    Time
+  value:   V
 )
 
 object FeatureValue {
   implicit class AsEavt[V <: Value](fv: FeatureValue[V]) {
-    def asEavt: (EntityId, Name, V, Time) = (fv.entity, fv.name, fv.value, fv.time)
+    def asEavt(time: Time): (EntityId, Name, V, Time) = (fv.entity, fv.name, fv.value, time)
   }
 }

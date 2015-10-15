@@ -37,7 +37,7 @@ object Example1Memory {
       dob = "11101999"
     )
 
-    val result: List[FeatureValue[Str]] = lift(acct)(List(c1, c2), ParameterisedFeatureContext(new DateTime))
+    val result: List[FeatureValue[Str]] = lift(acct)(List(c1, c2))
   }
 
 }

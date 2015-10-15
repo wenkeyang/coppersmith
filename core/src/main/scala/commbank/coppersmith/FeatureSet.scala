@@ -13,45 +13,46 @@ trait FeatureSet[S] extends MetadataSet[S] {
 
   def features: Iterable[Feature[S, Value]]
 
-  def generate(source: S, c: FeatureContext): Iterable[FeatureValue[Value]] = features.flatMap(f =>
-    f.generate(source, c)
+  def generate(source: S): Iterable[FeatureValue[Value]] = features.flatMap(f =>
+    f.generate(source)
   )
   def metadata: Iterable[Metadata[S, Value]] = {
     features.map(_.metadata)
   }
 }
 
+trait FeatureSetWithTime[S] extends FeatureSet[S] {
+  def time(source: S, c: FeatureContext): Time
+}
+
 trait MetadataSet[S] {
   def metadata: Iterable[Metadata[S, Value]]
 }
 
-abstract class PivotFeatureSet[S : TypeTag] extends FeatureSet[S] {
+abstract class PivotFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
   def entity(s: S): EntityId
-  def time(s: S, c: FeatureContext):   Time
 
   def pivot[V <: Value : TypeTag, FV <% V](field: Field[S, FV], humanDescription: String, featureType: Type) =
-    Patterns.pivot(namespace, featureType, entity, time, field, humanDescription)
+    Patterns.pivot(namespace, featureType, entity, field, humanDescription)
 }
 
-abstract class BasicFeatureSet[S : TypeTag] extends FeatureSet[S] {
+abstract class BasicFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
   def entity(s: S): EntityId
-  def time(s: S, c: FeatureContext): Time
 
   def basicFeature[V <: Value : TypeTag](featureName: Name, humanDescription: String, featureType: Type, value: S => V) =
-    Patterns.general(namespace, featureName, humanDescription, featureType, entity, (s: S) => Some(value(s)), time)
+    Patterns.general(namespace, featureName, humanDescription, featureType, entity, (s: S) => Some(value(s)))
 }
 
-abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends FeatureSet[S] {
+abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends FeatureSetWithTime[S] {
   type Filter = S => Boolean
 
   def featureType:  Feature.Type
 
   def entity(s: S): EntityId
   def value(s: S):  V
-  def time(s: S, c: FeatureContext):  Time
 
   def queryFeature(featureName: Name, humanDescription: String, filter: Filter) =
-    Patterns.general(namespace, featureName, humanDescription, featureType, entity, (s: S) => filter(s).option(value(s)), time)
+    Patterns.general(namespace, featureName, humanDescription, featureType, entity, (s: S) => filter(s).option(value(s)))
 }
 
 import scalaz.syntax.foldable1.ToFoldable1Ops
@@ -70,15 +71,15 @@ case class AggregationFeature[S : TypeTag, U, +V <: Value : TypeTag](
   import AggregationFeature.AlgebirdSemigroup
   // Note: Implementation here to satisfty feature signature. Framework should take advantage of
   // the fact that aggregators should be able to be run natively on the underlying plumbing
-  def toFeature(namespace: Namespace, time: (S, FeatureContext) => Time) =
+  def toFeature(namespace: Namespace) =
       new Feature[(EntityId, Iterable[S]), Value](Metadata(namespace, name, description, featureType)) {
-    def generate(s: (EntityId, Iterable[S]), c: FeatureContext): Option[FeatureValue[Value]] = {
+    def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
       val source = s._2.filter(where.getOrElse(_ => true)).toList.toNel
       source.map(nonEmptySource => {
         val value = aggregator.present(
           nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
         )
-        FeatureValue(s._1, name, value, time(nonEmptySource.head, c))
+        FeatureValue(s._1, name, value)
       })
     }
   }
@@ -86,11 +87,10 @@ case class AggregationFeature[S : TypeTag, U, +V <: Value : TypeTag](
 
 trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
   def entity(s: S): EntityId
-  def time(s: S, c: FeatureContext):   Time
 
   def aggregationFeatures: Iterable[AggregationFeature[S, _, Value]]
 
-  def features = aggregationFeatures.map(_.toFeature(namespace, time))
+  def features = aggregationFeatures.map(_.toFeature(namespace))
 
   // These allow aggregators to be created without specifying type args that
   // would otherwise be required if calling the delegated methods directly

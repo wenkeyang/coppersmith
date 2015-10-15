@@ -44,7 +44,7 @@ object Example1 {
       conf                    <- Execution.getConfig.map(ExampleConfig)
       (inputPipe, _)          <- Execution.from(Util.decodeHive[Customer](
                                   MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
-      outputPipe              = lift(acct)(inputPipe, ParameterisedFeatureContext(conf.queryDate))
+      outputPipe              = lift(acct)(inputPipe)
       _                       <- outputPipe.writeExecution(TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
   }
@@ -54,7 +54,7 @@ object Example1 {
       conf                    <- Execution.getConfig.map(ExampleConfig)
       (inputPipe, _)          <- Execution.from(Util.decodeHive[Customer](
                                 MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
-      outputPipe             = lift(pivotedAsFeatureSet)(inputPipe, ParameterisedFeatureContext(conf.queryDate))
+      outputPipe             = lift(pivotedAsFeatureSet)(inputPipe)
       _                       <- outputPipe.writeExecution(TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
   }

@@ -45,7 +45,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def integralConversions = {
     val feature = Patterns.general[Customer, Value.Integral, Value.Integral](
-      "ns", "name", "Desc", Type.Nominal, _.id, c => Some(c.age), (customer, ctx) => customer.time
+      "ns", "name", "Desc", Type.Nominal, _.id, c => Some(c.age)
     )
     Seq(
       feature.metadata.featureType === Type.Nominal,
@@ -57,7 +57,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def decimalConversions = {
     val feature = Patterns.general[Customer, Value.Decimal, Value.Decimal](
-      "ns", "name", "Description", Type.Ordinal, _.id, c => Some(c.age.toDouble), (customer, ctx) => customer.time
+      "ns", "name", "Description", Type.Ordinal, _.id, c => Some(c.age.toDouble)
     )
     Seq(
       feature.metadata.featureType === Type.Ordinal,
@@ -69,7 +69,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def stringConversions = {
     val feature = Patterns.general[Customer, Value.Str, Value.Str](
-      "ns", "name", "Description", Type.Nominal, _.id, c => Some(c.name), (c, ctx) => c.time
+      "ns", "name", "Description", Type.Nominal, _.id, c => Some(c.name)
     )
     feature.metadata.featureType === Type.Nominal
     typecheck("feature.as(Continuous)") must not succeed

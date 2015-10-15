@@ -10,7 +10,7 @@ object PivotMacro {
   def pivotThrift[A <: ThriftStruct](
     namespace:Namespace,
     entity: A => EntityId,
-    time: (A, FeatureContext) => Time = Feature.defaultTime[A] _
+    time: (A, FeatureContext) => Time
   ): Any = macro pivotImpl[A]
 
   def pivotImpl[A <: ThriftStruct: c.WeakTypeTag]
@@ -41,12 +41,11 @@ object PivotMacro {
 
               new Feature[$typ, $featureValueType](featureMetadata) { self =>
 
-                def generate(source: $typ, ctx: FeatureContext):Option[FeatureValue[$featureValueType]] = {
+                def generate(source: $typ):Option[FeatureValue[$featureValueType]] = {
                   val v = source.$method
                   Some(FeatureValue($entity(source),
                                     ${field.toLowerCase},
-                                    Feature.Value.$mapperFn(v),
-                                    $time(source, ctx)))
+                                    Feature.Value.$mapperFn(v)))
                 }
              }}"""
 

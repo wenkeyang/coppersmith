@@ -18,11 +18,13 @@ import au.com.cba.omnia.maestro.api.Maestro._
 import au.com.cba.omnia.maestro.api._
 
 import commbank.coppersmith.Feature.Value._
+import commbank.coppersmith.Feature._
+
 import commbank.coppersmith.FeatureValue
 import commbank.coppersmith.thrift.Eavt
 
 trait FeatureSink {
-  def write(features: TypedPipe[FeatureValue[_]]): Execution[Unit]
+  def write(features: TypedPipe[(FeatureValue[_], Time)]): Execution[Unit]
 }
 
 object HydroSink {
@@ -54,7 +56,7 @@ object HydroSink {
     def hiveConfig = HiveConfig[Eavt, (String, String, String)](partition, dbName, tablePath, tableName)
   }
 
-  def toEavt(fv: FeatureValue[_]) = {
+  def toEavt(fv: FeatureValue[_], time: Time) = {
     val featureValue = (fv.value match {
       case Integral(v) => v.map(_.toString)
       case Decimal(v)  => v.map(_.toString)
@@ -62,15 +64,15 @@ object HydroSink {
     }).getOrElse(NullValue)
 
     // TODO: Does time format need to be configurable?
-    val featureTime = new DateTime(fv.time).toString("yyyy-MM-dd")
+    val featureTime = new DateTime(time).toString("yyyy-MM-dd")
     Eavt(fv.entity, fv.name, featureValue, featureTime)
   }
 }
 
 case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
-  def write(features: TypedPipe[FeatureValue[_]]) = {
+  def write(features: TypedPipe[(FeatureValue[_], Time)]) = {
     val hiveConfig = conf.hiveConfig
-    val eavtPipe = features.map(HydroSink.toEavt)
+    val eavtPipe = features.map { case (fv, t) => HydroSink.toEavt(fv, t) }
     for {
       partitions <- HiveSupport.writeTextTable(conf.hiveConfig, eavtPipe)
       _          <- Execution.fromHdfs {

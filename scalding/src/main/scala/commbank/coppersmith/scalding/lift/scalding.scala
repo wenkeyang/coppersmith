@@ -11,12 +11,12 @@ import shapeless.ops.hlist.Prepend
 
 trait ScaldingLift extends Lift[TypedPipe] {
 
-  def lift[S, V <: Value](f:Feature[S,V])(s: TypedPipe[S], ctx: FeatureContext): TypedPipe[FeatureValue[V]] = {
-    s.flatMap(s => f.generate(s, ctx))
+  def lift[S, V <: Value](f:Feature[S,V])(s: TypedPipe[S]): TypedPipe[FeatureValue[V]] = {
+    s.flatMap(s => f.generate(s))
   }
 
-  def lift[S](fs: FeatureSet[S])(s: TypedPipe[S], ctx: FeatureContext): TypedPipe[FeatureValue[_]] = {
-    s.flatMap(s => fs.generate(s, ctx))
+  def lift[S](fs: FeatureSet[S])(s: TypedPipe[S]): TypedPipe[FeatureValue[_]] = {
+    s.flatMap(s => fs.generate(s))
   }
 
 
