@@ -203,13 +203,16 @@ case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Custome
   val partition     = HivePartition.byDay(Fields[Customer].EffectiveDate, "yyyy-MM-dd")
   val partitions    = ScaldingDataSource.Partitions(partition, ("2015", "08", "28"))
   val customers     = HiveTextSource[Customer, Partition](new Path("/data/customers"), partitions)
-  val maestroConf   = MaestroConfig(conf, "features", "CUST", "birthdays")
-  val dbPrefix      = conf.getArgs("db-prefix")  // from command-line option
 
   val featureSource = From[Customer]().bind(from(customers))
-  val featureSink   = HydroSink.configure(maestroConf, dbPrefix)
   
   val featureContext = ParameterisedFeatureContext(new DateTime(2015, 8, 29, 0, 0))
+
+  val dbPrefix      = conf.getArgs("db-prefix")
+  val dbRoot        = new Path(conf.getArgs("db-root"))
+  val tableName     = conf.getArgs("table-name")
+
+  val featureSink   = HydroSink.configure(dbPrefix, dbRoot, tableName)
 }
 
 object CustomerFeaturesJob extends SimpleFeatureJob {

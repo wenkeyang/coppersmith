@@ -23,7 +23,6 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     Writing features to a HydroSink
       writes all feature values          $featureValuesOnDiskMatch        ${tag("slow")}
       exposes features through hive      $featureValuesInHiveMatch        ${tag("slow")}
-
       writes all partitions with SUCCESS $expectedPartitionsMarkedSuccess ${tag("slow")}
   """
 
@@ -42,7 +41,8 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     Arbitrary(
       NonEmptyListArbitrary[FeatureValue[Value]].arbitrary.map(nel =>
         nel.map {
-          case v@FeatureValue(_, _, Str(s)) => v.copy(value = Str(s.map(_.filterNot(_ < 32))))
+          case v@FeatureValue(_, _, Str(s)) =>
+            v.copy(value = Str(s.map(_.filterNot(_ < 32).filterNot(_.contains(HydroSink.Delimiter)))))
           case v => v
         }
       )
@@ -50,10 +50,9 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
   }
 
   def featureValuesOnDiskMatch =
-    forAll { (vs: NonEmptyList[FeatureValue[Value]], hydroConfig: HydroSink.Config) =>  {
-
-      val eavtReader = delimitedThermometerRecordReader[Eavt]('\u0001', "\\N", implicitly[Decode[Eavt]])
-      val expected = vs.map(HydroSink.toEavt(_, 0)).list
+    forAll { (vs: NonEmptyList[FeatureValue[Value]], hydroConfig: HydroSink.Config) => {
+      val eavtReader = delimitedThermometerRecordReader[Eavt]('|', "\\N", implicitly[Decode[Eavt]])
+      val expected = vs.map(HydroSink.toEavt(_, 0)).list	
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         val sink = HydroSink(hydroConfig)
@@ -65,7 +64,7 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     }}.set(minTestsOk = 5)
 
   def featureValuesInHiveMatch =
-    forAll { (vs: NonEmptyList[FeatureValue[Value]], hydroConfig: HydroSink.Config) =>  {
+    forAll { (vs: NonEmptyList[FeatureValue[Value]], hydroConfig: HydroSink.Config) => {
       def hiveNull(s: String) = if (s == HydroSink.NullValue) "NULL" else s
       val expected = vs.map(value => {
         val eavt = HydroSink.toEavt(value, 0)
