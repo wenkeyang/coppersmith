@@ -20,7 +20,7 @@ import PivotMacro._
 import scalding.lift.scalding._
 
 object Example1 {
-  val pivoted = pivotThrift[Customer]("namespace", _.id, (c, ctx) => DateTime.parse(c.effectiveDate).getMillis())
+  val pivoted = pivotThrift[Customer]("namespace", _.id)
   val pivotedAsFeatureSet:PivotFeatureSet[Customer] = pivoted
   val acct: Feature[Customer, Value.Str] = pivoted.acct
   val cat: Feature[Customer, Value.Str] = pivoted.cat

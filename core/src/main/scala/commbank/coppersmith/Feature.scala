@@ -13,8 +13,6 @@ object Feature {
   type Time        = Long
 
 
-  def defaultTime[S](s: S, ctx: FeatureContext) = ctx.generationTime.getMillis
-
   sealed trait Type
   object Type {
     sealed trait Categorical extends Type

@@ -124,7 +124,6 @@ import commbank.coppersmith.example.thrift.Customer
 object CustomerFeatures extends BasicFeatureSet[Customer] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
-  def time(cust: Customer, ctx: FeatureContext)   = DateTime.parse(cust.effectiveDate).getMillis
 
   val customerBirthYear = basicFeature[Integral](
     "CUST_BIRTHYEAR", "Calendar year in which the customer was born", Continuous,
@@ -276,6 +275,7 @@ object CustomerFeaturesFluent extends FeatureSet[Customer] {
   def entity(cust: Customer) = cust.id
   def time(cust: Customer, ctx: FeatureContext)   = DateTime.parse(cust.effectiveDate).getMillis
 
+
   val source = From[Customer]()  // FeatureSource (see above)
   val select = source.featureSetBuilder(namespace, entity)
 
@@ -287,6 +287,11 @@ object CustomerFeaturesFluent extends FeatureSet[Customer] {
   val features = List(customerBirthDay, customerBirthYear)
 }
 ```
+
+Notice that in the above example, we overrode the `time` method to give us the
+feature time based on the customer's effective date. This is possible, but most
+of the time the default implementation, which returns the time specified by the
+feature context is the correct thing to do.
 
 
 Advanced
@@ -305,7 +310,6 @@ import commbank.coppersmith.example.thrift.{Customer, Account}
 
 object Implicits {
   implicit class RichCustomer(cust: Customer) {
-    def timestamp: Long = DateTime.parse(cust.effectiveDate).getMillis
     def birthYear: Int  = DateTime.parse(cust.dob).getYear
   }
 
@@ -339,7 +343,7 @@ import Implicits.RichCustomer
 
 object Example {
   val customerPivotFeatures: PivotFeatureSet[Customer] =
-    PivotMacro.pivotThrift[Customer]("userguide.examples", _.id, (c, ctx) => c.timestamp)
+    PivotMacro.pivotThrift[Customer]("userguide.examples", _.id)
 }
 ```
 
@@ -360,7 +364,9 @@ as defined by the `entity` and `time` properties.
 
 Note that when using `AggregationFeatureSet`,
 you should *not* override `features`;
-provide `aggregationFeatures` instead.
+provide `aggregationFeatures` instead. Also, there is no 
+option to manually specify a time function for aggregation
+features.
 
 Here is an example that finds
 the maximum and minimum end-of-day balance per account,
@@ -384,7 +390,6 @@ import Implicits.RichAccount
 object AccountFeatures extends AggregationFeatureSet[Account] {
   val namespace            = "userguide.examples"
   def entity(acc: Account) = acc.id
-  def time(acc: Account, ctx: FeatureContext)   = acc.eventYear
 
   val source = From[Account]()
   val select = source.featureSetBuilder(namespace, entity)
@@ -423,7 +428,6 @@ import Implicits.RichCustomer
 object CustomerBirthFeatures extends FeatureSet[Customer] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
-  def time(cust: Customer, ctx: FeatureContext)   = cust.timestamp
 
   val source = From[Customer]()
   val select = source.featureSetBuilder(namespace, entity)
@@ -460,7 +464,6 @@ import Implicits.RichCustomer
 object GenXYCustomerFeatures extends FeatureSet[Customer] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
-  def time(cust: Customer, ctx: FeatureContext)   = cust.timestamp
 
   // Common filter applied to all features built from this source
   val source = From[Customer]().filter(c => Range(1960, 2000).contains(c.birthYear))
@@ -497,7 +500,6 @@ import Implicits.RichCustomer
 object CustomerBirthFlags extends QueryFeatureSet[Customer, Str] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
-  def time(cust: Customer, ctx: FeatureContext)   = cust.timestamp
 
   def value(cust: Customer)  = "Y"
   val featureType            = Nominal
@@ -546,7 +548,6 @@ import commbank.coppersmith.example.thrift.Account
 object JoinFeatures extends AggregationFeatureSet[(Customer, Account)] {
   val namespace                      = "userguide.examples"
   def entity(s: (Customer, Account)) = s._1.id
-  def time(s: (Customer, Account), ctx: FeatureContext) = s._1.timestamp
 
   val source = Join[Customer].to[Account].on(
     cust => cust.id,
@@ -582,7 +583,6 @@ object JoinFeatures2 extends AggregationFeatureSet[(Customer, Account, Option[Cu
   val namespace = "userguide.examples"
   
   def entity(s: (Customer, Account, Option[Customer])) = s._1.id
-  def time  (s: (Customer, Account, Option[Customer]), ctx: FeatureContext) = s._1.timestamp
 
   val source = Join.multiway[Customer]
       .inner[Account].on((cust: Customer)             => cust.acct,

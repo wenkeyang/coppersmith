@@ -34,7 +34,7 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     val namespace = "test.namespace"
 
     def entity(c: Customer) = c.id
-    def time(c: Customer, ctx: FeatureContext)   = c.time
+    override def time(c: Customer, ctx: FeatureContext)   = c.time
 
     val name:   Feature[Customer, Str]      = pivot(Fields[Customer].Name,   "Customer name",   Nominal)
     val age:    Feature[Customer, Integral] = pivot(Fields[Customer].Age,    "Customer age",    Nominal)
@@ -70,8 +70,7 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
 
     val metadata = PivotMacro.pivotThrift[Customer](
       CustomerFeatureSet.namespace,
-      CustomerFeatureSet.entity,
-      CustomerFeatureSet.time
+      CustomerFeatureSet.entity
     ).features.map(_.metadata).map(copyNoDesc _)
 
     metadata must containAllOf(macroMetadata)
@@ -79,7 +78,7 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
 
   def generateFeatureValuesCompareMacro = forAll { (c:Customer) =>
     val values = CustomerFeatureSet.generate(c)
-    val macroValues = PivotMacro.pivotThrift[Customer](CustomerFeatureSet.namespace, CustomerFeatureSet.entity, CustomerFeatureSet.time).generate(c)
+    val macroValues = PivotMacro.pivotThrift[Customer](CustomerFeatureSet.namespace, CustomerFeatureSet.entity).generate(c)
 
     macroValues.map(it => (it.entity, it.value)) must containAllOf(values.toSeq.map(it => (it.entity, it.value)))
   }

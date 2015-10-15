@@ -33,7 +33,6 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
 
     def entity(c: Customer) = c.id
     def value(c: Customer)  = c.height
-    def time(c: Customer, ctx: FeatureContext)   = c.time
 
     def feature(name: String, humanDescription: String, condition: Customer => Boolean) = {
       queryFeature(name, humanDescription, condition)
