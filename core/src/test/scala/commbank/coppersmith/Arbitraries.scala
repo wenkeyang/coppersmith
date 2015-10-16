@@ -21,9 +21,11 @@ object Arbitraries {
   implicit val strValueGen: Gen[Str] = arbitrary[Option[String]].map(Str(_))
   implicit val arbValue: Arbitrary[Value] = Arbitrary(oneOf(integralValueGen, decimalValueGen, strValueGen))
 
-  val arbTime: Gen[Long] =
-      for { year <- chooseNum(1970, 2100); month <- chooseNum(1, 12); day <- chooseNum(1, 28) }
-      yield new DateTime(year, month, day, 0, 0).getMillis
+
+  implicit val arbDateTime: Arbitrary[DateTime] = Arbitrary(for { year <- chooseNum(1970, 2100); month <- chooseNum(1, 12); day <- chooseNum(1, 28) }
+    yield new DateTime(year, month, day, 0, 0))
+
+  val arbTime: Gen[Long] = arbitrary[DateTime].map(_.getMillis)
 
   implicit val arbFeatureValue: Arbitrary[FeatureValue[Value]] = Arbitrary(
     (arbNonEmptyAlphaStr.map(_.value) |@|
