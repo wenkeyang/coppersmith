@@ -30,7 +30,6 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     must use specified id as entity      $valueEntity
     must use specified name as name      $valueName
     must use value as defined            $valueValue
-    must use specified time as time      $valueTime
 """
 
   def general[V <: Value : TypeTag](
@@ -39,9 +38,8 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     desc:      Description           = "",
     fType:     Type                  = Nominal,
     entity:    Customer => EntityId  = _.id,
-    fValue:    Customer => Option[V] = (_: Customer) => Some(null),
-    time:      Customer => Time      = _.time
-  ) = Patterns.general(namespace, name, desc, fType, entity, fValue, time)
+    fValue:    Customer => Option[V] = (_: Customer) => Some(null)
+  ) = Patterns.general(namespace, name, desc, fType, entity, fValue)
 
   def metadataNamespace = forAll { (namespace: Namespace) => {
     val feature = general(namespace = namespace)
@@ -88,10 +86,5 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
 
     val featureValue = feature.generate(c)
     if (!filter) featureValue must beNone else featureValue must beSome.like { case v => v.value must_== expectedValue }
-  }}
-
-  def valueTime = forAll { (c: Customer) => {
-    val feature = general(time = _.time)
-    feature.generate(c) must beSome.like { case v => v.time must_== c.time }
   }}
 }

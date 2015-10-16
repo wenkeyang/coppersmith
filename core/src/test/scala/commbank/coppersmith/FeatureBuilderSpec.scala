@@ -1,5 +1,6 @@
 package commbank.coppersmith
 
+import org.joda.time.DateTime
 import org.scalacheck.Prop.forAll
 
 import org.specs2._
@@ -25,10 +26,10 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
   object CustomerFeatureSet extends FeatureSet[Customer] {
     val namespace           = "test.namespace"
     def entity(c: Customer) = c.id
-    def time(c: Customer)   = c.time
+    def time(c: Customer, ctx: FeatureContext)   = c.time
 
     val source = From[Customer]()
-    val select = source.featureSetBuilder(namespace, entity(_), time(_))
+    val select = source.featureSetBuilder(namespace, entity)
 
     type CF = Feature[Customer, Value]
     val age:       CF = select(_.age)                      .asFeature(Ordinal,     "age",       "Age")
@@ -56,9 +57,9 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
     val expectOldHieght = c.age > 65
 
     featureValues must_== List(
-                        Some(FeatureValue[Integral](c.id, "age",       c.age,    c.time)),
-      expectTallAge.option(  FeatureValue[Integral](c.id, "tallAge",   c.age,    c.time)),
-      expectOldHieght.option(FeatureValue[Decimal] (c.id, "oldHeight", c.height, c.time))
+                        Some(FeatureValue[Integral](c.id, "age",       c.age)),
+      expectTallAge.option(  FeatureValue[Integral](c.id, "tallAge",   c.age)),
+      expectOldHieght.option(FeatureValue[Decimal] (c.id, "oldHeight", c.height))
     ).flatten
   }}
 }
@@ -76,10 +77,10 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
   object CustomerFeatureSet extends AggregationFeatureSet[Customer] {
     val namespace           = "test.namespace"
     def entity(c: Customer) = c.id
-    def time(c: Customer)   = c.time
+    def time(c: Customer, ctx: FeatureContext)   = ctx.generationTime.getMillis
 
     val source = From[Customer]()
-    val select = source.featureSetBuilder(namespace, entity(_), time(_))
+    val select = source.featureSetBuilder(namespace, entity)
 
     type CAF = AggregationFeature[Customer, _, Value]
 
@@ -109,22 +110,24 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     )
   }
 
-  def generateFeatureValues = forAll { (cs: NonEmptyList[Customer]) => {
-    val featureValues = CustomerFeatureSet.generate((cs.head.id, cs.list)).map(_.asEavt).toList
+  def generateFeatureValues = forAll { (cs: NonEmptyList[Customer], dateTime: DateTime) => {
+    val featureValues = CustomerFeatureSet.generate((cs.head.id, cs.list))
+
+    val eavtValues = featureValues.map { fv => fv.asEavt(dateTime.getMillis) }.toList
 
     val c = cs.head
     val heights = cs.map(_.height).list
     val ages = cs.map(_.age).list
     val groupedAges = cs.map(_.age).list.groupBy(_ % 10)
 
-    featureValues must matchEavts(List(
-      (c.id, "size",  cs.size:                         Integral, c.time),
-      (c.id, "count", ages.filter(_ >= 18).size:       Integral, c.time),
-      (c.id, "sum",   heights.sum:                     Decimal,  c.time),
-      (c.id, "max",   ages.max:                        Integral, c.time),
-      (c.id, "min",   heights.min:                     Decimal,  c.time),
-      (c.id, "avg",   (ages.sum / ages.size.toDouble): Decimal,  c.time),
-      (c.id, "cu",    groupedAges.size:                Integral, c.time)
+    eavtValues must matchEavts(List(
+      (c.id, "size",  cs.size:                         Integral, dateTime.getMillis),
+      (c.id, "count", ages.filter(_ >= 18).size:       Integral, dateTime.getMillis),
+      (c.id, "sum",   heights.sum:                     Decimal,  dateTime.getMillis),
+      (c.id, "max",   ages.max:                        Integral, dateTime.getMillis),
+      (c.id, "min",   heights.min:                     Decimal,  dateTime.getMillis),
+      (c.id, "avg",   (ages.sum / ages.size.toDouble): Decimal,  dateTime.getMillis),
+      (c.id, "cu",    groupedAges.size:                Integral, dateTime.getMillis)
     ))
   }}
 

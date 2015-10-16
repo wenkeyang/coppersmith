@@ -68,7 +68,7 @@ we'll see how this can be made a lot easier.
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{Feature, FeatureValue}
+import commbank.coppersmith.{Feature, FeatureValue, FeatureContext}
 import Feature.Metadata, Feature.Type._, Feature.Value._
 import commbank.coppersmith.example.thrift.Customer
 
@@ -81,8 +81,7 @@ object CustomerBirthYear extends Feature[Customer, Integral](
   def generate(cust: Customer) = Some(
     FeatureValue(entity = cust.id,
                  name   = "CUST_BIRTHYEAR",
-                 value  = DateTime.parse(cust.dob).getYear,
-                 time   = DateTime.parse(cust.effectiveDate).getMillis)
+                 value  = DateTime.parse(cust.dob).getYear)
   )
 }
 ```
@@ -125,7 +124,6 @@ import commbank.coppersmith.example.thrift.Customer
 object CustomerFeatures extends BasicFeatureSet[Customer] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
-  def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
 
   val customerBirthYear = basicFeature[Integral](
     "CUST_BIRTHYEAR", "Calendar year in which the customer was born", Continuous,
@@ -187,7 +185,7 @@ import com.twitter.scalding.Config
 import au.com.cba.omnia.maestro.api.{MaestroConfig, HivePartition, Maestro}
 import Maestro.{DerivedDecode, Fields}
 
-import commbank.coppersmith.From
+import commbank.coppersmith.{From, ExplicitGenerationTime}
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.SourceBinder.from
 
@@ -206,6 +204,8 @@ case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Custome
   val customers     = HiveTextSource[Customer, Partition](new Path("/data/customers"), partitions)
 
   val featureSource = From[Customer]().bind(from(customers))
+  
+  val featureContext = ExplicitGenerationTime(new DateTime(2015, 8, 29, 0, 0))
 
   val dbPrefix      = conf.getArgs("db-prefix")
   val dbRoot        = new Path(conf.getArgs("db-root"))
@@ -273,10 +273,11 @@ import commbank.coppersmith.example.thrift.Customer
 object CustomerFeaturesFluent extends FeatureSet[Customer] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
-  def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
+  def time(cust: Customer, ctx: FeatureContext)   = DateTime.parse(cust.effectiveDate).getMillis
+
 
   val source = From[Customer]()  // FeatureSource (see above)
-  val select = source.featureSetBuilder(namespace, entity(_), time(_))
+  val select = source.featureSetBuilder(namespace, entity)
 
   val customerBirthDay  = select(_.dob)
     .asFeature(Nominal, "CUST_BIRTHDAY", "Day on which the customer was born")
@@ -286,6 +287,11 @@ object CustomerFeaturesFluent extends FeatureSet[Customer] {
   val features = List(customerBirthDay, customerBirthYear)
 }
 ```
+
+Notice that in the above example, we overrode the `time` method to give us the
+feature time based on the customer's effective date. This is possible, but most
+of the time the default implementation, which returns the time specified by the
+feature context is the correct thing to do.
 
 
 Advanced
@@ -304,7 +310,6 @@ import commbank.coppersmith.example.thrift.{Customer, Account}
 
 object Implicits {
   implicit class RichCustomer(cust: Customer) {
-    def timestamp: Long = DateTime.parse(cust.effectiveDate).getMillis
     def birthYear: Int  = DateTime.parse(cust.dob).getYear
   }
 
@@ -338,7 +343,7 @@ import Implicits.RichCustomer
 
 object Example {
   val customerPivotFeatures: PivotFeatureSet[Customer] =
-    PivotMacro.pivotThrift[Customer]("userguide.examples", _.id, _.timestamp)
+    PivotMacro.pivotThrift[Customer]("userguide.examples", _.id)
 }
 ```
 
@@ -359,7 +364,9 @@ as defined by the `entity` and `time` properties.
 
 Note that when using `AggregationFeatureSet`,
 you should *not* override `features`;
-provide `aggregationFeatures` instead.
+provide `aggregationFeatures` instead. Also, there is no 
+option to specify time as a function of the source record, 
+so the time will always come from the job's `FeatureContext`.
 
 Here is an example that finds
 the maximum and minimum end-of-day balance per account,
@@ -383,10 +390,9 @@ import Implicits.RichAccount
 object AccountFeatures extends AggregationFeatureSet[Account] {
   val namespace            = "userguide.examples"
   def entity(acc: Account) = acc.id
-  def time(acc: Account)   = acc.eventYear
 
   val source = From[Account]()
-  val select = source.featureSetBuilder(namespace, entity(_), time(_))
+  val select = source.featureSetBuilder(namespace, entity)
 
   val minBalance = select(min(_.balance))
     .asFeature(Continuous, "ACC_ANNUAL_MIN_BALANCE",
@@ -422,10 +428,9 @@ import Implicits.RichCustomer
 object CustomerBirthFeatures extends FeatureSet[Customer] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
-  def time(cust: Customer)   = cust.timestamp
 
   val source = From[Customer]()
-  val select = source.featureSetBuilder(namespace, entity(_), time(_))
+  val select = source.featureSetBuilder(namespace, entity)
 
   val ageIn1970  = select(1970 - _.birthYear)
     .where(_.birthYear < 1970)
@@ -459,11 +464,10 @@ import Implicits.RichCustomer
 object GenXYCustomerFeatures extends FeatureSet[Customer] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
-  def time(cust: Customer)   = cust.timestamp
 
   // Common filter applied to all features built from this source
   val source = From[Customer]().filter(c => Range(1960, 2000).contains(c.birthYear))
-  val select = source.featureSetBuilder(namespace, entity(_), time(_))
+  val select = source.featureSetBuilder(namespace, entity)
 
   val genXBirthYear  = select(_.birthYear)
     .where(_.birthYear < 1980)
@@ -496,7 +500,6 @@ import Implicits.RichCustomer
 object CustomerBirthFlags extends QueryFeatureSet[Customer, Str] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
-  def time(cust: Customer)   = cust.timestamp
 
   def value(cust: Customer)  = "Y"
   val featureType            = Nominal
@@ -545,13 +548,12 @@ import commbank.coppersmith.example.thrift.Account
 object JoinFeatures extends AggregationFeatureSet[(Customer, Account)] {
   val namespace                      = "userguide.examples"
   def entity(s: (Customer, Account)) = s._1.id
-  def time(s: (Customer, Account))   = s._1.timestamp
 
   val source = Join[Customer].to[Account].on(
     cust => cust.id,
     acc  => acc.customer
   )
-  val select = source.featureSetBuilder(namespace, entity(_), time(_))
+  val select = source.featureSetBuilder(namespace, entity)
 
   val totalBalanceForCustomersBornPre1970 = select(sum(_._2.balance))
     .where(_._1.birthYear < 1970)
@@ -581,7 +583,6 @@ object JoinFeatures2 extends AggregationFeatureSet[(Customer, Account, Option[Cu
   val namespace = "userguide.examples"
   
   def entity(s: (Customer, Account, Option[Customer])) = s._1.id
-  def time  (s: (Customer, Account, Option[Customer])) = s._1.timestamp
 
   val source = Join.multiway[Customer]
       .inner[Account].on((cust: Customer)             => cust.acct,
@@ -590,7 +591,7 @@ object JoinFeatures2 extends AggregationFeatureSet[(Customer, Account, Option[Cu
                          (c2: Customer)               => c2.acct)
       .src  //Note the use of the .src call. Awkward implementation detail
   
-  val select = source.featureSetBuilder(namespace, entity(_), time(_))
+  val select = source.featureSetBuilder(namespace, entity)
 
   //make sure the other customer is defined and not us (in reality this would have 
   //been an inner join but for the sake of education, we are showing the left)

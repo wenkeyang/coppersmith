@@ -12,6 +12,7 @@ object Feature {
   type EntityId    = String
   type Time        = Long
 
+
   sealed trait Type
   object Type {
     sealed trait Categorical extends Type
@@ -121,12 +122,11 @@ abstract class Feature[S, +V <: Value](val metadata: Metadata[S, V]) {
 case class FeatureValue[+V <: Value](
   entity:  EntityId,
   name:    Name,
-  value:   V,
-  time:    Time
+  value:   V
 )
 
 object FeatureValue {
   implicit class AsEavt[V <: Value](fv: FeatureValue[V]) {
-    def asEavt: (EntityId, Name, V, Time) = (fv.entity, fv.name, fv.value, fv.time)
+    def asEavt(time: Time): (EntityId, Name, V, Time) = (fv.entity, fv.name, fv.value, time)
   }
 }

@@ -9,15 +9,13 @@ import scala.reflect.macros.whitebox.Context
 object PivotMacro {
   def pivotThrift[A <: ThriftStruct](
     namespace:Namespace,
-    entity: A => EntityId,
-    time: A => Time
+    entity: A => EntityId
   ): Any = macro pivotImpl[A]
 
   def pivotImpl[A <: ThriftStruct: c.WeakTypeTag]
     (c: Context)
     (namespace:c.Expr[Namespace],
-     entity:    c.Expr[A => EntityId],
-     time:      c.Expr[A => Time]) = {
+     entity:    c.Expr[A => EntityId]) = {
 
     import c.universe._
 
@@ -45,8 +43,7 @@ object PivotMacro {
                   val v = source.$method
                   Some(FeatureValue($entity(source),
                                     ${field.toLowerCase},
-                                    Feature.Value.$mapperFn(v),
-                                    $time(source)))
+                                    Feature.Value.$mapperFn(v)))
                 }
              }}"""
 
@@ -64,7 +61,7 @@ object PivotMacro {
           def namespace = $namespace
           def features = List(..$featureRefs)
           def entity(s: $typ) = $entity(s)
-          def time(s: $typ) = $time(s)
+          override def time(s: $typ, ctx: FeatureContext) = ctx.generationTime.getMillis
          ..$features
          };
          new FeaturesWrapper {}

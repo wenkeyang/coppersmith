@@ -20,7 +20,7 @@ import PivotMacro._
 import scalding.lift.scalding._
 
 object Example1 {
-  val pivoted = pivotThrift[Customer]("namespace", _.id, c => DateTime.parse(c.effectiveDate).getMillis())
+  val pivoted = pivotThrift[Customer]("namespace", _.id)
   val pivotedAsFeatureSet:PivotFeatureSet[Customer] = pivoted
   val acct: Feature[Customer, Value.Str] = pivoted.acct
   val cat: Feature[Customer, Value.Str] = pivoted.cat
@@ -44,7 +44,7 @@ object Example1 {
       conf                    <- Execution.getConfig.map(ExampleConfig)
       (inputPipe, _)          <- Execution.from(Util.decodeHive[Customer](
                                   MultipleTextLineFiles(s"${conf.hdfsInputPath}/efft_yr_month=${conf.yearMonth}")))
-      outputPipe             = lift(acct)(inputPipe)
+      outputPipe              = lift(acct)(inputPipe)
       _                       <- outputPipe.writeExecution(TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
   }
