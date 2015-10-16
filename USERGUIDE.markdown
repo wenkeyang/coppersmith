@@ -185,7 +185,7 @@ import com.twitter.scalding.Config
 import au.com.cba.omnia.maestro.api.{MaestroConfig, HivePartition, Maestro}
 import Maestro.{DerivedDecode, Fields}
 
-import commbank.coppersmith.{From, ParameterisedFeatureContext}
+import commbank.coppersmith.{From, ExplicitGenerationTime}
 import commbank.coppersmith.FeatureBuilderSource.fromFS
 import commbank.coppersmith.SourceBinder.from
 
@@ -205,7 +205,7 @@ case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Custome
 
   val featureSource = From[Customer]().bind(from(customers))
   
-  val featureContext = ParameterisedFeatureContext(new DateTime(2015, 8, 29, 0, 0))
+  val featureContext = ExplicitGenerationTime(new DateTime(2015, 8, 29, 0, 0))
 
   val dbPrefix      = conf.getArgs("db-prefix")
   val dbRoot        = new Path(conf.getArgs("db-root"))
@@ -365,8 +365,8 @@ as defined by the `entity` and `time` properties.
 Note that when using `AggregationFeatureSet`,
 you should *not* override `features`;
 provide `aggregationFeatures` instead. Also, there is no 
-option to manually specify a time function for aggregation
-features.
+option to specify time as a function of the source record, 
+so the time will always come from the job's `FeatureContext`.
 
 Here is an example that finds
 the maximum and minimum end-of-day balance per account,

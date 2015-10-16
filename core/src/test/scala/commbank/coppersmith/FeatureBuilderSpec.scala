@@ -110,10 +110,10 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     )
   }
 
-  def generateFeatureValues = forAll { (cs: NonEmptyList[Customer]) => {
+  def generateFeatureValues = forAll { (cs: NonEmptyList[Customer], dateTime: DateTime) => {
     val featureValues = CustomerFeatureSet.generate((cs.head.id, cs.list))
 
-    val eavtValues = featureValues.map { fv => fv.asEavt(0) }.toList
+    val eavtValues = featureValues.map { fv => fv.asEavt(dateTime.getMillis) }.toList
 
     val c = cs.head
     val heights = cs.map(_.height).list
@@ -121,13 +121,13 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val groupedAges = cs.map(_.age).list.groupBy(_ % 10)
 
     eavtValues must matchEavts(List(
-      (c.id, "size",  cs.size:                         Integral, 0L),
-      (c.id, "count", ages.filter(_ >= 18).size:       Integral, 0L),
-      (c.id, "sum",   heights.sum:                     Decimal,  0L),
-      (c.id, "max",   ages.max:                        Integral, 0L),
-      (c.id, "min",   heights.min:                     Decimal,  0L),
-      (c.id, "avg",   (ages.sum / ages.size.toDouble): Decimal,  0L),
-      (c.id, "cu",    groupedAges.size:                Integral, 0L)
+      (c.id, "size",  cs.size:                         Integral, dateTime.getMillis),
+      (c.id, "count", ages.filter(_ >= 18).size:       Integral, dateTime.getMillis),
+      (c.id, "sum",   heights.sum:                     Decimal,  dateTime.getMillis),
+      (c.id, "max",   ages.max:                        Integral, dateTime.getMillis),
+      (c.id, "min",   heights.min:                     Decimal,  dateTime.getMillis),
+      (c.id, "avg",   (ages.sum / ages.size.toDouble): Decimal,  dateTime.getMillis),
+      (c.id, "cu",    groupedAges.size:                Integral, dateTime.getMillis)
     ))
   }}
 

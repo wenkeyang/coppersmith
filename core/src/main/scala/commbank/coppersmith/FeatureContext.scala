@@ -6,4 +6,4 @@ trait FeatureContext {
   def generationTime: DateTime
 }
 
-case class ParameterisedFeatureContext(generationTime: DateTime) extends FeatureContext
+case class ExplicitGenerationTime(generationTime: DateTime) extends FeatureContext
