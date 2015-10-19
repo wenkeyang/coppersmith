@@ -1,11 +1,9 @@
 package commbank.coppersmith.lift
 
-import commbank.coppersmith._
-
 import commbank.coppersmith.Feature.Value
+import commbank.coppersmith._
 import shapeless._
 import shapeless.ops.hlist._
-import commbank.coppersmith._, Feature.Value
 
 
 trait MemoryLift extends Lift[List] {

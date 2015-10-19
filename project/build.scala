@@ -89,7 +89,7 @@ object build extends Build {
            Seq(outfile)
          }
        )
-  ).dependsOn(core, scalding)
+  ).dependsOn(core, scalding, test)
 
   lazy val test = Project(
     id = "test"

@@ -1,12 +1,10 @@
 package commbank.coppersmith.lift
 
-import shapeless.ops.hlist.IsHCons
-
-import scalaz._, Scalaz._
-
 import commbank.coppersmith.Join
+import commbank.coppersmith.lift.memory._
 import org.specs2.Specification
-import memory._
+
+import scalaz.Scalaz._
 
 class MemorySpec extends Specification {
   def is =
