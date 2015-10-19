@@ -1,5 +1,6 @@
-package commbank.coppersmith
-package tools
+#!/bin/sh
+exec scala "$0" "$@"
+!#
 
 import scala.io.Source
 
@@ -17,11 +18,13 @@ import java.io.{File, FileInputStream, PrintStream}
  * where valueType is one of "double", "int" or "string" and featureType is one of
  * "continuous" or "categorical"
  *
+ * Setup: Save as CoppersmithBootstrap.sh and make executable (chmod +x CoppersmithBootstrap.scala)
+ *
  * Example usage:
  *
- * CoppersmithBootstrap --source-type Customer --file /path/to/metadata.psv --out Customer.scala
+ * ./CoppersmithBootstrap.sh --source-type Customer --file /path/to/metadata.psv --out CustomerFeatures.scala
  *
- * If --out is missing, result is printed to stdout
+ * If --out is missing, result is printed to STDOUT.
  */
 object CoppersmithBootstrap {
   def main(rawArgs: Array[String]): Unit = {
