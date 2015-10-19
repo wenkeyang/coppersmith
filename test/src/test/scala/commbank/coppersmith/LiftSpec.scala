@@ -1,10 +1,11 @@
 package commbank.coppersmith
 
-import commbank.coppersmith.Join.CompleteJoinHl
-import commbank.coppersmith.lift.memory._
 import org.specs2.Specification
 
 import scalaz.Scalaz._
+
+import commbank.coppersmith.Join.CompleteJoinHl
+import commbank.coppersmith.lift.memory._
 
 class LiftSpec extends Specification {
   implicit val lift = commbank.coppersmith.lift.memory

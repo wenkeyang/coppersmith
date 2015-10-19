@@ -1,10 +1,10 @@
 package commbank.coppersmith.lift
 
-import commbank.coppersmith.Feature.Value
-import commbank.coppersmith._
 import shapeless._
 import shapeless.ops.hlist._
 
+import commbank.coppersmith._
+import commbank.coppersmith.Feature.Value
 
 trait MemoryLift extends Lift[List] {
   def lift[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[V]] = {

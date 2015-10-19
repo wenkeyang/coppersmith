@@ -1,10 +1,11 @@
 package commbank.coppersmith.lift
 
-import commbank.coppersmith.Join
-import commbank.coppersmith.lift.memory._
 import org.specs2.Specification
 
 import scalaz.Scalaz._
+
+import commbank.coppersmith.Join
+import commbank.coppersmith.lift.memory._
 
 class MemorySpec extends Specification {
   def is =
