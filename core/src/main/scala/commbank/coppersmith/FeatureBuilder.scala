@@ -30,7 +30,7 @@ object FeatureSetBuilder {
 import FeatureSetBuilder.ComposePartial
 
 /**
-  * @tparam S Feature set Source
+  * @tparam S  Feature set Source
   * @tparam SV View of Source from which to generate feature
   */
 case class FeatureSetBuilder[S : TypeTag, SV](
@@ -50,29 +50,25 @@ case class FeatureSetBuilder[S : TypeTag, SV](
       aggregator: Aggregator[SV, T, FV]): AggregationFeatureBuilder[S, SV, T, FV, V] =
     AggregationFeatureBuilder(this, aggregator, view)
 
+  // For fluent-API, eg, collect{...}.select(...) as opposed to collect{...}(...) or
+  // collect{...}.apply(...)
   def select = this
 
-  def selectSource[V <: Value : TypeTag](implicit ev: SV => V) = apply(identity(_))
-
-  // These allow aggregators to be created without specifying type args that
-  // would otherwise be required if calling the delegated methods directly
-  import com.twitter.algebird.Monoid
-  import Aggregator.{count => Count, prepareMonoid => PrepareMonoid, size => Size}
-  import AggregationFeature.{avg => Avg, max => Max, min => Min, uniqueCountBy => UniqueCountBy}
-  def size                                                       = select(Size)
-  def count(where: SV => Boolean = _ => true)                    = select(Count(where))
-  def uniqueCountBy[T](f : SV => T)                              = select(UniqueCountBy(f))
-  def avg[V](v: SV => Double)                                    = select(Avg[SV](v))
-  def max[FV <% V : Ordering, V <: Value : TypeTag](v: SV => FV) = select(Max[SV, FV](v))
-  def min[FV <% V : Ordering, V <: Value : TypeTag](v: SV => FV) = select(Min[SV, FV](v))
-  def sum[FV <% V : Monoid,   V <: Value : TypeTag](v: SV => FV) = select(PrepareMonoid(v))
+  // Allows feature to be built directly from map or collect without having to specify
+  // select(identity(_))
+  def asFeature[FT <: Type, V <: Value : TypeTag](
+    featureType: FT,
+    name:        Name,
+    desc:        Description
+  )(implicit svv: SV => V, ev: Conforms[FT, V]) =
+    apply[SV, V](identity(_)).asFeature(featureType, name, desc)
 }
 
 /**
-  * @tparam S Feature Source
+  * @tparam S  Feature Source
   * @tparam SV Feature Source View
   * @tparam FV Raw type of feature value
-  * @tparam V Type of Feature Value
+  * @tparam V  Type of Feature Value
   */
 case class FeatureBuilder[S : TypeTag, SV, FV <% V, V <: Value : TypeTag](
   fsBuilder: FeatureSetBuilder[S, SV],

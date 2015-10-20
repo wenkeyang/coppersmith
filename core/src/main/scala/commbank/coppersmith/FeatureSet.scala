@@ -70,7 +70,7 @@ case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
   description: Description,
   aggregator:  Aggregator[SV, U, V],
   view:        PartialFunction[S, SV],
-  featureType: Type = Type.Continuous
+  featureType: Type
 ) {
   import AggregationFeature.AlgebirdSemigroup
   // Note: Implementation exists here to satisfty feature signature and enable unit testing.
@@ -97,6 +97,16 @@ trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
   def aggregationFeatures: Iterable[AggregationFeature[S, _, _, Value]]
 
   def features = aggregationFeatures.map(_.toFeature(namespace))
+
+  // These allow aggregators to be created without specifying type args that
+  // would otherwise be required if calling the delegated methods directly
+  def size: Aggregator[S, Long, Long] = Aggregator.size
+  def count(where: S => Boolean = _ => true): Aggregator[S, Long, Long] = Aggregator.count(where)
+  def avg[V](v: S => Double): Aggregator[S, AveragedValue, Double]      = AggregationFeature.avg[S](v)
+  def max[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.max[S, V](v)
+  def min[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.min[S, V](v)
+  def sum[V : Monoid]  (v: S => V): Aggregator[S, V, V]                 = Aggregator.prepareMonoid(v)
+  def uniqueCountBy[T](f : S => T): Aggregator[S, Set[T], Int]          = AggregationFeature.uniqueCountBy(f)
 }
 
 object AggregationFeature {

@@ -394,11 +394,11 @@ object AccountFeatures extends AggregationFeatureSet[Account] {
   val source = From[Account]()
   val select = source.featureSetBuilder(namespace, entity)
 
-  val minBalance = select.min(_.balance)
+  val minBalance = select(min(_.balance))
     .asFeature(Continuous, "ACC_ANNUAL_MIN_BALANCE",
                "Minimum end-of-day balance for the calendar year")
 
-  val maxBalance = select.max(_.balance)
+  val maxBalance = select(max(_.balance))
     .asFeature(Continuous, "ACC_ANNUAL_MAX_BALANCE",
                "Maximum end-of-day-balance for the calendar year")
 
@@ -406,6 +406,13 @@ object AccountFeatures extends AggregationFeatureSet[Account] {
 }
 ```
 
+<a name="aggregator-source-view-note" />
+Note that when using Aggregators with [source views](#source-views), the
+`Aggregator` must be specified explicitly instead of using the inherited
+aggregate functions. This is because the inherited functions are tied directly
+to the `AggregationFeatureSet` source type. See the
+[note](#source-view-aggregator-note) in the source views guide for an example
+of this.
 
 ### Filtering (aka `WHERE`)
 
@@ -555,7 +562,7 @@ object JoinFeatures extends AggregationFeatureSet[(Customer, Account)] {
   )
   val select = source.featureSetBuilder(namespace, entity)
 
-  val totalBalanceForCustomersBornPre1970 = select.sum(_._2.balance)
+  val totalBalanceForCustomersBornPre1970 = select(sum(_._2.balance))
     .where(_._1.birthYear < 1970)
     .asFeature(Continuous, "CUST_BORN_PRE1970_TOT_BALANCE",
                "Total balance for customer born before 1970")
@@ -594,7 +601,7 @@ object JoinFeatures2 extends AggregationFeatureSet[(Customer, Account, Option[Cu
 
   // Make sure the other customer is defined and not us (in reality this would have
   // been an inner join but for the sake of education, we are showing the left)
-  val totalBalanceForCustomersWithJointAccounts = select.sum(_._2.balance)
+  val totalBalanceForCustomersWithJointAccounts = select(sum(_._2.balance))
     .where(row => row._3.exists(_ != row._1.id))
     .asFeature(Continuous, "CUST_JOINT_TOT_BALANCE",
                "Total balance for customer with joint account")
@@ -636,8 +643,8 @@ object SourceViewFeatures extends FeatureSet[Customer] {
   val namespace              = "userguide.examples"
   def entity(cust: Customer) = cust.id
 
-  val source = From[Customer]()
-  val builder = source.featureSetBuilder(namespace, entity(_))
+  val source  = From[Customer]()
+  val builder = source.featureSetBuilder(namespace, entity)
 
   val customerName =
     builder.map(c => (c, c.name)).collect { case (c, Some(name)) => (c, name) }
@@ -645,6 +652,41 @@ object SourceViewFeatures extends FeatureSet[Customer] {
       .asFeature(Nominal, "CUST_NAME_AVAILABLE", "Customer name when it is known")
 
   val features = List(customerName)
+}
+```
+
+<a name="source-view-aggregator-note" />
+As [noted](#aggregator-source-view-note) in the Aggregation features section,
+when combining Aggregation features with source views, if the type of the source
+view differs from the underlying feature set source type, the inherited
+aggregator functions can no longer be used and the aggregator must be explicitly
+specified.
+
+```scala
+import com.twitter.algebird.Aggregator
+
+import org.joda.time.DateTime
+
+import commbank.coppersmith.{AggregationFeatureSet, Feature, From}
+import Feature.Type.Continuous
+import commbank.coppersmith.FeatureBuilderSource.fromFS
+import commbank.coppersmith.example.thrift.Customer
+import Implicits.RichCustomer
+
+object SourceViewAggregationFeatures extends AggregationFeatureSet[Customer] {
+  val namespace              = "userguide.examples"
+  def entity(cust: Customer) = cust.id
+  def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
+
+  val source  = From[Customer]()
+  val builder = source.featureSetBuilder(namespace, entity)
+
+  val adultMinBalance =
+    builder.collect { case c if Range(1960, 1980).contains(c.birthYear) => c.balance }
+      .select(Aggregator.min[Int])
+      .asFeature(Continuous, "GEN_X_MIN_BALANCE", "Minimum balance for gen-X customers")
+
+  val aggregationFeatures = List(adultMinBalance)
 }
 ```
 
