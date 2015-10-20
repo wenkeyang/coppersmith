@@ -356,7 +356,8 @@ you gain access to a number of useful aggregate functions:
 These are convenience methods for creating
 [Algebird `Aggregator`s](https://github.com/twitter/scalding/wiki/Aggregation-using-Algebird-Aggregators).
 Other aggregators can be defined by providing your own
-`Aggregator` instance.
+`Aggregator` instance (see the `balanceRangeSize` feature in the example that
+follows).
 
 The grouping criteria (in SQL terms, the `GROUP BY` clause)
 is implicitly *the entity and the time*,
@@ -401,6 +402,16 @@ object AccountFeatures extends AggregationFeatureSet[Account] {
   val maxBalance = select(max(_.balance))
     .asFeature(Continuous, "ACC_ANNUAL_MAX_BALANCE",
                "Maximum end-of-day-balance for the calendar year")
+
+  // Somewhat contrived custom aggregator for the purposes of demonstration
+  import com.twitter.algebird.Aggregator
+  val rangeSize: Aggregator[Int, (Int, Int), Int] =
+    Aggregator.min[Int].join(Aggregator.max[Int])
+      .andThenPresent{ case (min, max) => max - min }
+
+  val balanceRangeSize = select(rangeSize.composePrepare[Account](_.balance))
+    .asFeature(Continuous, "BALANCE_RANGE_SIZE",
+               "Size of the range between min and max balance")
 
   val aggregationFeatures = List(minBalance, maxBalance)
 }
