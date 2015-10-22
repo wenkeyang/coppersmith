@@ -65,25 +65,27 @@ import scalaz.syntax.std.option.ToOptionIdOps
 
 import com.twitter.algebird.{Aggregator, AveragedValue, Monoid, Semigroup}
 
-case class AggregationFeature[S : TypeTag, U, +V <: Value : TypeTag](
+case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
   name:        Name,
   description: Description,
-  aggregator:  Aggregator[S, U, V],
-  featureType: Type = Type.Continuous,
-  where:       Option[S => Boolean] = None
+  aggregator:  Aggregator[SV, U, V],
+  view:        PartialFunction[S, SV],
+  featureType: Type
 ) {
   import AggregationFeature.AlgebirdSemigroup
-  // Note: Implementation here to satisfty feature signature. Framework should take advantage of
-  // the fact that aggregators should be able to be run natively on the underlying plumbing
-  def toFeature(namespace: Namespace) =
-      new Feature[(EntityId, Iterable[S]), Value](Metadata(namespace, name, description, featureType)) {
+  // Note: Implementation exists here to satisfty feature signature and enable unit testing.
+  // Framework should take advantage of aggregators that can run natively on the underlying plumbing.
+  def toFeature(namespace: Namespace) = new Feature[(EntityId, Iterable[S]), Value](
+    Metadata(namespace, name, description, featureType)
+  ) {
     def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
-      val source = s._2.filter(where.getOrElse(_ => true)).toList.toNel
-      source.map(nonEmptySource => {
+      val (entity, source) = s
+      val sourceView = source.toList.collect(view).toNel
+      sourceView.map(nonEmptySource => {
         val value = aggregator.present(
           nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
         )
-        FeatureValue(s._1, name, value)
+        FeatureValue(entity, name, value)
       })
     }
   }
@@ -92,7 +94,7 @@ case class AggregationFeature[S : TypeTag, U, +V <: Value : TypeTag](
 trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
   def entity(s: S): EntityId
 
-  def aggregationFeatures: Iterable[AggregationFeature[S, _, Value]]
+  def aggregationFeatures: Iterable[AggregationFeature[S, _, _, Value]]
 
   def features = aggregationFeatures.map(_.toFeature(namespace))
 

@@ -204,7 +204,7 @@ case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Custome
   val customers     = HiveTextSource[Customer, Partition](new Path("/data/customers"), partitions)
 
   val featureSource = From[Customer]().bind(from(customers))
-  
+
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 8, 29, 0, 0))
 
   val dbPrefix      = conf.getArgs("db-prefix")
@@ -350,7 +350,7 @@ object Example {
 
 ### Aggregation (aka `GROUP BY`)
 
-By subclassing `AggregationFeatureSet`,
+By subclassing `AggregationFeatureSet` and using `FeatureBuilder`,
 you gain access to a number of useful aggregate functions:
 `count`, `avg`, `max`, `min`, `sum`, and `uniqueCountBy`.
 These are convenience methods for creating
@@ -364,8 +364,8 @@ as defined by the `entity` and `time` properties.
 
 Note that when using `AggregationFeatureSet`,
 you should *not* override `features`;
-provide `aggregationFeatures` instead. Also, there is no 
-option to specify time as a function of the source record, 
+provide `aggregationFeatures` instead. Also, there is no
+option to specify time as a function of the source record,
 so the time will always come from the job's `FeatureContext`.
 
 Here is an example that finds
@@ -406,6 +406,13 @@ object AccountFeatures extends AggregationFeatureSet[Account] {
 }
 ```
 
+<a name="aggregator-source-view-note" />
+Note that when using Aggregators with [source views](#source-views), the
+`Aggregator` must be specified explicitly instead of using the inherited
+aggregate functions. This is because the inherited functions are tied directly
+to the `AggregationFeatureSet` source type. See the
+[note](#source-view-aggregator-note) in the source views guide for an example
+of this.
 
 ### Filtering (aka `WHERE`)
 
@@ -568,7 +575,7 @@ object JoinFeatures extends AggregationFeatureSet[(Customer, Account)] {
 
 Joins between more than two tables are also possible, using the `multiway` function.
 
-For example, (also contrived) the customer's total balance across all accounts 
+For example, (also contrived) the customer's total balance across all accounts
 which have additional account holders:
 
 ```scala
@@ -578,10 +585,9 @@ import commbank.coppersmith.{AggregationFeatureSet, Feature, Join}
 import Feature.Type.Continuous
 import commbank.coppersmith.example.thrift.Account
 
-
 object JoinFeatures2 extends AggregationFeatureSet[(Customer, Account, Option[Customer])] {
   val namespace = "userguide.examples"
-  
+
   def entity(s: (Customer, Account, Option[Customer])) = s._1.id
 
   val source = Join.multiway[Customer]
@@ -589,26 +595,100 @@ object JoinFeatures2 extends AggregationFeatureSet[(Customer, Account, Option[Cu
                          (acc: Account)               => acc.id)
       .left[Customer].on((c1: Customer, acc: Account) => acc.id,
                          (c2: Customer)               => c2.acct)
-      .src  //Note the use of the .src call. Awkward implementation detail
-  
+      .src  // Note the use of the .src call. Awkward implementation detail
+
   val select = source.featureSetBuilder(namespace, entity)
 
-  //make sure the other customer is defined and not us (in reality this would have 
-  //been an inner join but for the sake of education, we are showing the left)
+  // Make sure the other customer is defined and not us (in reality this would have
+  // been an inner join but for the sake of education, we are showing the left)
   val totalBalanceForCustomersWithJointAccounts = select(sum(_._2.balance))
-    .where(row => row._3.exists(_ != row._1.id))  
+    .where(row => row._3.exists(_ != row._1.id))
     .asFeature(Continuous, "CUST_JOINT_TOT_BALANCE",
                "Total balance for customer with joint account")
 
   val aggregationFeatures = List(totalBalanceForCustomersWithJointAccounts)
 }
-
 ```
 
 Notice that for multiway joins, we need to hint the types of the join functions
 to the compiler. Each stage of the join needs two functions: one producing
-a join column for all of the left values so far, and one for the current right 
+a join column for all of the left values so far, and one for the current right
 value.
+
+### Source views
+
+Sometimes it is convenient to work with a different view of
+the source when defining features. This might simply be a
+mapping to a different type, or a pattern-based filter and
+extraction. This is akin to Scala's `map` and `collect`
+methods on the standard collections, and the same methods
+are available on the `FeatureSetBuilder`.
+
+The following example only generates name features for
+customers whose name is defined (ie, not `None`). Notice how
+even though the `Customer.name` type is `Option[String]`,
+there is no need to unwrap the option in the select clause
+as it has already been extracted as part of matching against
+`Some` in the `collect`.
+
+```scala
+import org.joda.time.DateTime
+
+import commbank.coppersmith.{FeatureSet, Feature, From}
+import Feature.Type.Nominal
+import commbank.coppersmith.FeatureBuilderSource.fromFS
+import commbank.coppersmith.example.thrift.Customer
+
+object SourceViewFeatures extends FeatureSet[Customer] {
+  val namespace              = "userguide.examples"
+  def entity(cust: Customer) = cust.id
+
+  val source  = From[Customer]()
+  val builder = source.featureSetBuilder(namespace, entity)
+
+  val customerName =
+    builder.map(c => (c, c.name)).collect { case (c, Some(name)) => (c, name) }
+      .select(_._2)
+      .asFeature(Nominal, "CUST_NAME_AVAILABLE", "Customer name when it is known")
+
+  val features = List(customerName)
+}
+```
+
+<a name="source-view-aggregator-note" />
+As [noted](#aggregator-source-view-note) in the Aggregation features section,
+when combining Aggregation features with source views, if the type of the source
+view differs from the underlying feature set source type, the inherited
+aggregator functions can no longer be used and the aggregator must be explicitly
+specified.
+
+```scala
+import com.twitter.algebird.Aggregator
+
+import org.joda.time.DateTime
+
+import commbank.coppersmith.{AggregationFeatureSet, Feature, From}
+import Feature.Type.Continuous
+import commbank.coppersmith.FeatureBuilderSource.fromFS
+import commbank.coppersmith.example.thrift.Customer
+import Implicits.RichCustomer
+
+object SourceViewAggregationFeatures extends AggregationFeatureSet[Customer] {
+  val namespace              = "userguide.examples"
+  def entity(cust: Customer) = cust.id
+  def time(cust: Customer)   = DateTime.parse(cust.effectiveDate).getMillis
+
+  val source  = From[Customer]()
+  val builder = source.featureSetBuilder(namespace, entity)
+
+  val adultMinBalance =
+    builder.collect { case c if Range(1960, 1980).contains(c.birthYear) => c.balance }
+      .select(Aggregator.min[Int])
+      .asFeature(Continuous, "GEN_X_MIN_BALANCE", "Minimum balance for gen-X customers")
+
+  val aggregationFeatures = List(adultMinBalance)
+}
+```
 
 ### Testing
 
