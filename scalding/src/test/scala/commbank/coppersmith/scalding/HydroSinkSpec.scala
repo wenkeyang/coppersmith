@@ -43,7 +43,7 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
       NonEmptyListArbitrary[FeatureValue[Value]].arbitrary.map(nel =>
         nel.map {
           case v@FeatureValue(_, _, Str(s)) =>
-            v.copy(value = Str(s.map(_.filterNot(_ < 32).filterNot(_.contains(HydroSink.Delimiter)))))
+            v.copy(value = Str(s.map(_.filterNot(_ < 32).replace(HydroSink.Delimiter, ""))))
           case v => v
         }
       )
