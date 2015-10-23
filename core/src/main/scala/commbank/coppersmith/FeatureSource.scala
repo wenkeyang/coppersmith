@@ -21,14 +21,22 @@ abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => 
     implicitly[Lift[P]].liftBinder(self, binder, filter)
   }
 
-  def withContext[C] = ContextSensitiveFeatureSource[S, C, FS](this)
+  def withContext[C] = ContextFeatureSource[S, C, FS](this)
 }
 
-// FIXME: See if it is possible to extend FeatureSource directly here to remove
+// TODO: See if it is possible to extend FeatureSource directly here to remove
 // additional FeatureBuilderSourceInstances.fromCFS implicit method
-case class ContextSensitiveFeatureSource[S, C, FS <: FeatureSource[S, FS]](underlying: FeatureSource[S, FS]) {
-  def bindWithContext[P[_] : Lift](binder: SourceBinder[S, FS, P], ctx: C): BoundFeatureSource[(S, C), P] =
- ???
+case class ContextFeatureSource[S, C, FS <: FeatureSource[S, FS]](underlying: FeatureSource[S, FS]) {
+  def bindWithContext[P[_] : Lift](
+    binder: SourceBinder[S, FS, P],
+    ctx:    C
+  ): BoundFeatureSource[(S, C), P] = {
+    new BoundFeatureSource[(S, C), P] {
+      // FIXME: Work out why implicit Functor for P isn't picked up from Lift
+//      def load: P[(S, C)] = underlying.bind(binder).load.map((_, ctx))
+      def load: P[(S, C)] = implicitly[Lift[P]].functor.map(underlying.bind(binder).load)((_, ctx))
+    }
+  }
 }
 
 abstract class BoundFeatureSource[S, P[_] : Lift] {

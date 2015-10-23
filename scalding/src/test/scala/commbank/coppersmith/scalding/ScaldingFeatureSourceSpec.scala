@@ -16,23 +16,25 @@ import commbank.coppersmith._, SourceBinder._
 import Arbitraries._
 import test.thrift.{Account, Customer}
 
-import lift.ScaldingScalazInstances._
-
 object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
   SelectFeatureSet - Test an example set of features based on selecting fields
   ===========
   A From feature source
-    must apply filter $fromFilter ${tag("slow")}
+    must apply filter $fromFilter  ${tag("slow")}
+    must map context  $fromContext ${tag("slow")}
 
   A Join feature source
-    must apply filter $joinFilter ${tag("slow")}
+    must apply filter $joinFilter  ${tag("slow")}
+    must map context  $joinContext ${tag("slow")}
 
   A LeftJoin feature source
-    must apply filter $leftJoinFilter ${tag("slow")}
+    must apply filter $leftJoinFilter  ${tag("slow")}
+    must map context  $leftJoinContext ${tag("slow")}
 
   A multiway join feature source
-    must have correct results $multiwayJoin  ${tag("slow")}
-    must apply filter $multiwayJoinFilter  ${tag("slow")}
+    must have correct results $multiwayJoin        ${tag("slow")}
+    must apply filter         $multiwayJoinFilter  ${tag("slow")}
+    must map context          $multiwayJoinContext ${tag("slow")}
 """
 
   // FIXME: Pull up to test project for use by client apps
@@ -48,6 +50,14 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     runsSuccessfully(loaded) must_== cs.filter(filter)
   }}.set(minTestsOk = 10)
 
+  def fromContext = forAll { (cs: List[Customer], ctx: String) => {
+    val filter = (c: Customer) => c.age < 18
+    val source = From[Customer].withContext[String]
+
+    val loaded = source.bindWithContext(from(TestDataSource(cs)), ctx).load
+    runsSuccessfully(loaded) must_== cs.map((_, ctx))
+  }}.set(minTestsOk = 10)
+
   def joinFilter = forAll { (customerAccounts: CustomerAccounts) => {
     val cas = customerAccounts.cas
     def filter(ca: (Customer, Account)) = ca._1.age < 18
@@ -56,6 +66,19 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
 
     val source = Join[Customer].to[Account].on(_.id, _.customerId).filter(filter)
     val bound = source.bind(join(TestDataSource(cas.map(_.c)), TestDataSource(cas.flatMap(_.as))))
+    runsSuccessfully(bound.load).toSet must_== expected.toSet
+  }}.set(minTestsOk = 10)
+
+  def joinContext = forAll { (customerAccounts: CustomerAccounts, ctx: String) => {
+    val cas = customerAccounts.cas
+
+    val expected = cas.flatMap(ca => ca.as.map(a => ((ca.c, a), ctx)))
+
+    val source = Join[Customer].to[Account].on(_.id, _.customerId).withContext[String]
+    val bound = source.bindWithContext(
+      join(TestDataSource(cas.map(_.c)), TestDataSource(cas.flatMap(_.as))),
+      ctx
+    )
     runsSuccessfully(bound.load).toSet must_== expected.toSet
   }}.set(minTestsOk = 10)
 
@@ -74,6 +97,22 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     runsSuccessfully(bound.load).toSet must_== expected.toSet
   }}.set(minTestsOk = 10)
 
+  def leftJoinContext = forAll { (customerAccounts: CustomerAccounts, ctx: String) => {
+    val cas = customerAccounts.cas
+
+    val expected = cas.flatMap(ca =>
+      ca.as.toList.toNel.map(as =>
+        as.list.map(a => (ca.c, a.some))
+      ).getOrElse(List((ca.c, None)))
+    ).map((_, ctx))
+
+    val source = Join.left[Customer].to[Account].on(_.id, _.customerId).withContext[String]
+    val bound = source.bindWithContext(
+      leftJoin(TestDataSource(cas.map(_.c)), TestDataSource(cas.flatMap(_.as))),
+      ctx
+    )
+    runsSuccessfully(bound.load).toSet must_== expected.toSet
+  }}.set(minTestsOk = 10)
 
   def multiwayJoin = forAll { (customerAccounts: CustomerAccounts) => {
     //shadow accidentally imported implicit
@@ -83,8 +122,10 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
 
     val expected = cas.flatMap(ca => ca.as.map(a => (ca.c, a)))
 
-    val source = Join.multiway[Customer].inner[Account] .on((c: Customer) => c.id, (a: Account) => a.customerId).src
-
+    val source = Join.multiway[Customer].inner[Account].on(
+      (c: Customer) => c.id,
+      (a: Account) => a.customerId
+    ).src
 
     val customersDs: DataSource[Customer, TypedPipe] = TestDataSource(cas.map(_.c))
     val accountsDs: DataSource[Account, TypedPipe] = TestDataSource(cas.flatMap(_.as))
@@ -103,11 +144,13 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
 
     val expected = cas.flatMap(ca => ca.as.map(a => (ca.c, a))).filter(filter)
 
-    val source = Join.multiway[Customer].inner[Account] .on((c: Customer) => c.id, (a: Account) => a.customerId).src.filter(filter)
-
+    val source = Join.multiway[Customer].inner[Account].on(
+      (c: Customer) => c.id,
+      (a: Account) => a.customerId
+    ).src.filter(filter)
 
     val customersDs: DataSource[Customer, TypedPipe] = TestDataSource(cas.map(_.c))
-    val accountsDs: DataSource[Account, TypedPipe] = TestDataSource(cas.flatMap(_.as))
+    val accountsDs:  DataSource[Account,  TypedPipe] = TestDataSource(cas.flatMap(_.as))
 
     val binder = joinMulti((customersDs, accountsDs), source)
 
@@ -117,5 +160,6 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
 
   }}.set(minTestsOk = 10)
 
-
+  def multiwayJoinContext =
+    pending("Missing generality in multiway join binder currently prevents withContext from compiling")
 }

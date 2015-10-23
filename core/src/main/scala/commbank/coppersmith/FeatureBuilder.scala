@@ -18,7 +18,7 @@ object FeatureBuilderSource extends FeatureBuilderSourceInstances
 
 trait FeatureBuilderSourceInstances {
   implicit def fromFS[S : TypeTag](fs: FeatureSource[S, _]) = new FeatureBuilderSource[S] {}
-  implicit def fromCFS[S : TypeTag, C : TypeTag](fs: ContextSensitiveFeatureSource[S, C, _]) =
+  implicit def fromCFS[S : TypeTag, C : TypeTag](fs: ContextFeatureSource[S, C, _]) =
     new FeatureBuilderSource[(S, C)] {}
 }
 
