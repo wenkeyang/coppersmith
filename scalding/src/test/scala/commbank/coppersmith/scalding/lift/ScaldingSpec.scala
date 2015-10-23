@@ -6,8 +6,6 @@ import commbank.coppersmith._
 import commbank.coppersmith.scalding.lift.scalding._
 import commbank.coppersmith.test.thrift._
 
-import ScaldingScalazInstances._
-
 class ScaldingSpec extends ThermometerSpec {
   def is = s2"""
      inner join $joins

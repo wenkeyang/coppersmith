@@ -17,8 +17,6 @@ import commbank.coppersmith.scalding.lift.scalding._
 
 import scalaz.{Value => _, _}, Scalaz._
 
-import ScaldingScalazInstances._
-
 object Example2 {
 
   val customerJoinAccount = Join[Customer].to[Account].on(_.acct, _.id)

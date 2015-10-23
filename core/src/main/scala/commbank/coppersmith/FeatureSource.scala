@@ -1,10 +1,12 @@
 package commbank.coppersmith
 
-import commbank.coppersmith.Join.{CompleteJoinHlFeatureSource, IncompleteJoinedHl, CompleteJoinHl}
+import scalaz.syntax.functor.ToFunctorOps
+import scalaz.syntax.std.option.ToOptionIdOps
+
 import shapeless._
 import shapeless.ops.hlist._
-import scalaz.Functor
-import scalaz.syntax.std.option.ToOptionIdOps
+
+import commbank.coppersmith.Join.{CompleteJoinHlFeatureSource, IncompleteJoinedHl, CompleteJoinHl}
 
 import util.Conversion
 
@@ -29,7 +31,7 @@ case class ContextSensitiveFeatureSource[S, C, FS <: FeatureSource[S, FS]](under
  ???
 }
 
-trait BoundFeatureSource[S, P[_]] {
+abstract class BoundFeatureSource[S, P[_] : Lift] {
   def load: P[S]
 }
 
@@ -42,16 +44,16 @@ object SourceBinder extends SourceBinderInstances
 trait SourceBinderInstances {
   def from[S, P[_] : Lift](dataSource: DataSource[S, P]) = FromBinder(dataSource)
 
-  def join[L, R, J : Ordering, P[_] : Lift : Functor]
+  def join[L, R, J : Ordering, P[_] : Lift]
     (leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     JoinedBinder(leftSrc, rightSrc)
 
-  def leftJoin[L, R, J : Ordering, P[_] : Lift : Functor]
+  def leftJoin[L, R, J : Ordering, P[_] : Lift]
     (leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     LeftJoinedBinder(leftSrc, rightSrc)
 
   def joinMulti[  //These come from parameters
-    P[_] : Functor : Lift,
+    P[_] : Lift,
     Tuple <: Product,
     Types <: HList,
     Joins <: HList,
@@ -79,7 +81,7 @@ trait SourceBinderInstances {
     Zipped <: HList,
 
     TypesTuple <: Product]
-    ( in: Tuple, j: CompleteJoinHlFeatureSource[Types, Joins, TypesTuple])
+    (in: Tuple, j: CompleteJoinHlFeatureSource[Types, Joins, TypesTuple])
     (implicit
      //Map data source tuple to pipes tuple
      dshlGen     : Generic.Aux[Tuple, DSHL],
@@ -113,7 +115,7 @@ case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, Fr
   def bind(from: From[S]): P[S] = src.load
 }
 
-case class JoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
+case class JoinedBinder[L, R, J : Ordering, P[_] : Lift](
   leftSrc:  DataSource[L, P],
   rightSrc: DataSource[R, P]
 ) extends SourceBinder[(L, R), Joined[L, R, J, (L, R)], P] {
@@ -122,7 +124,7 @@ case class JoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
   }
 }
 
-case class LeftJoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
+case class LeftJoinedBinder[L, R, J : Ordering, P[_] : Lift](
   leftSrc:  DataSource[L, P],
   rightSrc: DataSource[R, P]
 ) extends SourceBinder[(L, Option[R]), Joined[L, R, J, (L, Option[R])], P] {
@@ -133,7 +135,7 @@ case class LeftJoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
 
 case class MultiJoinedBinder[
   //These come from parameters
-  P[_] : Functor : Lift,
+  P[_] : Lift,
   Tuple <: Product,
   Types <: HList,
   Joins <: HList,

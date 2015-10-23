@@ -8,6 +8,7 @@ import commbank.coppersmith.scalding.ScaldingBoundFeatureSource
 import shapeless._
 import shapeless.ops.hlist.Prepend
 
+import ScaldingScalazInstances.typedPipeFunctor
 
 trait ScaldingLift extends Lift[TypedPipe] {
 
