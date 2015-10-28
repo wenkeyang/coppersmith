@@ -219,6 +219,33 @@ object CustomerFeaturesJob extends SimpleFeatureJob {
 }
 ```
 
+Individual data sources that are common to different feature sources can be
+pulled up to their own type for reuse, for example:
+
+```scala
+import org.apache.hadoop.fs.Path
+
+import org.joda.time.DateTime
+
+import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}
+import Maestro.{DerivedDecode, Fields}
+
+import commbank.coppersmith.scalding.{ScaldingDataSource, HiveTextSource}
+
+import commbank.coppersmith.example.thrift.Customer
+
+case class CustomerSourceConfig(date: DateTime) {
+  type Partition = (String, String, String) // (Year, Month, Day)
+
+  def toPartitionVal(date: DateTime) =
+    (date.getYear.toString, f"${date.getMonthOfYear}%02d", f"${date.getDayOfMonth}%02d")
+
+  val partition    = HivePartition.byDay(Fields[Customer].EffectiveDate, "yyyy-MM-dd")
+  val partitionVal = ScaldingDataSource.Partitions(partition, toPartitionVal(date))
+
+  val dataSource   = HiveTextSource[Customer, Partition](new Path("/data/customers"), partitionVal)
+}
+```
 
 Intermediate
 ------------
@@ -306,11 +333,16 @@ you may find that defining a "rich" version of the thrift struct
 can help to keep feature definitions clear and concise.
 
 ```scala
+import org.joda.time.{DateTime, Period}
+
 import commbank.coppersmith.example.thrift.{Customer, Account}
 
 object Implicits {
   implicit class RichCustomer(cust: Customer) {
-    def birthYear: Int  = DateTime.parse(cust.dob).getYear
+    def birthDate: DateTime = DateTime.parse(cust.dob)
+    def birthYear: Int      = birthDate.getYear
+
+    def ageAt(date: DateTime): Int = new Period(birthDate, date).getYears
   }
 
   implicit class RichAccount(acc: Account) {
@@ -698,6 +730,70 @@ object SourceViewAggregationFeatures extends AggregationFeatureSet[Customer] {
       .asFeature(Continuous, "GEN_X_MIN_BALANCE", "Minimum balance for gen-X customers")
 
   val aggregationFeatures = List(adultMinBalance)
+}
+```
+
+### Generating values from job context
+
+Sometimes it is necessary to use job specific data for generating feature
+values, for example, using date information from the job configuration to
+calculate the age of a person from their date of birth at the time of
+generating a feature.
+
+This can be achieved by incorporating a context with the `FeatureSet`'s source.
+
+```scala
+import org.joda.time.DateTime
+
+import commbank.coppersmith.{FeatureSet, From}
+import commbank.coppersmith.Feature.Type.Ordinal
+import commbank.coppersmith.FeatureBuilderSource.fromCFS
+import commbank.coppersmith.example.thrift.Customer
+
+// The context, a DateTime in this case, forms part of the FeatureSource
+object ContextFeatures extends FeatureSet[(Customer, DateTime)] {
+  val namespace = "userguide.examples"
+
+  def entity(s: (Customer, DateTime)) = s._1.id
+
+  // Incorporate context with FeatureSource as a type
+  val source = From[Customer].withContext[DateTime]
+
+  val select = source.featureSetBuilder(namespace, entity)
+
+  def customerAgeFeature =
+    select(cdt => cdt._1.ageAt(cdt._2))
+      .asFeature(Ordinal, "CUST_AGE", "Age of customer")
+
+  val features = List(customerAgeFeature)
+}
+```
+
+The context is passed through at the time of binding the concrete `DataSource`(s).
+
+```scala
+import org.joda.time.{DateTime, format}, format.DateTimeFormat
+
+import com.twitter.scalding.Config
+
+import commbank.coppersmith.SourceBinder.from
+import commbank.coppersmith.scalding.FeatureJobConfig
+import commbank.coppersmith.scalding.framework
+
+import commbank.coppersmith.example.thrift.Customer
+
+abstract class ContextFeaturesConfig(conf: Config)
+    extends FeatureJobConfig[(Customer, DateTime)] {
+
+  val date = conf.getArgs.optional("date").map(d =>
+               DateTime.parse(d, DateTimeFormat.forPattern("yyyy-MM-dd"))
+             ).getOrElse(new DateTime().minusDays(1))
+
+  val customers = CustomerSourceConfig(date).dataSource
+
+  // Note: Current date passed through as context param
+  val featureSource =
+    ContextFeatures.source.bindWithContext(from(customers), date)
 }
 ```
 

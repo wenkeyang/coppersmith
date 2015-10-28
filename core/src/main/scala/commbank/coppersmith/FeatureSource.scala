@@ -1,10 +1,12 @@
 package commbank.coppersmith
 
-import commbank.coppersmith.Join.{CompleteJoinHlFeatureSource, IncompleteJoinedHl, CompleteJoinHl}
+import scalaz.syntax.functor.ToFunctorOps
+import scalaz.syntax.std.option.ToOptionIdOps
+
 import shapeless._
 import shapeless.ops.hlist._
-import scalaz.Functor
-import scalaz.syntax.std.option.ToOptionIdOps
+
+import commbank.coppersmith.Join.{CompleteJoinHlFeatureSource, IncompleteJoinedHl, CompleteJoinHl}
 
 import util.Conversion
 
@@ -18,9 +20,26 @@ abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => 
   def bind[P[_] : Lift](binder: SourceBinder[S, FS, P]): BoundFeatureSource[S, P] = {
     implicitly[Lift[P]].liftBinder(self, binder, filter)
   }
+
+  def withContext[C] = ContextFeatureSource[S, C, FS](this)
 }
 
-trait BoundFeatureSource[S, P[_]] {
+// TODO: See if it is possible to extend FeatureSource directly here to remove
+// additional FeatureBuilderSourceInstances.fromCFS implicit method
+case class ContextFeatureSource[S, C, FS <: FeatureSource[S, FS]](underlying: FeatureSource[S, FS]) {
+  def bindWithContext[P[_] : Lift](
+    binder: SourceBinder[S, FS, P],
+    ctx:    C
+  ): BoundFeatureSource[(S, C), P] = {
+    new BoundFeatureSource[(S, C), P] {
+      // FIXME: Work out why implicit Functor for P isn't picked up from Lift
+//      def load: P[(S, C)] = underlying.bind(binder).load.map((_, ctx))
+      def load: P[(S, C)] = implicitly[Lift[P]].functor.map(underlying.bind(binder).load)((_, ctx))
+    }
+  }
+}
+
+abstract class BoundFeatureSource[S, P[_] : Lift] {
   def load: P[S]
 }
 
@@ -33,16 +52,16 @@ object SourceBinder extends SourceBinderInstances
 trait SourceBinderInstances {
   def from[S, P[_] : Lift](dataSource: DataSource[S, P]) = FromBinder(dataSource)
 
-  def join[L, R, J : Ordering, P[_] : Lift : Functor]
+  def join[L, R, J : Ordering, P[_] : Lift]
     (leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     JoinedBinder(leftSrc, rightSrc)
 
-  def leftJoin[L, R, J : Ordering, P[_] : Lift : Functor]
+  def leftJoin[L, R, J : Ordering, P[_] : Lift]
     (leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     LeftJoinedBinder(leftSrc, rightSrc)
 
   def joinMulti[  //These come from parameters
-    P[_] : Functor : Lift,
+    P[_] : Lift,
     Tuple <: Product,
     Types <: HList,
     Joins <: HList,
@@ -70,7 +89,7 @@ trait SourceBinderInstances {
     Zipped <: HList,
 
     TypesTuple <: Product]
-    ( in: Tuple, j: CompleteJoinHlFeatureSource[Types, Joins, TypesTuple])
+    (in: Tuple, j: CompleteJoinHlFeatureSource[Types, Joins, TypesTuple])
     (implicit
      //Map data source tuple to pipes tuple
      dshlGen     : Generic.Aux[Tuple, DSHL],
@@ -104,7 +123,7 @@ case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, Fr
   def bind(from: From[S]): P[S] = src.load
 }
 
-case class JoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
+case class JoinedBinder[L, R, J : Ordering, P[_] : Lift](
   leftSrc:  DataSource[L, P],
   rightSrc: DataSource[R, P]
 ) extends SourceBinder[(L, R), Joined[L, R, J, (L, R)], P] {
@@ -113,7 +132,7 @@ case class JoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
   }
 }
 
-case class LeftJoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
+case class LeftJoinedBinder[L, R, J : Ordering, P[_] : Lift](
   leftSrc:  DataSource[L, P],
   rightSrc: DataSource[R, P]
 ) extends SourceBinder[(L, Option[R]), Joined[L, R, J, (L, Option[R])], P] {
@@ -124,7 +143,7 @@ case class LeftJoinedBinder[L, R, J : Ordering, P[_] : Lift : Functor](
 
 case class MultiJoinedBinder[
   //These come from parameters
-  P[_] : Functor : Lift,
+  P[_] : Lift,
   Tuple <: Product,
   Types <: HList,
   Joins <: HList,
@@ -215,5 +234,3 @@ object DataSourcesToPipes {
   }
 
 }
-
-

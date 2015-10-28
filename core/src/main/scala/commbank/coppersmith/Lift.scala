@@ -12,11 +12,13 @@ import scalaz.{Ordering => _, Length => _, Zip => _, _}, Scalaz._
 
 import Feature.Value
 
-trait Lift[P[_]] {
+// Would have preferred functor to be specified as P[_] : Functor, but upcoming code in
+// ContextFeatureSource.bindWithContext is unable to derive implicit Functor instance,
+// and needs to access it via the Lift instance instead.
+abstract class Lift[P[_]](implicit val functor: Functor[P]) {
   def lift[S, V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[V]]
 
   def lift[S](fs: FeatureSet[S])(s: P[S]): P[FeatureValue[_]]
-
 
   //Join stuff
 
@@ -35,16 +37,15 @@ trait Lift[P[_]] {
 
   //two is a special case, a little easier to do than the general case
   def liftJoin[A, B, J : Ordering]
-    (joined: Joined[A, B, J, (A, B) ])
-    (a:P[A], b: P[B])
-    (implicit functor: Functor[P]): P[(A, B)] = {
+    (joined: Joined[A, B, J, (A, B)])
+    (a:P[A], b: P[B]): P[(A, B)] = {
     innerJoinNext((l: A :: HNil) =>
       joined.left(l.head), joined.right)(a.map(_ :: HNil), b).map(_.tupled)
   }
 
   def liftLeftJoin[A, B, J : Ordering]
     (joined: Joined[A, B, J, (A, Option[B])])
-    (a: P[A], b: P[B])(implicit functor: Functor[P]): P[(A, Option[B])] = {
+    (a: P[A], b: P[B]): P[(A, Option[B])] = {
     leftJoinNext((l: A :: HNil) =>
       joined.left(l.head), joined.right)(a.map(_ :: HNil), b).map(_.tupled)
   }
@@ -74,8 +75,7 @@ trait Lift[P[_]] {
              zipper     : Zip.Aux[NextPipes :: Joins :: HNil, Zipped],
              leftFolder : LeftFolder.Aux[Zipped, P[InHeadElementType :: HNil],
                                             JoinFolders.joinFolder.type, P[Types]],
-             tupler     : Tupler.Aux[Types, OutTuple],
-             pFunctor   : Functor[P])
+             tupler     : Tupler.Aux[Types, OutTuple])
   : P[OutTuple] = {
     val inHl : InHList = inToHlist.to(in)
     val inHead: P[InHeadElementType] = pEl2(inHl.head)
@@ -142,7 +142,7 @@ object JoinFolders {
   //Lower priority since inner joins have less specific types than left joins
   trait innerFolder extends Poly2 {
     implicit def doInnerJoin[
-    P[_] : Functor : Lift,
+    P[_] : Lift,
     SoFar <: HList,
     Next,
     J : Ordering,
@@ -159,7 +159,7 @@ object JoinFolders {
 
   object joinFolder extends innerFolder {
     implicit def doLeftJoin[
-    P[_]: Functor : Lift,
+    P[_] : Lift,
     SoFar <: HList,
     Next,
     J : Ordering,

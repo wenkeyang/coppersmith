@@ -1,5 +1,7 @@
 package commbank.coppersmith.lift
 
+import scalaz.std.list.listInstance
+
 import shapeless._
 import shapeless.ops.hlist._
 
@@ -56,17 +58,22 @@ trait MemoryLift extends Lift[List] {
     (underlying: U, binder: B, filter: Option[S => Boolean]) =
       MemoryBoundFeatureSource(underlying, binder, filter)
 
-  case class MemoryBoundFeatureSource[S, U <: FeatureSource[S, U]](
-    underlying: U,
-    binder: SourceBinder[S, U, List],
-    filter: Option[S => Boolean]
-  ) extends BoundFeatureSource[S, List] {
-    def load: List[S] = {
-      val pipe = binder.bind(underlying)
-      filter.map(f => pipe.filter(f)).getOrElse(pipe)
-    }
-  }
-
   def liftFilter[S](p: List[S], f: S => Boolean) = p.filter(f)
 }
-object memory extends MemoryLift
+
+object memory extends MemoryLift {
+  implicit def framework: Lift[List] = this
+}
+
+import memory.framework
+
+case class MemoryBoundFeatureSource[S, U <: FeatureSource[S, U]](
+  underlying: U,
+  binder: SourceBinder[S, U, List],
+  filter: Option[S => Boolean]
+) extends BoundFeatureSource[S, List] {
+  def load: List[S] = {
+    val pipe = binder.bind(underlying)
+    filter.map(f => pipe.filter(f)).getOrElse(pipe)
+  }
+}
