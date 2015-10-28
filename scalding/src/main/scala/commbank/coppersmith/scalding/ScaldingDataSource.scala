@@ -52,9 +52,9 @@ case class HiveTextSource[S <: ThriftStruct : Decode, P](
 
   def errorMessage(e: DecodeError[_]): String = e.reason match {
     // Error messages copied from maestro's LoadExecution.scala
-    case ParseError(value, expected, error) => s"unexpected type: $e"
-    case NotEnoughInput(required, expected) => s"not enough fields in record: $e"
-    case TooMuchInput                       => s"too many fields in record: $e"
+    case ParseError(_, _, _)  => s"unexpected type: $e"
+    case NotEnoughInput(_, _) => s"not enough fields in record: $e"
+    case TooMuchInput         => s"too many fields in record: $e"
   }
 }
 
