@@ -2,6 +2,8 @@ package commbank.coppersmith.scalding
 
 import org.scalacheck.Prop.forAll
 
+import cascading.flow.FlowException
+
 import scalaz.syntax.std.list.ToListOpsFromList
 import scalaz.syntax.std.option.ToOptionIdOps
 
@@ -10,12 +12,13 @@ import au.com.cba.omnia.maestro.api._, Maestro._
 import au.com.cba.omnia.thermometer.core.Thermometer._
 import au.com.cba.omnia.thermometer.core.ThermometerSpec
 
-import commbank.coppersmith.test.thrift.Customer
+import commbank.coppersmith.test.thrift.{Customer, Account}
 import ScaldingDataSource.Partitions
 
 class HiveTextSourceSpec extends ThermometerSpec { def is = s2"""
   HiveTextSource
     should read multiple partitions $multiplePartitions
+    should throw exception on decode failure $decodeFailure
 """
   val basePath = dir </> path("user/multiplePartitions")
 
@@ -31,6 +34,17 @@ class HiveTextSourceSpec extends ThermometerSpec { def is = s2"""
 
     withEnvironment(path(getClass.getResource("/hiveTextSource").toString)) {
       runsSuccessfully(dataSource.load).toSet must_== expected.toSet
+    }
+  }
+
+  def decodeFailure = {
+    // reuse input data from [[multiplePartitions]], but attempt to decode using Account thrift
+
+    val partitions = Partitions("status=%s", "ACTIVE")
+    val dataSource = HiveTextSource[Account, String](basePath, partitions)
+
+    withEnvironment(path(getClass.getResource("/hiveTextSource").toString)) {
+      run(dataSource.load) must beFailedTry.withThrowable[FlowException]  // this wraps the actual coppersmith exception
     }
   }
 }

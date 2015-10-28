@@ -9,7 +9,7 @@ import org.apache.hadoop.fs.Path
 import au.com.cba.omnia.ebenezer.scrooge.ParquetScroogeSource
 
 import au.com.cba.omnia.maestro.api._
-import au.com.cba.omnia.maestro.core.codec.DecodeOk
+import au.com.cba.omnia.maestro.core.codec.{DecodeOk, DecodeError, ParseError, NotEnoughInput, TooMuchInput}
 
 import commbank.coppersmith.DataSource
 
@@ -45,9 +45,16 @@ case class HiveTextSource[S <: ThriftStruct : Decode, P](
     input.map { raw =>
       decoder.decode(none = "\\N", Splitter.delimited(delimiter).run(raw).toList)
     }.collect {
-      // FIXME: This implementation completely ignores errors
-      case DecodeOk(row) => row
+      case DecodeOk(row)            => row
+      case e @ DecodeError(_, _, _) => throw new Exception("Cannot decode input to HiveTextSource: " + errorMessage(e))
     }
+  }
+
+  def errorMessage(e: DecodeError[_]): String = e.reason match {
+    // Error messages copied from maestro's LoadExecution.scala
+    case ParseError(_, _, _)  => s"unexpected type: $e"
+    case NotEnoughInput(_, _) => s"not enough fields in record: $e"
+    case TooMuchInput         => s"too many fields in record: $e"
   }
 }
 
