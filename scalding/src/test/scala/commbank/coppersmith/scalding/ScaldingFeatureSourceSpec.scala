@@ -4,7 +4,9 @@ package scalding
 
 import com.twitter.scalding.typed._
 
+import org.scalacheck.Arbitrary, Arbitrary.arbitrary
 import org.scalacheck.Prop.forAll
+
 import shapeless.Generic
 
 import scalaz.syntax.std.list.ToListOpsFromList
@@ -68,6 +70,8 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     val loaded = source.bindWithContext(from(TestDataSource(cs)), ctx).load
     runsSuccessfully(loaded) must_== cs.map((_, ctx)).filter(filter)
   }}.set(minTestsOk = 10)
+
+  implicit val arbCustAccts: Arbitrary[CustomerAccounts] = arbCustomerAccounts(arbitrary[String])
 
   def joinFilter = forAll { (customerAccounts: CustomerAccounts) => {
     val cas = customerAccounts.cas
