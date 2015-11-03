@@ -20,6 +20,17 @@ object MetadataOutput {
       List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
   }
 
+  val Lua: MetadataPrinter = md =>
+    s""" {
+       name = "${md.name}",
+       namespace = "${md.namespace}",
+       description = "${md.description}",
+       source = "${md.sourceTag.tpe}",
+       featureType = "${md.featureType}",
+       valueType = "${md.valueType}"
+     }
+     """
+
   val Markdown: MetadataPrinter = md =>
     s"""
        |# ${md.name}
@@ -34,6 +45,8 @@ object MetadataOutput {
        |Value Type    ${md.valueType}
        |
      """.stripMargin
+
+
   trait HasMetadata[S] {
     def metadata: Iterable[Metadata[S, Value]]
   }
@@ -46,7 +59,8 @@ object MetadataOutput {
     def metadata = mds.metadata
   }
 
+  //TODO: leaky abstraction here because the way in which the strings are joined depends on the language itself. this one is lua
   def metadataString[S, V <: Value](md: HasMetadata[S], printer: MetadataPrinter): String = {
-    md.metadata.map(printer(_)).mkString("\n")
+    s"{${md.metadata.map(printer(_)).mkString(",\n")}}"
   }
 }
