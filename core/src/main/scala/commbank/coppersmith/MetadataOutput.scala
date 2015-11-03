@@ -21,7 +21,7 @@ object MetadataOutput {
   }
 
   val Lua: MetadataPrinter = md =>
-    s""" {
+    s""" FeatureMetadata{
        name = "${md.name}",
        namespace = "${md.namespace}",
        description = "${md.description}",
@@ -61,6 +61,6 @@ object MetadataOutput {
 
   //TODO: leaky abstraction here because the way in which the strings are joined depends on the language itself. this one is lua
   def metadataString[S, V <: Value](md: HasMetadata[S], printer: MetadataPrinter): String = {
-    s"{${md.metadata.map(printer(_)).mkString(",\n")}}"
+    s"${md.metadata.map(printer(_)).mkString("\n")}"
   }
 }
