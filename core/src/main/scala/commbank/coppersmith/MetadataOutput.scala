@@ -2,11 +2,24 @@ package commbank.coppersmith
 
 import commbank.coppersmith.Feature.Value
 import Feature._
+import Metadata._
 
 object MetadataOutput {
   type MetadataPrinter = Metadata[_, Feature.Value] => String
 
-  val HydroPsv: MetadataPrinter = md => md.asHydroPsv
+  val HydroPsv: MetadataPrinter = m => {
+      val valueType = m.valueType match {
+        case ValueType.IntegralType => "int"
+        case ValueType.DecimalType  => "double"
+        case ValueType.StringType   => "string"
+      }
+      val featureType = m.featureType match {
+        case t : Type.Categorical => "categorical"
+        case t : Type.Numeric     => "continuous"   //Assumption hydro interprets all numeric as continuous
+      }
+      List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
+  }
+
   val Markdown: MetadataPrinter = md =>
     s"""
        |# ${md.name}

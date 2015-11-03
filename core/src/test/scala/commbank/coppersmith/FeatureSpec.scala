@@ -92,7 +92,7 @@ object HydroMetadataSpec extends Specification with ScalaCheck { def is = s2"""
       case c: Categorical => "categorical"
     }
 
-    val hydroMetadata = metadata.asHydroPsv
+    val hydroMetadata = MetadataOutput.HydroPsv(metadata)
 
     hydroMetadata must_==
       s"${namespace.toLowerCase}.${name.toLowerCase}|$expectedValueType|$expectedFeatureType"
