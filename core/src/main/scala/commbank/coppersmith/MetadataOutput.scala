@@ -20,16 +20,16 @@ object MetadataOutput {
       List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
   }
 
-  val Lua: MetadataPrinter = md =>
-    s""" FeatureMetadata{
-       name = "${md.name}",
-       namespace = "${md.namespace}",
-       description = "${md.description}",
-       source = "${md.sourceTag.tpe}",
-       featureType = "${md.featureType}",
-       valueType = "${md.valueType}"
-     }
-     """
+  val LuaTable: MetadataPrinter = md =>
+    s"""|FeatureMetadata{
+        |    name = "${md.name}",
+        |    namespace = "${md.namespace}",
+        |    description = "${md.description}",
+        |    source = "${md.sourceTag.tpe}",
+        |    featureType = "${md.featureType}",
+        |    valueType = "${md.valueType}"
+        |}
+     """.stripMargin
 
   val Markdown: MetadataPrinter = md =>
     s"""
