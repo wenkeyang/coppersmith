@@ -7,16 +7,20 @@ import Metadata._
 object MetadataOutput {
   type MetadataPrinter = Metadata[_, Feature.Value] => String
 
+  private def valueTypeToString(v: ValueType) = v match {
+    case ValueType.IntegralType => "int"
+    case ValueType.DecimalType  => "double"
+    case ValueType.StringType   => "string"
+  }
+
+  private def featureTypeToString(f: Feature.Type) = f match {
+    case t : Type.Categorical => "categorical"
+    case t : Type.Numeric     => "continuous"
+  }
+
   val HydroPsv: MetadataPrinter = m => {
-      val valueType = m.valueType match {
-        case ValueType.IntegralType => "int"
-        case ValueType.DecimalType  => "double"
-        case ValueType.StringType   => "string"
-      }
-      val featureType = m.featureType match {
-        case t : Type.Categorical => "categorical"
-        case t : Type.Numeric     => "continuous"   //Assumption hydro interprets all numeric as continuous
-      }
+      val valueType = valueTypeToString(m.valueType)
+      val featureType = featureTypeToString(m.featureType)
       List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
   }
 
@@ -26,8 +30,8 @@ object MetadataOutput {
         |    namespace = "${md.namespace}",
         |    description = "${md.description}",
         |    source = "${md.sourceTag.tpe}",
-        |    featureType = "${md.featureType}",
-        |    valueType = "${md.valueType}"
+        |    featureType = "${featureTypeToString(md.featureType)}",
+        |    valueType = "${valueTypeToString(md.valueType)}"
         |}
      """.stripMargin
 
@@ -41,8 +45,8 @@ object MetadataOutput {
        |Namespace     ${md.namespace}
        |Description   ${md.description}
        |Source        ${md.sourceTag.tpe}
-       |Feature type  ${md.featureType}
-       |Value Type    ${md.valueType}
+       |Feature type  ${featureTypeToString(md.featureType)}
+       |Value Type    ${valueTypeToString(md.valueType)}
        |
      """.stripMargin
 
@@ -59,7 +63,6 @@ object MetadataOutput {
     def metadata = mds.metadata
   }
 
-  //TODO: leaky abstraction here because the way in which the strings are joined depends on the language itself. this one is lua
   def metadataString[S, V <: Value](md: HasMetadata[S], printer: MetadataPrinter): String = {
     s"${md.metadata.map(printer(_)).mkString("\n")}"
   }

@@ -22,6 +22,6 @@ object LegacyFeatureSetExample extends MetadataSet[Customer] {
   def main(args: Array[String]): Unit = {
     import MetadataOutput._
 
-    println(metadataString(LegacyFeatureSetExample, Lua))
+    println(metadataString(LegacyFeatureSetExample, LuaTable))
   }
 }
