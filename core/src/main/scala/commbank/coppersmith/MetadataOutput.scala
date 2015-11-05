@@ -7,20 +7,24 @@ import Metadata._
 object MetadataOutput {
   type MetadataPrinter = Metadata[_, Feature.Value] => String
 
-  private def valueTypeToString(v: ValueType) = v match {
+  private def hydroValueTypeToString(v: ValueType) = v match {
     case ValueType.IntegralType => "int"
     case ValueType.DecimalType  => "double"
     case ValueType.StringType   => "string"
   }
 
-  private def featureTypeToString(f: Feature.Type) = f match {
+  private def hydroFeatureTypeToString(f: Feature.Type) = f match {
     case t : Type.Categorical => "categorical"
     case t : Type.Numeric     => "continuous"
   }
 
+  private def genericFeatureTypeToString(f: Feature.Type) = f.toString.toLowerCase
+
+  private def genericValueTypeToString(v: ValueType) = v.toString.replace("Type", "").toLowerCase
+
   val HydroPsv: MetadataPrinter = m => {
-      val valueType = valueTypeToString(m.valueType)
-      val featureType = featureTypeToString(m.featureType)
+      val valueType = hydroValueTypeToString(m.valueType)
+      val featureType = hydroFeatureTypeToString(m.featureType)
       List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
   }
 
@@ -30,26 +34,10 @@ object MetadataOutput {
         |    namespace = "${md.namespace}",
         |    description = "${md.description}",
         |    source = "${md.sourceTag.tpe}",
-        |    featureType = "${featureTypeToString(md.featureType)}",
-        |    valueType = "${valueTypeToString(md.valueType)}"
+        |    featureType = "${genericFeatureTypeToString(md.featureType)}",
+        |    valueType = "${genericValueTypeToString(md.valueType)}"
         |}
      """.stripMargin
-
-  val Markdown: MetadataPrinter = md =>
-    s"""
-       |# ${md.name}
-       |
-       |Meta          Value
-       |------------  ------------------------
-       |Identifier    ${md.name}
-       |Namespace     ${md.namespace}
-       |Description   ${md.description}
-       |Source        ${md.sourceTag.tpe}
-       |Feature type  ${featureTypeToString(md.featureType)}
-       |Value Type    ${valueTypeToString(md.valueType)}
-       |
-     """.stripMargin
-
 
   trait HasMetadata[S] {
     def metadata: Iterable[Metadata[S, Value]]
