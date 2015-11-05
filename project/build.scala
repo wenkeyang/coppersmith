@@ -42,13 +42,15 @@ object build extends Build {
    ++ uniform.project("coppersmith-core", "commbank.coppersmith")
    ++ uniformThriftSettings
    ++ Seq(
+          libraryDependencies += "io.github.lukehutch" % "fast-classpath-scanner" % "1.9.7",
           libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
             exclude("org.scala-lang.modules", "scala-compiler"),
           libraryDependencies ++= depend.testing(),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
-          parallelExecution in Test := false
+          parallelExecution in Test := false,
+        fork in Test := true
       )
-  )
+  ).configs( IntegrationTest )
 
   lazy val scalding = Project(
     id = "scalding"
@@ -87,7 +89,8 @@ object build extends Build {
            val outfile = outdir / "USERGUIDE.scala"
            file("USERGUIDE.markdown") #> "sed -n /```scala/,/```/p" #| "grep -v ```" #> outfile ! s.log
            Seq(outfile)
-         }
+         },
+        fork in run := true
        )
   ).dependsOn(core, scalding, test)
 
