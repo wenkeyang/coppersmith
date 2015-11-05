@@ -76,21 +76,6 @@ object Feature {
       case object DecimalType  extends ValueType
       case object StringType   extends ValueType
     }
-
-    implicit class AsHydroPsv[V <: Value](m: Metadata[_, V]) {
-      def asHydroPsv: String = {
-        val valueType = m.valueType match {
-          case ValueType.IntegralType => "int"
-          case ValueType.DecimalType  => "double"
-          case ValueType.StringType   => "string"
-        }
-        val featureType = m.featureType match {
-          case t : Type.Categorical => "categorical"
-          case t : Type.Numeric     => "continuous"   //Assumption hydro interprets all numeric as continuous
-        }
-        List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
-      }
-    }
   }
 
   import Metadata.ValueType
