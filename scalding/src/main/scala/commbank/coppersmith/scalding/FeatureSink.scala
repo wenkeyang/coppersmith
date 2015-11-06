@@ -2,7 +2,8 @@ package commbank.coppersmith.scalding
 
 import com.twitter.algebird.Aggregator
 import com.twitter.scalding.typed.{PartitionedTextLine, TypedPipe}
-import com.twitter.scalding.{Execution, TupleConverter, TupleSetter}
+import com.twitter.scalding.{Config, Execution, TupleConverter, TupleSetter}
+
 import com.twitter.scrooge.ThriftStruct
 
 import org.apache.hadoop.fs.Path
@@ -16,6 +17,7 @@ import scalaz.syntax.std.option.ToOptionIdOps
 
 import au.com.cba.omnia.maestro.api.Maestro._
 import au.com.cba.omnia.maestro.api._
+import au.com.cba.omnia.maestro.scalding.ConfHelper.createUniqueFilenames
 
 import commbank.coppersmith.Feature.Value._
 import commbank.coppersmith.Feature._
@@ -133,8 +135,11 @@ object HiveSupport {
     val partitioned: TypedPipe[(P, String)] = pipe.map(v =>
       partition.extract(v) -> serialise[T](v, conf.delimiter, "\\N")(conf.dcs)
     )
+    val sink = PartitionedTextLine(conf.path.toString, partition.pattern)
     for {
-      _          <- partitioned.writeExecution(PartitionedTextLine(conf.path.toString, partition.pattern))
+                 // Use append semantics for now as an interim fix to address #97
+                 // Check if this is still relevant once #137 is addressed
+      _          <- partitioned.writeExecution(sink).withSubConfig(createUniqueFilenames(_))
       _          <- Execution.fromHive(createTextTable(conf))
       partitions <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
     } yield partitions.toSet.flatten

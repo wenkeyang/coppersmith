@@ -23,6 +23,7 @@ import thrift.Eavt
 class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     Writing features to a HydroSink
       writes all feature values          $featureValuesOnDiskMatch        ${tag("slow")}
+      writes multiple results            $multipleValueSetsOnDiskMatch    ${tag("slow")}
       exposes features through hive      $featureValuesInHiveMatch        ${tag("slow")}
       writes all partitions with SUCCESS $expectedPartitionsMarkedSuccess ${tag("slow")}
   """
@@ -50,14 +51,34 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     )
   }
 
+  val eavtReader = delimitedThermometerRecordReader[Eavt]('|', "\\N", implicitly[Decode[Eavt]])
+  def valuePipe(vs: NonEmptyList[FeatureValue[Value]], dateTime: DateTime) =
+    TypedPipe.from(vs.list.map(v => v -> dateTime.getMillis))
+
   def featureValuesOnDiskMatch =
     forAll { (vs: NonEmptyList[FeatureValue[Value]], hydroConfig: HydroSink.Config, dateTime: DateTime) => {
-      val eavtReader = delimitedThermometerRecordReader[Eavt]('|', "\\N", implicitly[Decode[Eavt]])
       val expected = vs.map(HydroSink.toEavt(_, dateTime.getMillis)).list
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         val sink = HydroSink(hydroConfig)
-        executesSuccessfully(sink.write(TypedPipe.from(vs.list.map(v => (v, dateTime.getMillis)))))
+        executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
+        facts(
+          path(s"${hydroConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected)
+        )
+      }
+    }}.set(minTestsOk = 5)
+
+  def multipleValueSetsOnDiskMatch =
+    forAll { (vs1: NonEmptyList[FeatureValue[Value]],
+              vs2: NonEmptyList[FeatureValue[Value]],
+              hydroConfig: HydroSink.Config,
+              dateTime: DateTime) => {
+      val expected = (vs1.list ++ vs2.list).map(HydroSink.toEavt(_, dateTime.getMillis))
+
+      withEnvironment(path(getClass.getResource("/").toString)) {
+        val sink = HydroSink(hydroConfig)
+        executesSuccessfully(sink.write(valuePipe(vs1, dateTime)))
+        executesSuccessfully(sink.write(valuePipe(vs2, dateTime)))
         facts(
           path(s"${hydroConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected)
         )
@@ -74,12 +95,11 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
       }).list.toSet
 
       withEnvironment(path(getClass.getResource("/").toString)) {
-        val date = dateTime.getMillis
         val sink = HydroSink(hydroConfig)
         val hiveConf = hydroConfig.hiveConfig
         val query = s"""SELECT * FROM `${hiveConf.database}.${hiveConf.tablename}`"""
 
-        executesSuccessfully(sink.write(TypedPipe.from(vs.list).map(v => v -> date )))
+        executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
         val actual = executesSuccessfully(Execution.fromHive(Hive.query(query)))
         actual.toSet must_== expected.toSet
       }
@@ -87,10 +107,12 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
 
   def expectedPartitionsMarkedSuccess =
     forAll { (vs: NonEmptyList[FeatureValue[Value]], hydroConfig: HydroSink.Config, dateTime: DateTime) =>  {
-      val expectedPartitions = vs.map(v => HydroSink.toEavt(v, dateTime.getMillis)).map(HydroSink.partition.extract).list.toSet.toSeq
+      val expectedPartitions = vs.map(v =>
+        HydroSink.partition.extract(HydroSink.toEavt(v, dateTime.getMillis))
+      ).list.toSet.toSeq
       withEnvironment(path(getClass.getResource("/").toString)) {
         val sink = HydroSink(hydroConfig)
-        executesSuccessfully(sink.write(TypedPipe.from(vs.list.map(v => v -> dateTime.getMillis))))
+        executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
         facts(
           expectedPartitions.map { case (year, month, day) =>
             path(s"${hydroConfig.hiveConfig.path}/year=$year/month=$month/day=$day/_SUCCESS") ==> exists
