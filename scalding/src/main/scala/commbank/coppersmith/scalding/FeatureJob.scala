@@ -56,7 +56,6 @@ trait SimpleFeatureJobOps {
   // Should be able to take advantage of shapless' tuple support in combination with Aggregator.join
   // in order to run the aggregators in one pass over the input. Need to consider that features may
   // have different filter conditions though.
-  // TODO: Where unable to join aggregators, might be possible to run in parallel instead
   private def generateAggregate[S](
     features: AggregationFeatureSet[S]
   )(input: TypedPipe[S], ctx: FeatureContext): TypedPipe[(FeatureValue[_], Time)] = {
@@ -72,11 +71,22 @@ trait SimpleFeatureJobOps {
     ctx:     FeatureContext
   ) = {
     val name = feature.name
-    val view = grouped.toTypedPipe.collect {
-      case (e, s) if feature.view.isDefinedAt(s) => (e, feature.view(s))
-    }.group
-    view.aggregate(feature.aggregator).toTypedPipe.map { case (e, v) =>
+    val aggregator = composeView(feature.aggregator, feature.view)
+    grouped.aggregate(aggregator).toTypedPipe.collect { case (e, Some(v)) =>
       (FeatureValue(e, name, v), ctx.generationTime.getMillis)
+    }
+  }
+
+  def composeView[S, SV, B, V <: Value](
+    aggregator: Aggregator[SV, B, V],
+    view: PartialFunction[S, SV]
+  ): Aggregator[S, Option[B], Option[Value]] = {
+    import com.twitter.algebird.MonoidAggregator
+    val lifted: MonoidAggregator[SV, Option[B], Option[V]] = aggregator.lift
+    new MonoidAggregator[S, Option[B], Option[Value]] {
+      def prepare(s: S) = if (view.isDefinedAt(s)) lifted.prepare(view(s)) else None
+      def monoid = lifted.monoid
+      def present(b: Option[B]) = lifted.present(b).map(v => v: Value)
     }
   }
 
