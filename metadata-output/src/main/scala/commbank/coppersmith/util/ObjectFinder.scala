@@ -1,12 +1,10 @@
 package commbank.coppersmith.util
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
-import io.github.lukehutch.fastclasspathscanner.matchprocessor.SubclassMatchProcessor
 
 import scala.collection.convert.WrapAsScala
 import scala.reflect.ClassTag
-
-import scalaz._, Scalaz._
+import scalaz.Scalaz._
 
 object ObjectFinder {
   def findObjects[T : ClassTag](packages: String*): Set[T] = {

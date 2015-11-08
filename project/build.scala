@@ -31,7 +31,7 @@ object build extends Build {
    ++ Seq(
         publishArtifact := false
       )
-  , aggregate = Seq(core, test, examples, scalding)
+  , aggregate = Seq(core, test, examples, scalding, metadataOutput)
   )
 
   lazy val core = Project(
@@ -47,8 +47,8 @@ object build extends Build {
             exclude("org.scala-lang.modules", "scala-compiler"),
           libraryDependencies ++= depend.testing(),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
-          parallelExecution in Test := false,
-        fork in Test := true
+          parallelExecution in Test := false
+
       )
   ).configs( IntegrationTest )
 
@@ -89,8 +89,7 @@ object build extends Build {
            val outfile = outdir / "USERGUIDE.scala"
            file("USERGUIDE.markdown") #> "sed -n /```scala/,/```/p" #| "grep -v ```" #> outfile ! s.log
            Seq(outfile)
-         },
-        fork in run := true
+         }
        )
   ).dependsOn(core, scalding, test)
 
@@ -103,6 +102,20 @@ object build extends Build {
    ++ uniformThriftSettings
    ++ Seq(
         libraryDependencies ++= depend.testing()
+      )
+
+  ).dependsOn(core)
+
+  lazy val metadataOutput = Project(
+    id = "metadata-output"
+    , base = file("metadata-output")
+    , settings =
+      standardSettings
+        ++ uniform.project("coppersmith-metadata-output", "commbank.coppersmith.metadata")
+        ++ uniformThriftSettings
+        ++ Seq(
+        libraryDependencies ++= depend.testing(),
+        fork in Test := true
       )
 
   ).dependsOn(core)
