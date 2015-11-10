@@ -1,6 +1,6 @@
 package commbank.coppersmith
 
-import scalaz.{Value => _, _}, Scalaz._
+import scalaz.{Value => _, _}, Scalaz.{option => _, _}
 import scalaz.scalacheck.ScalaCheckBinding._
 
 import org.scalacheck.{Arbitrary, Gen}, Arbitrary._, Gen._
@@ -35,40 +35,41 @@ object Arbitraries {
   )
 
   def ageGen: Gen[Int] = Gen.chooseNum(0, 150, 17, 18, 19, 64, 65, 66)
-  implicit val arbCustomer: Arbitrary[Customer] = Arbitrary(
-    (arbitrary[String] |@|
-       arbitrary[String] |@|
+  def customerGen(strGen: Gen[String]): Gen[Customer] =
+    (strGen |@|
+       strGen |@|
        ageGen |@|
        arbitrary[Double] |@|
        arbitrary[Option[Double]] |@|
        arbitrary[Long])(Customer.apply)
-  )
+
+  implicit val arbCustomer: Arbitrary[Customer] = Arbitrary(customerGen(arbitrary[String]))
 
   implicit val arbCustomerField: Arbitrary[Field[Customer, _]] = Arbitrary(
     oneOf(Fields[Customer].Name, Fields[Customer].Age, Fields[Customer].Height)
   )
 
-  implicit val arbAccount: Arbitrary[Account] = Arbitrary(
-    (arbitrary[String] |@|
-       arbitrary[String] |@|
+  def accountGen(strGen: Gen[String]): Gen[Account] =
+    (strGen |@|
+       strGen |@|
        arbitrary[Double] |@|
-       arbitrary[Option[String]] |@|
-       arbitrary[Option[Int]] |@|
+       option(strGen) |@|
+       option(ageGen) |@|
        arbitrary[Option[Double]] |@|
        arbTime)(Account.apply)
-  )
 
-  case class CustomerAccountsGroup(c: Customer, as: Iterable[Account])
+  implicit val arbAccount: Arbitrary[Account] = Arbitrary(accountGen(arbitrary[String]))
+
+  case class CustomerAccountsGroup(c: Customer, as: List[Account])
   case class CustomerAccounts(cas: Iterable[CustomerAccountsGroup])
-  implicit val arbCustomerAccounts: Arbitrary[CustomerAccounts] = {
-    implicit val arbCA: Arbitrary[CustomerAccountsGroup] = Arbitrary(
+  def arbCustomerAccounts(strGen: Gen[String]): Arbitrary[CustomerAccounts] = {
+    val caGen: Gen[CustomerAccountsGroup] =
       for {
-        c <- arbitrary[Customer]
-        as <- arbitrary[Iterable[Account]]
+        c <- customerGen(strGen)
+        as <- nonEmptyListOf[Account](accountGen(strGen))
       } yield CustomerAccountsGroup(c, as.map(_.copy(customerId = c.id)))
-    )
     Arbitrary(
-      arbitrary[Iterable[CustomerAccountsGroup]].map(cas => {
+      nonEmptyListOf[CustomerAccountsGroup](caGen).map(cas => {
         // Filter out customers with the same id (typically from multiple empty strings being generated)
         val uniqueByCustomerId = cas.groupBy(_.c.id).values.flatMap(_.headOption.toList)
         CustomerAccounts(uniqueByCustomerId)
@@ -87,5 +88,4 @@ object Arbitraries {
 
   val arbNonEmptyAlphaStr: Gen[NonEmptyString] =
     for (h <- alphaChar; t <- alphaStr) yield nonEmptyString(h, t)
-
 }

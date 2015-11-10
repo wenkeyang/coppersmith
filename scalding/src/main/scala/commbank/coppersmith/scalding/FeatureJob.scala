@@ -16,9 +16,13 @@ trait FeatureJobConfig[S] {
   def featureContext: FeatureContext
 }
 
-abstract class SimpleFeatureJob extends MaestroJob {
+abstract class SimpleFeatureJob extends MaestroJob with SimpleFeatureJobOps {
   val attemptsExceeded = Execution.from(JobNeverReady)
+}
 
+object SimpleFeatureJob extends SimpleFeatureJobOps
+
+trait SimpleFeatureJobOps {
   def generate[S](cfg:      Config => FeatureJobConfig[S],
                   features: FeatureSetWithTime[S]): Execution[JobStatus] =
     generate[S](cfg, generateOneToMany(features)_)
