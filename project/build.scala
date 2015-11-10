@@ -43,7 +43,7 @@ object build extends Build {
    ++ uniformThriftSettings
    ++ Seq(
           libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
-            exclude("org.scala-lang.modules", "scala-compiler"),
+            exclude("org.scala-lang", "scala-compiler"),
           libraryDependencies ++= depend.testing(),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
           parallelExecution in Test := false
@@ -59,13 +59,9 @@ object build extends Build {
         ++ uniformThriftSettings
         ++ Seq(
         libraryDependencies ++= depend.hadoopClasspath,
-        libraryDependencies ++= depend.omnia("maestro", maestroVersion),
         libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
         libraryDependencies ++= depend.parquet(),
-        libraryDependencies ++= Seq(
-          "org.specs2" %% "specs2-matcher-extra" % versions.specs
-        ) ++  depend.testing()
-        , parallelExecution in Test := false
+        parallelExecution in Test := false
       )
   ).dependsOn(core % "compile->compile;test->test")
 
