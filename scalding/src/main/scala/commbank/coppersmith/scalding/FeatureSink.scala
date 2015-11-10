@@ -117,7 +117,7 @@ object HiveSupport {
       sys.error(s"field '$result' in '$row' contains the specified delimiter '$sep'")
   }
 
-  case class HiveConfig[T <: ThriftStruct with Product : Manifest, P](
+  case class HiveConfig[T <: ThriftStruct : Manifest, P](
     partition: Partition[T, P],
     database:  String,
     path:      Path,
@@ -140,13 +140,15 @@ object HiveSupport {
                  // Use append semantics for now as an interim fix to address #97
                  // Check if this is still relevant once #137 is addressed
       _          <- partitioned.writeExecution(sink).withSubConfig(createUniqueFilenames(_))
-      _          <- Execution.fromHive(createTextTable(conf))
+      _          <- Execution.fromHive(ensureTextTableExists(conf))
       partitions <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
     } yield partitions.toSet.flatten
   }
 
-  def createTextTable[T <: ThriftStruct with Product : Manifest](conf: HiveConfig[T, _]): Hive[Unit] =
+  def ensureTextTableExists[T <: ThriftStruct : Manifest](conf: HiveConfig[T, _]): Hive[Unit] =
     for {
+           // Hive.createTextTable is idempotent - it will no-op if the table already exists,
+           // assuming the schema matches exactly
       _ <- Hive.createTextTable[T](
              database         = conf.database,
              table            = conf.tablename,
