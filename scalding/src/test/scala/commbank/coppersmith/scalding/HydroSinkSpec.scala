@@ -77,8 +77,9 @@ class HydroSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         val sink = HydroSink(hydroConfig)
-        executesSuccessfully(sink.write(valuePipe(vs1, dateTime)))
-        executesSuccessfully(sink.write(valuePipe(vs2, dateTime)))
+        executesSuccessfully(
+          sink.write(valuePipe(vs1, dateTime)).zip(sink.write(valuePipe(vs2, dateTime)))
+        )
         facts(
           path(s"${hydroConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected)
         )
