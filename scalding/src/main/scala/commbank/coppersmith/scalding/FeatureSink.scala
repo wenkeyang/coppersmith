@@ -124,23 +124,57 @@ object HiveSupport {
     dcs:       DelimiterConflictStrategy[T]
   )
 
-  def writeTextTable[T <: ThriftStruct with Product : Manifest, P : TupleSetter : TupleConverter](
+  def writeTextTable[
+    T <: ThriftStruct with Product : Manifest,
+    P : TupleSetter : TupleConverter : PathComponents
+  ](
     conf: HiveConfig[T, P],
     pipe: TypedPipe[T]
-  ): Execution[Set[P]] = {
+  ): Execution[Partitions[P]] = {
 
     import conf.partition
     val partitioned: TypedPipe[(P, String)] = pipe.map(v =>
       partition.extract(v) -> serialise[T](v, conf.delimiter, "\\N")(conf.dcs)
     )
-    val sink = PartitionedTextLine(conf.path.toString, partition.pattern)
-    for {
-                 // Use append semantics for now as an interim fix to address #97
-                 // Check if this is still relevant once #137 is addressed
-      _          <- partitioned.writeExecution(sink).withSubConfig(createUniqueFilenames(_))
-      _          <- Execution.fromHive(ensureTextTableExists(conf))
-      partitions <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
-    } yield partitions.toSet.flatten
+
+    // Use an intermediate temporary directory to write pipe in order to avoid race condition that
+    // occurs when two parallel executions are writing to the same sink in two different Cascading
+    // Flow instances. Race condition occurs when shared _temporary directory is deleted via
+    // cascading.tap.hadoop.util.Hadoop18TapUtil.cleanupJob when Hadoop18TapUtil.isInflow returns
+    // false and before the other execution has copied its results.
+    Execution.fromHdfs(Hdfs.createTempDir()).flatMap(tempDir => {
+      val sink = PartitionedTextLine(tempDir.toString, partition.pattern);
+      {
+        for {
+                         // Use append semantics for now as an interim fix to address #97
+                         // Check if this is still relevant once #137 is addressed
+          _           <- partitioned.writeExecution(sink).withSubConfig(createUniqueFilenames(_))
+          oPartitions <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
+          partitions   = Partitions(conf.partition, oPartitions.toSet.flatten.toList: _*)
+          _           <- moveToTarget(tempDir, conf.path, partitions)
+          _           <- Execution.fromHive(ensureTextTableExists(conf))
+        } yield partitions
+      }.ensure(Execution.fromHdfs(Hdfs.delete(tempDir, recDelete = true)))
+    })
+  }
+
+  private def moveToTarget(
+    sourceDir:  Path,
+    targetDir:  Path,
+    partitions: Partitions[_]
+  ): Execution[Unit] = {
+    val partitionRelPaths = partitions.relativePaths
+    partitionRelPaths.map(partitionRelPath => {
+      val sourcePartition = new Path(sourceDir, partitionRelPath)
+      val targetPartition = new Path(targetDir, partitionRelPath)
+      Execution.fromHdfs(
+        for {
+          parts <- Hdfs.glob(sourcePartition, "*")
+          _     <- Hdfs.mkdirs(targetPartition)
+          _     <- parts.map(part => Hdfs.move(part, new Path(targetPartition, part.getName))).sequence
+        } yield ()
+      )
+    }).sequence.unit
   }
 
   def ensureTextTableExists[T <: ThriftStruct : Manifest](conf: HiveConfig[T, _]): Hive[Unit] =
