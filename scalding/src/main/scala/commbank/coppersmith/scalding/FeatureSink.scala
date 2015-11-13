@@ -14,6 +14,7 @@ import scalaz.syntax.bind.ToBindOps
 import scalaz.syntax.foldable.ToFoldableOps
 import scalaz.syntax.functor.ToFunctorOps
 import scalaz.syntax.std.option.ToOptionIdOps
+import scalaz.syntax.traverse.ToTraverseOps
 
 import au.com.cba.omnia.maestro.api.Maestro._
 import au.com.cba.omnia.maestro.api._
@@ -23,6 +24,7 @@ import commbank.coppersmith.Feature.Value._
 import commbank.coppersmith.Feature._
 
 import commbank.coppersmith.FeatureValue
+import commbank.coppersmith.scalding.ScaldingDataSource.{Partitions, PathComponents}
 import commbank.coppersmith.thrift.Eavt
 
 import HiveSupport.{DelimiterConflictStrategy, FailJob}
@@ -88,20 +90,16 @@ case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
   def write(features: TypedPipe[(FeatureValue[_], Time)]) = {
     val hiveConfig = conf.hiveConfig
     val eavtPipe = features.map { case (fv, t) => HydroSink.toEavt(fv, t) }
+
     for {
-      partitions <- HiveSupport.writeTextTable(conf.hiveConfig, eavtPipe)
+      partitions <- HiveSupport.writeTextTable(hiveConfig, eavtPipe)
       _          <- Execution.fromHdfs {
-                      paths(hiveConfig.path, partitions).toList.traverse_[Hdfs](eachPath =>
+                      partitions.toPaths(hiveConfig.path).toList.traverse_[Hdfs](eachPath =>
                         Hdfs.create(s"${eachPath.toString}/_SUCCESS".toPath).map(_ => ())
                       )
-      }
-    } yield()
+                    }
+    } yield ()
   }
-
-  private def paths(root: Path, partitions: Iterable[(String, String, String)]) =
-    partitions.map(p =>
-      new Path(root, HydroSink.partition.pattern.format(p._1, p._2, p._3))
-    )
 }
 
 // Maestro's HiveTable currently assumes the underlying format to be Parquet. This code generalises

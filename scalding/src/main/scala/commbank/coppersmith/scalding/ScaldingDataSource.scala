@@ -23,9 +23,14 @@ object ScaldingDataSource {
     def unpartitioned = Partitions[Nothing]("")
   }
   case class Partitions[P : PathComponents](pattern: String, values: P*) {
-    def toPaths(basePath: Path): List[Path] = values.toList.toNel.map(_.list.map(value =>
-      new Path(basePath, pattern.format(implicitly[PathComponents[P]].toComponents((value)): _*))
-    )).getOrElse(List(new Path(basePath, "*")))
+    def toPaths(basePath: Path): List[Path] =
+      oPaths.map(_.map(new Path(basePath, _))).getOrElse(List(new Path(basePath, "*")))
+
+    def relativePaths: List[Path] = oPaths.getOrElse(List(new Path(".")))
+
+    def oPaths: Option[List[Path]] = values.toList.toNel.map(_.list.map(value =>
+     new Path(pattern.format(implicitly[PathComponents[P]].toComponents((value)): _*))
+    ))
   }
 
   case class PathComponents[P](toComponents: P => List[String])
@@ -51,7 +56,8 @@ case class HiveTextSource[S <: ThriftStruct : Decode, P](
       decoder.decode(none = "\\N", Splitter.delimited(delimiter).run(raw).toList)
     }.collect {
       case DecodeOk(row)            => row
-      case e @ DecodeError(_, _, _) => throw new Exception("Cannot decode input to HiveTextSource: " + errorMessage(e))
+      case e @ DecodeError(_, _, _) =>
+        throw new Exception("Cannot decode input to HiveTextSource: " + errorMessage(e))
     }
   }
 
