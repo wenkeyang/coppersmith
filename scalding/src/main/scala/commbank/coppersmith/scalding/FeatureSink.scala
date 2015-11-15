@@ -2,7 +2,8 @@ package commbank.coppersmith.scalding
 
 import com.twitter.algebird.Aggregator
 import com.twitter.scalding.typed.{PartitionedTextLine, TypedPipe}
-import com.twitter.scalding.{Execution, TupleConverter, TupleSetter}
+import com.twitter.scalding.{Config, Execution, TupleConverter, TupleSetter}
+
 import com.twitter.scrooge.ThriftStruct
 
 import org.apache.hadoop.fs.Path
@@ -13,14 +14,17 @@ import scalaz.syntax.bind.ToBindOps
 import scalaz.syntax.foldable.ToFoldableOps
 import scalaz.syntax.functor.ToFunctorOps
 import scalaz.syntax.std.option.ToOptionIdOps
+import scalaz.syntax.traverse.ToTraverseOps
 
 import au.com.cba.omnia.maestro.api.Maestro._
 import au.com.cba.omnia.maestro.api._
+import au.com.cba.omnia.maestro.scalding.ConfHelper.createUniqueFilenames
 
 import commbank.coppersmith.Feature.Value._
 import commbank.coppersmith.Feature._
 
 import commbank.coppersmith.FeatureValue
+import commbank.coppersmith.scalding.ScaldingDataSource.{Partitions, PathComponents}
 import commbank.coppersmith.thrift.Eavt
 
 import HiveSupport.{DelimiterConflictStrategy, FailJob}
@@ -86,20 +90,16 @@ case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
   def write(features: TypedPipe[(FeatureValue[_], Time)]) = {
     val hiveConfig = conf.hiveConfig
     val eavtPipe = features.map { case (fv, t) => HydroSink.toEavt(fv, t) }
+
     for {
-      partitions <- HiveSupport.writeTextTable(conf.hiveConfig, eavtPipe)
+      partitions <- HiveSupport.writeTextTable(hiveConfig, eavtPipe)
       _          <- Execution.fromHdfs {
-                      paths(hiveConfig.path, partitions).toList.traverse_[Hdfs](eachPath =>
+                      partitions.toPaths(hiveConfig.path).toList.traverse_[Hdfs](eachPath =>
                         Hdfs.create(s"${eachPath.toString}/_SUCCESS".toPath).map(_ => ())
                       )
-      }
-    } yield()
+                    }
+    } yield ()
   }
-
-  private def paths(root: Path, partitions: Iterable[(String, String, String)]) =
-    partitions.map(p =>
-      new Path(root, HydroSink.partition.pattern.format(p._1, p._2, p._3))
-    )
 }
 
 // Maestro's HiveTable currently assumes the underlying format to be Parquet. This code generalises
@@ -115,7 +115,7 @@ object HiveSupport {
       sys.error(s"field '$result' in '$row' contains the specified delimiter '$sep'")
   }
 
-  case class HiveConfig[T <: ThriftStruct with Product : Manifest, P](
+  case class HiveConfig[T <: ThriftStruct : Manifest, P](
     partition: Partition[T, P],
     database:  String,
     path:      Path,
@@ -124,24 +124,63 @@ object HiveSupport {
     dcs:       DelimiterConflictStrategy[T]
   )
 
-  def writeTextTable[T <: ThriftStruct with Product : Manifest, P : TupleSetter : TupleConverter](
+  def writeTextTable[
+    T <: ThriftStruct with Product : Manifest,
+    P : TupleSetter : TupleConverter : PathComponents
+  ](
     conf: HiveConfig[T, P],
     pipe: TypedPipe[T]
-  ): Execution[Set[P]] = {
+  ): Execution[Partitions[P]] = {
 
     import conf.partition
     val partitioned: TypedPipe[(P, String)] = pipe.map(v =>
       partition.extract(v) -> serialise[T](v, conf.delimiter, "\\N")(conf.dcs)
     )
-    for {
-      _          <- partitioned.writeExecution(PartitionedTextLine(conf.path.toString, partition.pattern))
-      _          <- Execution.fromHive(createTextTable(conf))
-      partitions <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
-    } yield partitions.toSet.flatten
+
+    // Use an intermediate temporary directory to write pipe in order to avoid race condition that
+    // occurs when two parallel executions are writing to the same sink in two different Cascading
+    // Flow instances. Race condition occurs when shared _temporary directory is deleted via
+    // cascading.tap.hadoop.util.Hadoop18TapUtil.cleanupJob when Hadoop18TapUtil.isInflow returns
+    // false and before the other execution has copied its results.
+    Execution.fromHdfs(Hdfs.createTempDir()).flatMap(tempDir => {
+      val sink = PartitionedTextLine(tempDir.toString, partition.pattern);
+      {
+        for {
+                         // Use append semantics for now as an interim fix to address #97
+                         // Check if this is still relevant once #137 is addressed
+          _           <- partitioned.writeExecution(sink).withSubConfig(createUniqueFilenames(_))
+          oPartitions <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
+          partitions   = Partitions(conf.partition, oPartitions.toSet.flatten.toList: _*)
+          _           <- moveToTarget(tempDir, conf.path, partitions)
+          _           <- Execution.fromHive(ensureTextTableExists(conf))
+        } yield partitions
+      }.ensure(Execution.fromHdfs(Hdfs.delete(tempDir, recDelete = true)))
+    })
   }
 
-  def createTextTable[T <: ThriftStruct with Product : Manifest](conf: HiveConfig[T, _]): Hive[Unit] =
+  private def moveToTarget(
+    sourceDir:  Path,
+    targetDir:  Path,
+    partitions: Partitions[_]
+  ): Execution[Unit] = {
+    val partitionRelPaths = partitions.relativePaths
+    partitionRelPaths.map(partitionRelPath => {
+      val sourcePartition = new Path(sourceDir, partitionRelPath)
+      val targetPartition = new Path(targetDir, partitionRelPath)
+      Execution.fromHdfs(
+        for {
+          parts <- Hdfs.glob(sourcePartition, "*")
+          _     <- Hdfs.mkdirs(targetPartition)
+          _     <- parts.map(part => Hdfs.move(part, new Path(targetPartition, part.getName))).sequence
+        } yield ()
+      )
+    }).sequence.unit
+  }
+
+  def ensureTextTableExists[T <: ThriftStruct : Manifest](conf: HiveConfig[T, _]): Hive[Unit] =
     for {
+           // Hive.createTextTable is idempotent - it will no-op if the table already exists,
+           // assuming the schema matches exactly
       _ <- Hive.createTextTable[T](
              database         = conf.database,
              table            = conf.tablename,
