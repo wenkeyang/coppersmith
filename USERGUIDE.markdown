@@ -68,8 +68,7 @@ we'll see how this can be made a lot easier.
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{Feature, FeatureValue, FeatureContext}
-import Feature.Metadata, Feature.Type._, Feature.Value._
+import commbank.coppersmith.core.api._
 import commbank.coppersmith.example.thrift.Customer
 
 object CustomerBirthYear extends Feature[Customer, Integral](
@@ -117,8 +116,7 @@ For details of the other classes available, refer to the **Advanced** section.
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{BasicFeatureSet, Feature}
-import Feature.Type.Continuous, Feature.Value.Integral
+import commbank.coppersmith.core.api._    
 import commbank.coppersmith.example.thrift.Customer
 
 object CustomerFeatures extends BasicFeatureSet[Customer] {
@@ -185,16 +183,15 @@ import com.twitter.scalding.Config
 import au.com.cba.omnia.maestro.api.{MaestroConfig, HivePartition, Maestro}
 import Maestro.{DerivedDecode, Fields}
 
-import commbank.coppersmith.{From, ExplicitGenerationTime}
-import commbank.coppersmith.FeatureBuilderSource.fromFS
-import commbank.coppersmith.SourceBinder.from
+import org.joda.time.DateTime
+
+import commbank.coppersmith.core.api._
+import commbank.coppersmith.scalding.api._
 
 import commbank.coppersmith.example.thrift.Customer
 
 // imports from the coppersmith-scalding package
-import commbank.coppersmith.scalding.{FeatureJobConfig, SimpleFeatureJob}
-import commbank.coppersmith.scalding.{ScaldingDataSource, HiveTextSource, HydroSink}
-import commbank.coppersmith.scalding.framework
+
 
 case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Customer] {
   type Partition    = (String, String, String) // (Year, Month, Day)
@@ -230,7 +227,7 @@ import org.joda.time.DateTime
 import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}
 import Maestro.{DerivedDecode, Fields}
 
-import commbank.coppersmith.scalding.{ScaldingDataSource, HiveTextSource}
+import commbank.coppersmith.scalding.api._
 
 import commbank.coppersmith.example.thrift.Customer
 
@@ -292,9 +289,8 @@ returning a `Feature` object.
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{FeatureSet, Feature}
-import Feature.Type.{Nominal, Continuous}
-import commbank.coppersmith.FeatureBuilderSource.fromFS
+import commbank.coppersmith.core.api._
+
 import commbank.coppersmith.example.thrift.Customer
 
 object CustomerFeaturesFluent extends FeatureSet[Customer] {
@@ -367,7 +363,7 @@ easily create a feature set containing all the input fields
 as separate features.
 
 ```scala
-import commbank.coppersmith.{PivotMacro, PivotFeatureSet}
+import commbank.coppersmith.core.api._
 
 import commbank.coppersmith.example.thrift.Customer
 
@@ -413,9 +409,7 @@ as well as the value for "T" in the EAVT output for hydro.
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{AggregationFeatureSet, Feature}
-import Feature.Type.Continuous
-import commbank.coppersmith.FeatureBuilderSource.fromFS
+import commbank.coppersmith.core.api._
 import commbank.coppersmith.example.thrift.Account
 
 import Implicits.RichAccount
@@ -468,9 +462,7 @@ to improve readability when there are multiple conditions).
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{FeatureSet, Feature}
-import Feature.Type.Nominal
-import commbank.coppersmith.FeatureBuilderSource.fromFS
+import commbank.coppersmith.core.api._
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
@@ -591,9 +583,10 @@ for customers born before 1970:
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{AggregationFeatureSet, Feature, Join}
-import Feature.Type.Continuous
+import commbank.coppersmith.core.api._
 import commbank.coppersmith.example.thrift.Account
+
+import Implicits.RichCustomer
 
 object JoinFeatures extends AggregationFeatureSet[(Customer, Account)] {
   val namespace                      = "userguide.examples"
@@ -624,8 +617,7 @@ which have additional account holders:
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{AggregationFeatureSet, Feature, Join}
-import Feature.Type.Continuous
+import commbank.coppersmith.core.api._
 import commbank.coppersmith.example.thrift.Account
 
 object JoinFeatures2 extends AggregationFeatureSet[(Customer, Account, Option[Customer])] {
@@ -677,9 +669,7 @@ as it has already been extracted as part of matching against
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{FeatureSet, Feature, From}
-import Feature.Type.Nominal
-import commbank.coppersmith.FeatureBuilderSource.fromFS
+import commbank.coppersmith.core.api._
 import commbank.coppersmith.example.thrift.Customer
 
 object SourceViewFeatures extends FeatureSet[Customer] {
@@ -710,9 +700,7 @@ import com.twitter.algebird.Aggregator
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{AggregationFeatureSet, Feature, From}
-import Feature.Type.Continuous
-import commbank.coppersmith.FeatureBuilderSource.fromFS
+import commbank.coppersmith.core.api._
 import commbank.coppersmith.example.thrift.Customer
 import Implicits.RichCustomer
 
@@ -745,11 +733,10 @@ This can be achieved by incorporating a context with the `FeatureSet`'s source.
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{FeatureSet, From}
-import commbank.coppersmith.Feature.Type.Ordinal
-import commbank.coppersmith.FeatureBuilderSource.fromCFS
+import commbank.coppersmith.core.api._
 import commbank.coppersmith.example.thrift.Customer
 
+import Implicits.RichCustomer
 // The context, a DateTime in this case, forms part of the FeatureSource
 object ContextFeatures extends FeatureSet[(Customer, DateTime)] {
   val namespace = "userguide.examples"
@@ -776,9 +763,8 @@ import org.joda.time.{DateTime, format}, format.DateTimeFormat
 
 import com.twitter.scalding.Config
 
-import commbank.coppersmith.SourceBinder.from
-import commbank.coppersmith.scalding.FeatureJobConfig
-import commbank.coppersmith.scalding.framework
+import commbank.coppersmith.core.api._
+import commbank.coppersmith.scalding.api._
 
 import commbank.coppersmith.example.thrift.Customer
 
