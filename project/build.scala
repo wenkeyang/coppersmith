@@ -77,12 +77,18 @@ object build extends Build {
          libraryDependencies ++= depend.scalding(),
          libraryDependencies ++= depend.hadoopClasspath,
          sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
-           // Poor man's "Literate Scala". (Consider alternatives such as https://github.com/non/literati or
-           // https://github.com/scala-lms/tutorials/blob/master/src/test/scala/lms/tutorial/start.scala)
-           // This is part of the "examples" project because it depends on a thrift spec there.
-           val outfile = outdir / "USERGUIDE.scala"
-           file("USERGUIDE.markdown") #> "sed -n /```scala/,/```/p" #| "grep -v ```" #> outfile ! s.log
-           Seq(outfile)
+           val infile  = "USERGUIDE.markdown"
+           val source = io.Source.fromFile(infile)
+           val fileContent = try source.mkString finally source.close()
+           val sourceCode = """```scala(?s)([^`]*?)```""".r
+           val codeFragments = (sourceCode findAllIn fileContent).matchData.map {_.group(1)}
+           codeFragments.zipWithIndex.map { x => 
+              val frag: String = x._1 
+              val i: Int = x._2
+              val newFile = outdir / s"userGuideFragment$i.scala"
+              IO.write(newFile, frag)
+              newFile
+           }.toSeq
          }
        )
   ).dependsOn(core, scalding, test)
