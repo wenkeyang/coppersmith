@@ -8,7 +8,8 @@ import scala.reflect.runtime.universe.TypeTag
 package object api {
 
   implicit def fromFS[S](fs: FeatureSource[S, _]) = commbank.coppersmith.FeatureBuilderSource.fromFS[S](fs: FeatureSource[S, _])
-  implicit def fromCFS[S, C : TypeTag](fs: ContextFeatureSource[S, C, _]) = commbank.coppersmith.FeatureBuilderSource.fromCFS[S, C](fs: ContextFeatureSource[S, C, _])
+
+  implicit def fromCFS[S, C: TypeTag](fs: ContextFeatureSource[S, C, _]) = commbank.coppersmith.FeatureBuilderSource.fromCFS[S, C](fs: ContextFeatureSource[S, C, _])
 
   def from[S, P[_] : Lift](dataSource: DataSource[S, P]) = commbank.coppersmith.SourceBinder.from[S, P](dataSource: DataSource[S, P])
 
@@ -17,7 +18,10 @@ package object api {
   type AggregationFeature[S, SV, U, +V <: Value] = commbank.coppersmith.AggregationFeature[S, SV, U, V]
   type AggregationFeatureSet[S] = commbank.coppersmith.AggregationFeatureSet[S]
   type Integral = commbank.coppersmith.Feature.Value.Integral
+  type Str = commbank.coppersmith.Feature.Value.Str
+  type Decimal = commbank.coppersmith.Feature.Value.Decimal
   type BasicFeatureSet[S] = commbank.coppersmith.BasicFeatureSet[S]
+  type QueryFeatureSet[S, V <: Value] = commbank.coppersmith.QueryFeatureSet[S, V]
   type FeatureContext = commbank.coppersmith.FeatureContext
   type PivotFeatureSet[S] = commbank.coppersmith.PivotFeatureSet[S]
   type ContextFeatureSource[S, C, FS <: FeatureSource[S, FS]] = commbank.coppersmith.ContextFeatureSource[S, C, FS]

@@ -496,9 +496,7 @@ repetition in the feature definitions.
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{FeatureSet, Feature}
-import Feature.Type.Nominal
-import commbank.coppersmith.FeatureBuilderSource.fromFS
+import commbank.coppersmith.core.api._
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
@@ -532,9 +530,7 @@ consider using the `QueryFeatureSet`:
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.{QueryFeatureSet, Feature}
-import Feature.Type.Nominal, Feature.Value.Str
-import commbank.coppersmith.FeatureBuilderSource.fromFS
+import commbank.coppersmith.core.api._
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
@@ -584,6 +580,7 @@ for customers born before 1970:
 import org.joda.time.DateTime
 
 import commbank.coppersmith.core.api._
+import commbank.coppersmith.example.thrift.Customer
 import commbank.coppersmith.example.thrift.Account
 
 import Implicits.RichCustomer
@@ -618,6 +615,7 @@ which have additional account holders:
 import org.joda.time.DateTime
 
 import commbank.coppersmith.core.api._
+import commbank.coppersmith.example.thrift.Customer
 import commbank.coppersmith.example.thrift.Account
 
 object JoinFeatures2 extends AggregationFeatureSet[(Customer, Account, Option[Customer])] {
