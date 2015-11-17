@@ -82,9 +82,7 @@ object build extends Build {
            val fileContent = try source.mkString finally source.close()
            val sourceCode = """```scala(?s)([^`]*?)```""".r
            val codeFragments = (sourceCode findAllIn fileContent).matchData.map {_.group(1)}
-           codeFragments.zipWithIndex.map { x => 
-              val frag: String = x._1 
-              val i: Int = x._2
+           codeFragments.zipWithIndex.map { case (frag, i) =>
               val newFile = outdir / s"userGuideFragment$i.scala"
               IO.write(newFile, frag)
               newFile

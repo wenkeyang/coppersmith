@@ -578,8 +578,7 @@ for customers born before 1970:
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.example.thrift.Customer
-import commbank.coppersmith.example.thrift.Account
+import commbank.coppersmith.example.thrift.{Customer, Account}
 
 import Implicits.RichCustomer
 
