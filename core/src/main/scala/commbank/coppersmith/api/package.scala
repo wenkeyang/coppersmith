@@ -1,14 +1,11 @@
 package commbank.coppersmith
 
 import commbank.coppersmith.Feature.Value
-import commbank.coppersmith.{ContextFeatureSource, FeatureSource, DataSource, Lift}
-
 import scala.reflect.runtime.universe.TypeTag
 
 package object api {
 
   implicit def fromFS[S](fs: FeatureSource[S, _]) = commbank.coppersmith.FeatureBuilderSource.fromFS[S](fs: FeatureSource[S, _])
-
   implicit def fromCFS[S, C: TypeTag](fs: ContextFeatureSource[S, C, _]) = commbank.coppersmith.FeatureBuilderSource.fromCFS[S, C](fs: ContextFeatureSource[S, C, _])
 
   def from[S, P[_] : Lift](dataSource: DataSource[S, P]) = commbank.coppersmith.SourceBinder.from[S, P](dataSource: DataSource[S, P])
