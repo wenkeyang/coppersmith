@@ -1,4 +1,4 @@
-package commbank.coppersmith.core
+package commbank.coppersmith
 
 import commbank.coppersmith.Feature.Value
 import commbank.coppersmith.{ContextFeatureSource, FeatureSource, DataSource, Lift}

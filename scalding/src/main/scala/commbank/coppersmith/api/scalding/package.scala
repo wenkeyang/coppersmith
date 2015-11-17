@@ -1,10 +1,10 @@
-package commbank.coppersmith.scalding
+package commbank.coppersmith.api
 
 import com.twitter.scalding._
-import commbank.coppersmith.{scalding, Lift}
+import commbank.coppersmith.Lift
 
 
-package object api {
+package object scalding {
 
   type FeatureJobConfig[S] = commbank.coppersmith.scalding.FeatureJobConfig[S]
   type SimpleFeatureJob = commbank.coppersmith.scalding.SimpleFeatureJob
@@ -13,6 +13,6 @@ package object api {
   val HiveTextSource = commbank.coppersmith.scalding.HiveTextSource
   val HydroSink = commbank.coppersmith.scalding.HydroSink
 
-  implicit val framework: Lift[TypedPipe] = scalding.lift.scalding
+  implicit val framework: Lift[TypedPipe] = commbank.coppersmith.scalding.lift.scalding
 
 }

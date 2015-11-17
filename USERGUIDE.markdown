@@ -68,7 +68,7 @@ we'll see how this can be made a lot easier.
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._
+import commbank.coppersmith.api._
 import commbank.coppersmith.example.thrift.Customer
 
 object CustomerBirthYear extends Feature[Customer, Integral](
@@ -116,7 +116,7 @@ For details of the other classes available, refer to the **Advanced** section.
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._    
+import commbank.coppersmith.api._    
 import commbank.coppersmith.example.thrift.Customer
 
 object CustomerFeatures extends BasicFeatureSet[Customer] {
@@ -185,8 +185,7 @@ import Maestro.{DerivedDecode, Fields}
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._
-import commbank.coppersmith.scalding.api._
+import commbank.coppersmith.api._, scalding._
 
 import commbank.coppersmith.example.thrift.Customer
 
@@ -226,8 +225,7 @@ import org.joda.time.DateTime
 
 import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}
 import Maestro.{DerivedDecode, Fields}
-
-import commbank.coppersmith.scalding.api._
+import commbank.coppersmith.api.scalding._
 
 import commbank.coppersmith.example.thrift.Customer
 
@@ -289,7 +287,7 @@ returning a `Feature` object.
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._
+import commbank.coppersmith.api._
 
 import commbank.coppersmith.example.thrift.Customer
 
@@ -363,7 +361,7 @@ easily create a feature set containing all the input fields
 as separate features.
 
 ```scala
-import commbank.coppersmith.core.api._
+import commbank.coppersmith.api._
 
 import commbank.coppersmith.example.thrift.Customer
 
@@ -409,7 +407,7 @@ as well as the value for "T" in the EAVT output for hydro.
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._
+import commbank.coppersmith.api._
 import commbank.coppersmith.example.thrift.Account
 
 import Implicits.RichAccount
@@ -462,7 +460,7 @@ to improve readability when there are multiple conditions).
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._
+import commbank.coppersmith.api._
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
@@ -496,7 +494,7 @@ repetition in the feature definitions.
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._
+import commbank.coppersmith.api._
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
@@ -530,7 +528,7 @@ consider using the `QueryFeatureSet`:
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._
+import commbank.coppersmith.api._
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
@@ -579,7 +577,7 @@ for customers born before 1970:
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._
+import commbank.coppersmith.api._
 import commbank.coppersmith.example.thrift.Customer
 import commbank.coppersmith.example.thrift.Account
 
@@ -614,7 +612,7 @@ which have additional account holders:
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._
+import commbank.coppersmith.api._
 import commbank.coppersmith.example.thrift.Customer
 import commbank.coppersmith.example.thrift.Account
 
@@ -667,7 +665,7 @@ as it has already been extracted as part of matching against
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._
+import commbank.coppersmith.api._
 import commbank.coppersmith.example.thrift.Customer
 
 object SourceViewFeatures extends FeatureSet[Customer] {
@@ -698,7 +696,7 @@ import com.twitter.algebird.Aggregator
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._
+import commbank.coppersmith.api._
 import commbank.coppersmith.example.thrift.Customer
 import Implicits.RichCustomer
 
@@ -731,7 +729,7 @@ This can be achieved by incorporating a context with the `FeatureSet`'s source.
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.core.api._
+import commbank.coppersmith.api._
 import commbank.coppersmith.example.thrift.Customer
 
 import Implicits.RichCustomer
@@ -761,8 +759,7 @@ import org.joda.time.{DateTime, format}, format.DateTimeFormat
 
 import com.twitter.scalding.Config
 
-import commbank.coppersmith.core.api._
-import commbank.coppersmith.scalding.api._
+import commbank.coppersmith.api._, scalding._
 
 import commbank.coppersmith.example.thrift.Customer
 
