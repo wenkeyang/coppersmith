@@ -189,9 +189,6 @@ import commbank.coppersmith.api._, scalding._
 
 import commbank.coppersmith.example.thrift.Customer
 
-// imports from the coppersmith-scalding package
-
-
 case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Customer] {
   type Partition    = (String, String, String) // (Year, Month, Day)
 

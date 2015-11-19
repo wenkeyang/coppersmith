@@ -80,7 +80,7 @@ object build extends Build {
            val infile  = "USERGUIDE.markdown"
            val source = io.Source.fromFile(infile)
            val fileContent = try source.mkString finally source.close()
-           val sourceCode = """```scala(?s)([^`]*?)```""".r
+           val sourceCode = """```scala(?s)(.*?)```""".r
            val codeFragments = (sourceCode findAllIn fileContent).matchData.map {_.group(1)}
            codeFragments.zipWithIndex.map { case (frag, i) =>
               val newFile = outdir / s"userGuideFragment$i.scala"
