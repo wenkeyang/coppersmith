@@ -153,7 +153,14 @@ object ScaldingJobSpec {
         case Some(age) => age
       }.select(Aggregator.fromMonoid[Int]).asFeature(Continuous, "collect", "test")
 
-    def aggregationFeatures = List(sizeF, minF, collectF)
+    // Make sure reflection code in SimpleFeatureJobOps.Unjoiner works with empty source.
+    // Note that it will never be in the expectedFeatureValues.
+    val knownEmptyF: AggregationFeature[Account, Int, _, Value] =
+      builder.map(_.age).collect {
+        case Some(age) if false => age
+      }.select(Aggregator.fromMonoid[Int]).asFeature(Continuous, "knownEmpty", "test")
+
+    def aggregationFeatures = List(sizeF, minF, knownEmptyF, collectF)
 
     def expectedFeatureValues(custAccts: CustomerAccounts, time: DateTime) = {
       custAccts.cas.flatMap(cag => {
