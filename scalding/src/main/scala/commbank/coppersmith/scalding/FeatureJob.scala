@@ -59,7 +59,7 @@ trait SimpleFeatureJobOps {
     val grouped: Grouped[EntityId, S] = input.groupBy(s => features.entity(s))
     val (joinedAggregator, unjoiner) = join(features.aggregationFeatures.toList.map(serialisable(_)))
     grouped.aggregate(joinedAggregator).toTypedPipe.flatMap { case (e, v) =>
-      unjoiner.values(e, v).map((_, ctx.generationTime.getMillis))
+      unjoiner.apply(e, v).map((_, ctx.generationTime.getMillis))
     }
   }
 
@@ -89,12 +89,14 @@ trait SimpleFeatureJobOps {
     new MonoidAggregator[S, Option[B], Option[Value]] {
       def prepare(s: S) = if (view.isDefinedAt(s)) lifted.prepare(view(s)) else None
       def monoid = lifted.monoid
-      def present(b: Option[B]) = lifted.present(b).map(v => v: Value)
+      def present(b: Option[B]) = lifted.present(b)
     }
   }
 
   // Note: Could probably avoid reflection in join() and pattern matching on types in
-  // NextUnjoiner.values() by changing AggregationFeatureSet.aggregationFeatures to be an HList
+  // unjoiner() by changing AggregationFeatureSet.aggregationFeatures to be an HList
+
+  type Unjoiner = (EntityId, Any) => List[FeatureValue[Value]]
 
   /*
    * Join (compose) aggregators of the form:
@@ -112,10 +114,10 @@ trait SimpleFeatureJobOps {
     features match {
       case a :: as => {
         val (agg, remaining) = join(as)
-        (a.aggregator.join(agg).asInstanceOf[Aggregator[S, _, _]], NextUnjoiner(a.name, remaining))
+        (a.aggregator.join(agg).asInstanceOf[Aggregator[S, _, _]], unjoiner(a.name, remaining))
       }
-      // Dummy aggregator for base case - value will always be ignored by LastUnjoiner
-      case Nil => (Aggregator.const[Option[Value]](None), LastUnjoiner)
+      // Dummy aggregator for base case - value will always be ignored by last unjoiner
+      case Nil => (Aggregator.const[Option[Value]](None), (_, _) => List())
     }
   }
 
@@ -133,21 +135,10 @@ trait SimpleFeatureJobOps {
    * is filtered completely out as a result of lifting the original aggregator and source
    * view PartialFunction into the Option MonoidAggregator.
    */
-  sealed trait Unjoiner {
-    def values(e: EntityId, a: Any): List[FeatureValue[Value]]
-  }
-
-  case class NextUnjoiner(name: Name, remaining: Unjoiner) extends Unjoiner {
-    def values(e: EntityId, a: Any): List[FeatureValue[Value]] = a match {
-      case (Some(v: Value), vs) => FeatureValue(e, name, v) :: remaining.values(e, vs)
-      case (None, vs) => remaining.values(e, vs)
-      // Will only occur if implemenation of values falls out of sync with join (from above).
-      case _ => sys.error("Assumption failed: Wrong shape " + a)
-    }
-  }
-
-  // Marker for recursion base case
-  case object LastUnjoiner extends Unjoiner {
-    def values(e: EntityId, a: Any): List[FeatureValue[Value]] = List()
+  def unjoiner(name: Name, remaining: Unjoiner)(e: EntityId, a: Any) = a match {
+    case (Some(v: Value), vs) => FeatureValue(e, name, v) :: remaining.apply(e, vs)
+    case (None, vs) => remaining(e, vs)
+    // Will only occur if implemenation of values falls out of sync with join (from above).
+    case _ => sys.error("Assumption failed: Wrong shape " + a)
   }
 }
