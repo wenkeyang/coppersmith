@@ -12,6 +12,7 @@ package object api {
 
   type Feature[S, +V <: Value] = commbank.coppersmith.Feature[S, V]
   type FeatureSet[S] = commbank.coppersmith.FeatureSet[S]
+  type MetadataSet[S] = commbank.coppersmith.MetadataSet[S]
   type AggregationFeature[S, SV, U, +V <: Value] = commbank.coppersmith.AggregationFeature[S, SV, U, V]
   type AggregationFeatureSet[S] = commbank.coppersmith.AggregationFeatureSet[S]
   type Integral = commbank.coppersmith.Feature.Value.Integral
@@ -23,6 +24,7 @@ package object api {
   type PivotFeatureSet[S] = commbank.coppersmith.PivotFeatureSet[S]
   type ContextFeatureSource[S, C, FS <: FeatureSource[S, FS]] = commbank.coppersmith.ContextFeatureSource[S, C, FS]
 
+  val FeatureStub = commbank.coppersmith.FeatureStub
   val ExplicitGenerationTime = commbank.coppersmith.ExplicitGenerationTime
   val From = commbank.coppersmith.From
   val Join = commbank.coppersmith.Join
@@ -31,6 +33,7 @@ package object api {
   val Nominal = commbank.coppersmith.Feature.Type.Nominal
   val Ordinal = commbank.coppersmith.Feature.Type.Ordinal
   val Metadata = commbank.coppersmith.Feature.Metadata
+  val MetadataOutput = commbank.coppersmith.MetadataOutput
   val FeatureValue = commbank.coppersmith.FeatureValue
   val PivotMacro = commbank.coppersmith.PivotMacro
 }

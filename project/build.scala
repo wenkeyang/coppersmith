@@ -31,7 +31,7 @@ object build extends Build {
    ++ Seq(
         publishArtifact := false
       )
-  , aggregate = Seq(core, test, examples, scalding)
+  , aggregate = Seq(core, test, examples, scalding, tools)
   )
 
   lazy val core = Project(
@@ -102,5 +102,21 @@ object build extends Build {
         libraryDependencies ++= depend.testing()
       )
 
+  ).dependsOn(core)
+
+  lazy val tools = Project(
+    id = "tools"
+    , base = file("tools")
+    , settings = standardSettings
+      ++ uniform.project("coppersmith-tools", "commbank.coppersmith.tools")
+      ++ Seq(
+      sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
+        val infile  = "tools/test/resources/simple_test.psv"
+        val outfile = outdir / s"CustomerFeatures.scala"
+        outfile.getParentFile.mkdirs
+        val output = s"tools/CoppersmithBootstrap.sh --source-type Customer --file $infile" #> outfile !!;
+        Seq(outfile)
+      }
+    )
   ).dependsOn(core)
 }

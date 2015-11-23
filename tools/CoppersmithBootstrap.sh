@@ -7,7 +7,7 @@ import scala.io.Source
 import java.io.{File, FileInputStream, PrintStream}
 
 /*
- * Tool for generating blank feature scala code from an existing metadata file. Supports
+ * Tool for generating feature stub scala code from an existing metadata file. Supports
  * both PSV and CSV (based on file name extension).
  *
  * Supports the following formats
@@ -148,17 +148,14 @@ object CoppersmithBootstrap {
    }
 
   def toScala(sourceType: String)(metadata: Iterable[Metadata]) = s"""
-import commbank.coppersmith._
-import Feature._
-import Type._
+import commbank.coppersmith.api._
 
 trait $sourceType
 
 object ${sourceType}FeatureSet extends MetadataSet[$sourceType] {
 ${metadata.map{ case (ns, name, vType, fType, desc) =>
-s"""  val ${camelCase(name)} = Metadata[$sourceType, Value.$vType](
-      "$ns", "$name", "$desc", $fType
-  )"""
+s"""  val ${camelCase(name)} = FeatureStub[$sourceType, $vType].asFeatureMetadata("$ns", "$name", "$desc", $fType)
+"""
 }.mkString("\n\n")}
 
   def metadata = List(
