@@ -114,7 +114,7 @@ object build extends Build {
         val infile  = "tools/test/resources/simple_test.psv"
         val outfile = outdir / s"CustomerFeatures.scala"
         outfile.getParentFile.mkdirs
-        val output = s"tools/CoppersmithBootstrap.sh --source-type Customer --file $infile" #> outfile !!;
+        val output = s"tools/CoppersmithBootstrap.sh --source-type Customer --file $infile" #> outfile !! s.log
         Seq(outfile)
       }
     )
