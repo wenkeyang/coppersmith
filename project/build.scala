@@ -108,15 +108,6 @@ object build extends Build {
 
   updateOptions := updateOptions.value.withCachedResolution(true)
   val sbtCPTask = taskKey[Unit]("tools/test:sbtCPTask")
-  //
-  //  sbtCPTask := {
-  //    val files: Seq[File] = (fullClasspath in Compile).value.files
-  //    val sbtClasspath : String = files.map(x => x.getAbsolutePath).mkString(":")
-  //    println("Set SBT classpath to 'sbt-classpath' environment variable")
-  //    System.setProperty("sbt-classpath", sbtClasspath)
-  //  }
-  //
-  //
 
   lazy val tools = Project(
     id = "tools"
@@ -135,5 +126,14 @@ object build extends Build {
         System.setProperty("sbt-classpath", sbtClasspath)
       })
         ++ Seq((testExecution in test in Test) <<= (testExecution in test in Test) dependsOn (sbtCPTask))
+        ++ Seq(resourceGenerators in Compile <+= (resourceManaged in Compile, streams) map {
+        (outdir: File, s) =>
+          val infile = "tools/src/main/bash/CoppersmithBootstrap.sh"
+          val infile2 = "tools/src/main/scala/CoppersmithBootstrap.scala"
+          val outfile = outdir / "CoppersmithBootstrap.sh"
+          outfile.getParentFile.mkdirs
+          s"cat ${infile} ${infile2}" #> outfile !! s.log
+          Seq(outfile)
+      })
   ).dependsOn(core)
 }
