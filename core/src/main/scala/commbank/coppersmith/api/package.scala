@@ -33,7 +33,6 @@ package object api {
   val Nominal = commbank.coppersmith.Feature.Type.Nominal
   val Ordinal = commbank.coppersmith.Feature.Type.Ordinal
   val Metadata = commbank.coppersmith.Feature.Metadata
-  val MetadataOutput = commbank.coppersmith.MetadataOutput
   val FeatureValue = commbank.coppersmith.FeatureValue
   val PivotMacro = commbank.coppersmith.PivotMacro
 }
