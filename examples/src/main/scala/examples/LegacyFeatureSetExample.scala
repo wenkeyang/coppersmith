@@ -1,6 +1,7 @@
 package examples
 
 import commbank.coppersmith.api._
+import commbank.coppersmith.MetadataOutput
 
 import commbank.coppersmith.example.thrift.Customer
 
