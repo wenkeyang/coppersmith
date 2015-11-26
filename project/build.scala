@@ -9,7 +9,7 @@ import au.com.cba.omnia.uniform.thrift.UniformThriftPlugin._
 import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
-  val maestroVersion = "2.13.1-20150728061651-8d9c378"
+  val maestroVersion = "2.16.0-20151123035255-1a0be7f"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
@@ -44,7 +44,7 @@ object build extends Build {
    ++ Seq(
           libraryDependencies += "io.github.lukehutch" % "fast-classpath-scanner" % "1.9.7",
           libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
-            exclude("org.scala-lang.modules", "scala-compiler"),
+            exclude("org.scala-lang", "scala-compiler"),
           libraryDependencies ++= depend.testing(),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
           parallelExecution in Test := false
@@ -61,13 +61,9 @@ object build extends Build {
         ++ uniformThriftSettings
         ++ Seq(
         libraryDependencies ++= depend.hadoopClasspath,
-        libraryDependencies ++= depend.omnia("maestro", maestroVersion),
         libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
         libraryDependencies ++= depend.parquet(),
-        libraryDependencies ++= Seq(
-          "org.specs2" %% "specs2-matcher-extra" % versions.specs
-        ) ++  depend.testing()
-        , parallelExecution in Test := false
+        parallelExecution in Test := false
       )
   ).dependsOn(core % "compile->compile;test->test")
 
@@ -83,12 +79,16 @@ object build extends Build {
          libraryDependencies ++= depend.scalding(),
          libraryDependencies ++= depend.hadoopClasspath,
          sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
-           // Poor man's "Literate Scala". (Consider alternatives such as https://github.com/non/literati or
-           // https://github.com/scala-lms/tutorials/blob/master/src/test/scala/lms/tutorial/start.scala)
-           // This is part of the "examples" project because it depends on a thrift spec there.
-           val outfile = outdir / "USERGUIDE.scala"
-           file("USERGUIDE.markdown") #> "sed -n /```scala/,/```/p" #| "grep -v ```" #> outfile ! s.log
-           Seq(outfile)
+           val infile  = "USERGUIDE.markdown"
+           val source = io.Source.fromFile(infile)
+           val fileContent = try source.mkString finally source.close()
+           val sourceCode = """```scala(?s)(.*?)```""".r
+           val codeFragments = (sourceCode findAllIn fileContent).matchData.map {_.group(1)}
+           codeFragments.zipWithIndex.map { case (frag, i) =>
+              val newFile = outdir / s"userGuideFragment$i.scala"
+              IO.write(newFile, frag)
+              newFile
+           }.toSeq
          }
        )
   ).dependsOn(core, scalding, test)

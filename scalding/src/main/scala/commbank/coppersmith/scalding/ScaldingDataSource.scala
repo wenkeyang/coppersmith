@@ -4,6 +4,8 @@ import com.twitter.scalding.TDsl.sourceToTypedPipe
 import com.twitter.scalding.typed.TypedPipe
 import com.twitter.scalding.{MultipleTextLineFiles, TextLineScheme, TupleConverter, TupleSetter}
 
+import scalaz.syntax.std.list.ToListOpsFromList
+
 import org.apache.hadoop.fs.Path
 
 import au.com.cba.omnia.ebenezer.scrooge.ParquetScroogeSource
@@ -17,15 +19,23 @@ object ScaldingDataSource {
   object Partitions {
     def apply[P : PathComponents](underlying: Partition[_, P], values: P*): Partitions[P] =
       Partitions(underlying.pattern, values: _*)
+
+    def unpartitioned = Partitions[Nothing]("")
   }
   case class Partitions[P : PathComponents](pattern: String, values: P*) {
-    def toPaths(basePath: Path): List[Path] = values.map(value =>
-      new Path(basePath, pattern.format(implicitly[PathComponents[P]].toComponents((value)): _*))
-    ).toList
+    def toPaths(basePath: Path): List[Path] =
+      oPaths.map(_.map(new Path(basePath, _))).getOrElse(List(new Path(basePath, "*")))
+
+    def relativePaths: List[Path] = oPaths.getOrElse(List(new Path(".")))
+
+    def oPaths: Option[List[Path]] = values.toList.toNel.map(_.list.map(value =>
+     new Path(pattern.format(implicitly[PathComponents[P]].toComponents((value)): _*))
+    ))
   }
 
   case class PathComponents[P](toComponents: P => List[String])
   import shapeless.syntax.std.tuple.productTupleOps
+  implicit val EmptyToPath        = PathComponents[Nothing](List())
   implicit val StringToPath       = PathComponents[String](List(_))
   implicit val StringTuple2ToPath = PathComponents[(String, String)](_.toList)
   implicit val StringTuple3ToPath = PathComponents[(String, String, String)](_.toList)
@@ -46,7 +56,8 @@ case class HiveTextSource[S <: ThriftStruct : Decode, P](
       decoder.decode(none = "\\N", Splitter.delimited(delimiter).run(raw).toList)
     }.collect {
       case DecodeOk(row)            => row
-      case e @ DecodeError(_, _, _) => throw new Exception("Cannot decode input to HiveTextSource: " + errorMessage(e))
+      case e @ DecodeError(_, _, _) =>
+        throw new Exception("Cannot decode input to HiveTextSource: " + errorMessage(e))
     }
   }
 
