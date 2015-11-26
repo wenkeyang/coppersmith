@@ -13,40 +13,40 @@ object build extends Build {
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
-    uniformDependencySettings ++
-    strictDependencySettings ++
-    Seq(
-      scalacOptions += "-Xfatal-warnings",
-      scalacOptions in (Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
-      scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
-      scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value
-    )
+      uniformDependencySettings ++
+      strictDependencySettings ++
+      Seq(
+        scalacOptions += "-Xfatal-warnings",
+        scalacOptions in(Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
+        scalacOptions in(Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
+        scalacOptions in(Test, console) := (scalacOptions in(Compile, console)).value
+      )
 
   lazy val all = Project(
     id = "all"
-  , base = file(".")
-  , settings =
+    , base = file(".")
+    , settings =
       standardSettings
-   ++ uniform.project("coppersmith-all", "commbank.coppersmith.all")
-   ++ Seq(
+        ++ uniform.project("coppersmith-all", "commbank.coppersmith.all")
+        ++ Seq(
         publishArtifact := false
       )
-  , aggregate = Seq(core, test, examples, scalding, tools)
+    , aggregate = Seq(core, testProject, examples, scalding, tools)
   )
 
   lazy val core = Project(
     id = "core"
-  , base = file("core")
-  , settings =
+    , base = file("core")
+    , settings =
       standardSettings
-   ++ uniform.project("coppersmith-core", "commbank.coppersmith")
-   ++ uniformThriftSettings
-   ++ Seq(
-          libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
-            exclude("org.scala-lang", "scala-compiler"),
-          libraryDependencies ++= depend.testing(),
-          libraryDependencies ++= depend.omnia("maestro", maestroVersion),
-          parallelExecution in Test := false
+        ++ uniform.project("coppersmith-core", "commbank.coppersmith")
+        ++ uniformThriftSettings
+        ++ Seq(
+        libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
+          exclude("org.scala-lang", "scala-compiler"),
+        libraryDependencies ++= depend.testing(),
+        libraryDependencies ++= depend.omnia("maestro", maestroVersion),
+        parallelExecution in Test := false
       )
   )
 
@@ -67,56 +67,73 @@ object build extends Build {
 
   lazy val examples = Project(
     id = "examples"
-  , base = file("examples")
-  , settings =
-       standardSettings
-    ++ uniform.project("coppersmith-examples", "commbank.coppersmith.examples")
-    ++ uniformThriftSettings
-    ++ uniformAssemblySettings
-    ++ Seq(
-         libraryDependencies ++= depend.scalding(),
-         libraryDependencies ++= depend.hadoopClasspath,
-         sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
-           val infile  = "USERGUIDE.markdown"
-           val source = io.Source.fromFile(infile)
-           val fileContent = try source.mkString finally source.close()
-           val sourceCode = """```scala(?s)(.*?)```""".r
-           val codeFragments = (sourceCode findAllIn fileContent).matchData.map {_.group(1)}
-           codeFragments.zipWithIndex.map { case (frag, i) =>
-              val newFile = outdir / s"userGuideFragment$i.scala"
-              IO.write(newFile, frag)
-              newFile
-           }.toSeq
-         }
-       )
-  ).dependsOn(core, scalding, test)
-
-  lazy val test = Project(
-    id = "test"
-  , base = file("test")
-  , settings =
+    , base = file("examples")
+    , settings =
       standardSettings
-   ++ uniform.project("coppersmith-test", "commbank.coppersmith.test")
-   ++ uniformThriftSettings
-   ++ Seq(
+        ++ uniform.project("coppersmith-examples", "commbank.coppersmith.examples")
+        ++ uniformThriftSettings
+        ++ uniformAssemblySettings
+        ++ Seq(
+        libraryDependencies ++= depend.scalding(),
+        libraryDependencies ++= depend.hadoopClasspath,
+        sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
+          val infile = "USERGUIDE.markdown"
+          val source = io.Source.fromFile(infile)
+          val fileContent = try source.mkString finally source.close()
+          val sourceCode = """```scala(?s)(.*?)```""".r
+          val codeFragments = (sourceCode findAllIn fileContent).matchData.map {
+            _.group(1)
+          }
+          codeFragments.zipWithIndex.map { case (frag, i) =>
+            val newFile = outdir / s"userGuideFragment$i.scala"
+            IO.write(newFile, frag)
+            newFile
+          }.toSeq
+        }
+      )
+  ).dependsOn(core, scalding, testProject)
+
+  lazy val testProject = Project(
+    id = "test"
+    , base = file("test")
+    , settings =
+      standardSettings
+        ++ uniform.project("coppersmith-test", "commbank.coppersmith.test")
+        ++ uniformThriftSettings
+        ++ Seq(
         libraryDependencies ++= depend.testing()
       )
 
   ).dependsOn(core)
 
+  updateOptions := updateOptions.value.withCachedResolution(true)
+  val sbtCPTask = taskKey[Unit]("tools/test:sbtCPTask")
+  //
+  //  sbtCPTask := {
+  //    val files: Seq[File] = (fullClasspath in Compile).value.files
+  //    val sbtClasspath : String = files.map(x => x.getAbsolutePath).mkString(":")
+  //    println("Set SBT classpath to 'sbt-classpath' environment variable")
+  //    System.setProperty("sbt-classpath", sbtClasspath)
+  //  }
+  //
+  //
+
   lazy val tools = Project(
     id = "tools"
     , base = file("tools")
-    , settings = standardSettings
-      ++ uniform.project("coppersmith-tools", "commbank.coppersmith.tools")
-      ++ Seq(
-      sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
-        val infile  = "tools/test/resources/simple_test.psv"
-        val outfile = outdir / s"CustomerFeatures.scala"
-        outfile.getParentFile.mkdirs
-        val output = s"tools/CoppersmithBootstrap.sh --source-type Customer --file $infile" #> outfile !! s.log
-        Seq(outfile)
-      }
-    )
+    , settings =
+      Defaults.coreDefaultSettings ++
+        uniformDependencySettings
+        ++ uniform.project("coppersmith-tools", "commbank.coppersmith.tools")
+        ++ Seq(libraryDependencies ++= Seq(
+        "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test")
+      )
+        ++ Seq(sbtCPTask := {
+        val files: Seq[File] = (fullClasspath in Compile).value.files
+        val sbtClasspath: String = files.map(x => x.getAbsolutePath).mkString(":")
+        println("Set SBT classpath to 'sbt-classpath' environment variable")
+        System.setProperty("sbt-classpath", sbtClasspath)
+      })
+        ++ Seq((testExecution in test in Test) <<= (testExecution in test in Test) dependsOn (sbtCPTask))
   ).dependsOn(core)
 }

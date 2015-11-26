@@ -1,10 +1,6 @@
-#!/bin/sh
-exec scala "$0" "$@"
-!#
+import java.io.{File, FileInputStream, PrintStream}
 
 import scala.io.Source
-
-import java.io.{File, FileInputStream, PrintStream}
 
 /*
  * Tool for generating feature stub scala code from an existing metadata file. Supports
@@ -44,9 +40,10 @@ object CoppersmithBootstrap {
       run(sourceType, inFile, sep, out).fold(
         e => {
           System.err.println(e)
-          System.exit(-1)
+//          System.exit(-1)
         },
-        _ => System.exit(0)
+//        _ => System.exit(0)
+        _ => System.err.println("Done")
       )
     } finally {
       out.foreach(_.close)
@@ -95,6 +92,7 @@ object CoppersmithBootstrap {
       }
 
     featureMetadata.right.map(toScala(sourceType))
+//    throw new RuntimeException("BOOM!")
   }
 
   def parseMetadata(s: String, sep: Char): Either[String, Metadata] = {
@@ -115,9 +113,9 @@ object CoppersmithBootstrap {
   }
 
   def parseName(qName: String): Either[String, (String, String)] = qName.split('.') match {
-      case Array(ns, name) => Right((ns, name))
-      case _               => Left(s"Could not parse name from '$qName'")
-    }
+    case Array(ns, name) => Right((ns, name))
+    case _               => Left(s"Could not parse name from '$qName'")
+  }
 
   def parseTypes(vTypeStr: String, fTypeStr: String) = {
     for {
@@ -127,25 +125,25 @@ object CoppersmithBootstrap {
   }
 
   def parseValueType(vTypeStr: String) = vTypeStr.toLowerCase match {
-      case "double" => Right("Decimal")
-      case "int"    => Right("Integral")
-      case "string" => Right("Str")
-      case _        => Left(s"Unknown value type '$vTypeStr'")
-    }
+    case "double" => Right("Decimal")
+    case "int"    => Right("Integral")
+    case "string" => Right("Str")
+    case _        => Left(s"Unknown value type '$vTypeStr'")
+  }
 
   def parseFeatureType(fTypeStr: String, vType: String) = fTypeStr.toLowerCase match {
-      case "continuous" => vType match {
-        case "Decimal"  => Right("Continuous")
-        case "Integral" => Right("Discrete")
-        case _          => Left(s"Invalid value type '$vType' for continuous feature")
-      }
-      case "categorical" => vType match {
-        case "Integral" => Right("Ordinal")
-        case "Str"      => Right("Nominal")
-        case _          => Left(s"Invalid value type '$vType' for categorical feature")
-      }
-      case _ => Left(s"Unknown feature type '$fTypeStr'")
-   }
+    case "continuous" => vType match {
+      case "Decimal"  => Right("Continuous")
+      case "Integral" => Right("Discrete")
+      case _          => Left(s"Invalid value type '$vType' for continuous feature")
+    }
+    case "categorical" => vType match {
+      case "Integral" => Right("Ordinal")
+      case "Str"      => Right("Nominal")
+      case _          => Left(s"Invalid value type '$vType' for categorical feature")
+    }
+    case _ => Left(s"Unknown feature type '$fTypeStr'")
+  }
 
   def toScala(sourceType: String)(metadata: Iterable[Metadata]) = s"""
 import commbank.coppersmith.api._
@@ -154,9 +152,9 @@ trait $sourceType
 
 object ${sourceType}FeatureSet extends MetadataSet[$sourceType] {
 ${metadata.map{ case (ns, name, vType, fType, desc) =>
-s"""  val ${camelCase(name)} = FeatureStub[$sourceType, $vType].asFeatureMetadata("$ns", "$name", "$desc", $fType)
+    s"""  val ${camelCase(name)} = FeatureStub[$sourceType, $vType].asFeatureMetadata("$ns", "$name", "$desc", $fType)
 """
-}.mkString("\n\n")}
+  }.mkString("\n\n")}
 
   def metadata = List(
       ${
