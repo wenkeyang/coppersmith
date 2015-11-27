@@ -13,7 +13,7 @@ object build extends Build {
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
-    uniformDependencySettings ++
+    uniformPublicDependencySettings ++
     strictDependencySettings ++
     Seq(
       scalacOptions += "-Xfatal-warnings",
