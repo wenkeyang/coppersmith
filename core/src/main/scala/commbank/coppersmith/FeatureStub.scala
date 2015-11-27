@@ -1,7 +1,6 @@
 package commbank.coppersmith
 
 import commbank.coppersmith.Feature._
-
 import scala.reflect.runtime.universe.TypeTag
 
 object FeatureStub {
@@ -15,10 +14,10 @@ object FeatureStub {
   */
 
 class FeatureStub[S : TypeTag, V <: Value : TypeTag] {
-  def asFeatureMetadata(namespace: Namespace,
+  def asFeatureMetadata(featureType: Type,
+                        namespace: Namespace,
                         name: Name,
-                        desc: Description,
-                        featureType: Type
+                        desc: Description
                        ) = Metadata[S, V](namespace, name, desc, featureType)
 
 }
