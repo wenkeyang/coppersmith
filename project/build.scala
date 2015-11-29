@@ -31,7 +31,7 @@ object build extends Build {
    ++ Seq(
         publishArtifact := false
       )
-  , aggregate = Seq(core, test, examples, scalding)
+  , aggregate = Seq(core, test, examples, scalding, tools)
   )
 
   lazy val core = Project(
@@ -42,13 +42,15 @@ object build extends Build {
    ++ uniform.project("coppersmith-core", "commbank.coppersmith")
    ++ uniformThriftSettings
    ++ Seq(
+          libraryDependencies += "io.github.lukehutch" % "fast-classpath-scanner" % "1.9.7",
           libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
             exclude("org.scala-lang", "scala-compiler"),
           libraryDependencies ++= depend.testing(),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion),
           parallelExecution in Test := false
+
       )
-  )
+  ).configs( IntegrationTest )
 
   lazy val scalding = Project(
     id = "scalding"
@@ -100,6 +102,20 @@ object build extends Build {
    ++ uniformThriftSettings
    ++ Seq(
         libraryDependencies ++= depend.testing()
+      )
+
+  ).dependsOn(core)
+
+  lazy val tools = Project(
+    id = "metadata-output"
+    , base = file("metadata-output")
+    , settings =
+      standardSettings
+        ++ uniform.project("coppersmith-tools", "commbank.coppersmith.tools")
+        ++ uniformThriftSettings
+        ++ Seq(
+        libraryDependencies ++= depend.testing(),
+        fork in Test := true
       )
 
   ).dependsOn(core)
