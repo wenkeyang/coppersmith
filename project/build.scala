@@ -106,7 +106,6 @@ object build extends Build {
 
   ).dependsOn(core)
 
-  updateOptions := updateOptions.value.withCachedResolution(true)
   val sbtCPTask = taskKey[Unit]("tools/test:sbtCPTask")
 
   lazy val tools = Project(
