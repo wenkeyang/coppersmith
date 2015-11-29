@@ -31,7 +31,7 @@ object build extends Build {
    ++ Seq(
         publishArtifact := false
       )
-  , aggregate = Seq(core, test, examples, scalding, metadataOutput)
+  , aggregate = Seq(core, test, examples, scalding, tools)
   )
 
   lazy val core = Project(
@@ -106,12 +106,12 @@ object build extends Build {
 
   ).dependsOn(core)
 
-  lazy val metadataOutput = Project(
+  lazy val tools = Project(
     id = "metadata-output"
     , base = file("metadata-output")
     , settings =
       standardSettings
-        ++ uniform.project("coppersmith-metadata-output", "commbank.coppersmith.metadata")
+        ++ uniform.project("coppersmith-tools", "commbank.coppersmith.tools")
         ++ uniformThriftSettings
         ++ Seq(
         libraryDependencies ++= depend.testing(),
