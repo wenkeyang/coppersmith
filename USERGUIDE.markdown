@@ -116,7 +116,7 @@ For details of the other classes available, refer to the **Advanced** section.
 ```scala
 import org.joda.time.DateTime
 
-import commbank.coppersmith.api._    
+import commbank.coppersmith.api._
 import commbank.coppersmith.example.thrift.Customer
 
 object CustomerFeatures extends BasicFeatureSet[Customer] {
@@ -180,7 +180,7 @@ import org.apache.hadoop.fs.Path
 
 import com.twitter.scalding.Config
 
-import au.com.cba.omnia.maestro.api.{MaestroConfig, HivePartition, Maestro}
+import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}
 import Maestro.{DerivedDecode, Fields}
 
 import org.joda.time.DateTime
