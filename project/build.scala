@@ -9,18 +9,18 @@ import au.com.cba.omnia.uniform.thrift.UniformThriftPlugin._
 import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
-  val maestroVersion = "2.14.2-20151109233551-eb56195"
+  val maestroVersion = "2.16.1-20151125012349-278db85"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
-      uniformDependencySettings ++
-      strictDependencySettings ++
-      Seq(
-        scalacOptions += "-Xfatal-warnings",
-        scalacOptions in(Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
-        scalacOptions in(Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
-        scalacOptions in(Test, console) := (scalacOptions in(Compile, console)).value
-      )
+    uniformPublicDependencySettings ++
+    strictDependencySettings ++
+    Seq(
+      scalacOptions += "-Xfatal-warnings",
+      scalacOptions in (Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
+      scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
+      scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value
+    )
 
   lazy val all = Project(
     id = "all"
@@ -39,16 +39,17 @@ object build extends Build {
     , base = file("core")
     , settings =
       standardSettings
-        ++ uniform.project("coppersmith-core", "commbank.coppersmith")
-        ++ uniformThriftSettings
-        ++ Seq(
-        libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
-          exclude("org.scala-lang", "scala-compiler"),
-        libraryDependencies ++= depend.testing(),
-        libraryDependencies ++= depend.omnia("maestro", maestroVersion),
-        parallelExecution in Test := false
+   ++ uniform.project("coppersmith-core", "commbank.coppersmith")
+   ++ uniformThriftSettings
+   ++ Seq(
+          libraryDependencies += "io.github.lukehutch" % "fast-classpath-scanner" % "1.9.7",
+          libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
+            exclude("org.scala-lang", "scala-compiler"),
+          libraryDependencies ++= depend.testing(),
+          libraryDependencies ++= depend.omnia("maestro", maestroVersion),
+          parallelExecution in Test := false
       )
-  )
+  ).configs( IntegrationTest )
 
   lazy val scalding = Project(
     id = "scalding"
