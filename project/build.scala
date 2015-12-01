@@ -109,22 +109,35 @@ object build extends Build {
 
   val sbtCPTask = taskKey[Unit]("tools/test:sbtCPTask")
 
+  lazy val tools2 = Project(
+    id = "tools2"
+    , base = file("tools2")
+    , settings =
+      Defaults.coreDefaultSettings
+        ++ uniformDependencySettings
+        ++ uniform.project("coppersmith-tools", "commbank.coppersmith.tools")
+        ++ Seq(fork in Test := true)
+        ++ Seq(libraryDependencies ++= Seq(
+        "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test")
+      )
+  ).dependsOn(core)
+
   lazy val tools = Project(
     id = "tools"
     , base = file("tools")
     , settings =
-      Defaults.coreDefaultSettings ++
-        uniformDependencySettings
+      Defaults.coreDefaultSettings
+        ++ uniformDependencySettings
         ++ uniform.project("coppersmith-tools", "commbank.coppersmith.tools")
         ++ Seq(libraryDependencies ++= Seq(
         "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test")
       )
         ++ Seq(sbtCPTask := {
-        val files: Seq[File] = (fullClasspath in Compile).value.files
-        val sbtClasspath: String = files.map(x => x.getAbsolutePath).mkString(":")
-        println("Set SBT classpath to 'sbt-classpath' environment variable")
-        System.setProperty("sbt-classpath", sbtClasspath)
-      })
+            val files: Seq[File] = (fullClasspath in Compile).value.files
+            val sbtClasspath: String = files.map(x => x.getAbsolutePath).mkString(":")
+            println("Set SBT classpath to 'sbt-classpath' environment variable")
+            System.setProperty("sbt-classpath", sbtClasspath)
+          })
         ++ Seq((testExecution in test in Test) <<= (testExecution in test in Test) dependsOn (sbtCPTask))
         ++ Seq((testExecution in testOnly in Test) <<= (testExecution in test in Test) dependsOn (sbtCPTask))
         ++ Seq(resourceGenerators in Compile <+= (resourceManaged in Compile, streams) map {
