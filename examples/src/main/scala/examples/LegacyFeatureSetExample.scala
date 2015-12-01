@@ -1,8 +1,7 @@
 package examples
 
-import commbank.coppersmith._
-import Feature._
-import Type._
+import commbank.coppersmith.api._
+import commbank.coppersmith.MetadataOutput
 
 import commbank.coppersmith.example.thrift.Customer
 
@@ -10,11 +9,12 @@ import commbank.coppersmith.example.thrift.Customer
  * An example of defining metadata for features that are defined elsewhere.
  */
 object LegacyFeatureSetExample extends MetadataSet[Customer] {
-  val legacyFeature1 = Metadata[Customer, Value.Str](
-    "cep_features", "lgc_ftr_1", "A string feature", Nominal
-  )
-  val legacyFeature2 = Metadata[Customer, Value.Decimal](
-    "cep_features", "lgc_ftr_2", "A decimal feature", Continuous
+
+  val legacyFeature1 = FeatureStub[Customer, Decimal].asFeatureMetadata(
+    Nominal, "cep_features", "lgc_ftr_1", "A string feature")
+
+  val legacyFeature2 = FeatureStub[Customer, Decimal].asFeatureMetadata(
+    Continuous, "cep_features", "lgc_ftr_2", "A decimal feature"
   )
 
   def metadata = List(legacyFeature1, legacyFeature2)
