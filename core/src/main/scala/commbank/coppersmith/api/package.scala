@@ -12,6 +12,7 @@ package object api {
 
   type Feature[S, +V <: Value] = commbank.coppersmith.Feature[S, V]
   type FeatureSet[S] = commbank.coppersmith.FeatureSet[S]
+  type FeatureSetWithTime[S] = commbank.coppersmith.FeatureSetWithTime[S]
   type MetadataSet[S] = commbank.coppersmith.MetadataSet[S]
   type AggregationFeature[S, SV, U, +V <: Value] = commbank.coppersmith.AggregationFeature[S, SV, U, V]
   type AggregationFeatureSet[S] = commbank.coppersmith.AggregationFeatureSet[S]
