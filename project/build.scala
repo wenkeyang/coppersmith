@@ -126,6 +126,7 @@ object build extends Build {
         System.setProperty("sbt-classpath", sbtClasspath)
       })
         ++ Seq((testExecution in test in Test) <<= (testExecution in test in Test) dependsOn (sbtCPTask))
+        ++ Seq((testExecution in testOnly in Test) <<= (testExecution in test in Test) dependsOn (sbtCPTask))
         ++ Seq(resourceGenerators in Compile <+= (resourceManaged in Compile, streams) map {
         (outdir: File, s) =>
           val infile = "tools/src/main/bash/CoppersmithBootstrap.sh"
