@@ -1,6 +1,11 @@
 Change log
 ==========
 
+## 0.4.0
+- No API changes
+- Bumped compile-time hadoop dependencies from cdh5.2.4 to cdh5.3.8
+
+
 ## 0.3.0
 - Added feature context to the `FeatureSet` time functions. Allows
  feature sets to have feature times derived from either data or
