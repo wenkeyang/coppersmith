@@ -44,11 +44,6 @@ object HydroSink {
 
   val partition = HivePartition.byDay(Fields[Eavt].Time, "yyyy-MM-dd")
 
-  def configure(maestro: MaestroConfig,
-                dbPrefix: String,
-                dcs: DelimiterConflictStrategy[Eavt]): HydroSink =
-    configure(dbPrefix, new Path(maestro.hdfsRoot), maestro.tablename, maestro.source.some, dcs)
-
   def configure(dbPrefix:  String,
                 dbRoot:    Path,
                 tableName: TableName,
