@@ -239,6 +239,50 @@ case class CustomerSourceConfig(date: DateTime) {
 }
 ```
 
+### Partition selection
+
+For partitioned tables, you can list more than one partition.
+Additionally, you can use any glob/wildcard pattern that Hadoop supports.
+For example:
+
+```scala
+import org.apache.hadoop.fs.Path
+
+import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}
+import Maestro.{DerivedDecode, Fields}
+import commbank.coppersmith.api.scalding._
+
+import commbank.coppersmith.example.thrift.Customer
+
+object MultiPartitionSnippet {
+  type Partition = (String, String, String)
+
+  // Last two days of July, and all of August
+  val partition  = HivePartition.byDay(Fields[Customer].EffectiveDate, "yyyy-MM-dd")
+  val partitions = ScaldingDataSource.Partitions(partition,
+                     ("2015", "07", "30"), ("2015", "07", "31"), ("2015", "08", "*"))
+
+  val customers  = HiveTextSource[Customer, Partition](new Path("/data/customers"), partitions)
+}
+```
+
+For unpartitioned tables, use the following pattern:
+
+```scala
+import org.apache.hadoop.fs.Path
+
+import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
+import commbank.coppersmith.api.scalding._
+import commbank.coppersmith.example.thrift.Customer
+
+object UnpartitionedSnippet {
+  val customers = HiveTextSource[Customer, Nothing](new Path("/data/customers"),
+                    ScaldingDataSource.Partitions.unpartitioned)
+}
+```
+
+
+
 Intermediate
 ------------
 
