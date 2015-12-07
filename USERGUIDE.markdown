@@ -14,30 +14,12 @@ Basics
 ------
 
 
-### Recommended project structure
+### Getting started
 
-Coppersmith separates two key concerns of feature generation:
-the formula or calculation itself (feature definition),
-and the process of executing this calculation
-on some source data (feature job).
+Add the `coppersmith-scalding` package to your SBT configuration.
+For example (please replace with the latest version number):
 
-Feature definition requires the `coppersmith-core` package,
-and has no dependencies on any particular execution framework,
-e.g. scalding.
-To turn the feature definition into a Hadoop job
-requires the `coppersmith-scalding` package.
-Other execution frameworks may be supported in the future.
-
-Thusly, feature code can be separated into two projects, such
-that feature definitions can be maintained independently of the
-framework code that is use to generate the feature values.
-
-An example of how these two projects would be structured is as follows:
-
-- **_my-org_-features**: feature definitions
-  (depends on `coppersmith-core`)
-- **_my-org_-scaffolding**: feature jobs
-  (depends on `my-org-features` and `coppersmith-scalding`)
+    libraryDependencies += "au.com.cba.omnia" %% "coppersmith-scalding" % "0.4.1-20151129224909-484f4ea"
 
 
 ### The `Feature` class
