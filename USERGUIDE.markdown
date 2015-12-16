@@ -147,6 +147,7 @@ Coppersmith currently supports the following source types:
   under a [Hive](https://hive.apache.org/)-partitioned directory structure
 - `HiveParquetSource`: [Parquet](https://parquet.apache.org/)-encoded
   files under a Hive-partitioned directory structure
+- `TypedPipeSource`: see [Generating features from custom scalding code](#generating-features-from-custom-scalding-code)
 
 and one sink type:
 
@@ -797,6 +798,63 @@ abstract class ContextFeaturesConfig(conf: Config)
   // Note: Current date passed through as context param
   val featureSource =
     ContextFeatures.source.bindWithContext(from(customers), date)
+}
+```
+
+### Generating features from custom scalding code
+
+Coppersmith adopts the 80/20 rule,
+aiming to allow the most common feature patterns to be expressed
+in a concise way.
+
+For less common scenarios,
+it may be necessary to directly implement the core logic
+using the underlying execution engine (e.g. scalding).
+Going down this route ties you to a specific backend,
+so you lose some of the future-proofing that coppersmith provides,
+but you can still retain some benefits by using coppersmith
+to add metadata and manage the serialisation of the feature values.
+
+As long as your calculation can be expressed as a `TypedPipe[T]`
+(such as `customerIds` in the following example)
+you can bind it to the feature source.
+An SQL analogy would be using a view, in place of a concrete table.
+
+```scala
+import org.apache.hadoop.fs.Path
+
+import com.twitter.scalding.Config
+import com.twitter.scalding.typed.TypedPipe
+
+import org.joda.time.DateTime
+
+import commbank.coppersmith.api._, scalding._
+
+object MillionthCustomerFeatures extends FeatureSetWithTime[String] {
+  val namespace           = "userguide.examples"
+  def entity(cid: String) = cid
+
+  val source = From[String]
+  val select = source.featureSetBuilder(namespace, entity)
+
+  val customerMillionth = select(_ => "Y")
+    .asFeature(Nominal, "CUST_MILLIONTH", "Y if customer id is divisible by 1,000,000")
+
+  val features = List(customerMillionth)
+}
+
+case class MillionthCustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[String] {
+  val step           = 1000000
+  val max            = step * 10
+  val customerIds    = TypedPipe.from(step to max by step).map(_.toString)
+
+  val featureSource  = MillionthCustomerFeatures.source.bind(from(customerIds))
+  val featureSink    = HydroSink.configure("dd", new Path("dev"), "customers")
+  val featureContext = ExplicitGenerationTime(new DateTime(2015, 8, 29, 0, 0))
+}
+
+object MillionthCustomerFeaturesJob extends SimpleFeatureJob {
+  def job = generate(MillionthCustomerFeaturesConfig(_), MillionthCustomerFeatures)
 }
 ```
 

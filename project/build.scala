@@ -10,6 +10,7 @@ import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
   val maestroVersion = "2.16.2-20151203053255-2ec72cc"
+  val thermometerVersion = "1.3.0-20151122230202-55282c8"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
@@ -77,6 +78,7 @@ object build extends Build {
         ++ Seq(
         libraryDependencies ++= depend.scalding(),
         libraryDependencies ++= depend.hadoopClasspath,
+        libraryDependencies ++= depend.omnia("thermometer-hive", thermometerVersion),
         sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
           val infile = "USERGUIDE.markdown"
           val source = io.Source.fromFile(infile)

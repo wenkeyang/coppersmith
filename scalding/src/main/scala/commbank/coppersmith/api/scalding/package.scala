@@ -15,4 +15,5 @@ package object scalding {
 
   implicit val framework: Lift[TypedPipe] = commbank.coppersmith.scalding.lift.scalding
 
+  implicit def typedPipeSource[T](pipe: TypedPipe[T]) = commbank.coppersmith.scalding.TypedPipeSource(pipe)
 }
