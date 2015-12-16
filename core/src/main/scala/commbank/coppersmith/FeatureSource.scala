@@ -96,9 +96,12 @@ trait SourceBinderInstances {
     // (NextPipes, Joins)
     Zipped <: HList,
 
-    TypesTuple <: Product]
-    (in: Tuple, j: CompleteJoinHlFeatureSource[Types, Joins, TypesTuple])
-    (implicit
+    TypesTuple <: Product
+
+    // FIXME: CompleteJoinHlFeatureSource instance is only required here to infer
+    // implicit ToNextPipe param - it is not used in creating the SourceBinder
+  ](in: Tuple, j: CompleteJoinHlFeatureSource[Types, Joins, TypesTuple])
+   (implicit
      //Map data source tuple to pipes tuple
      dshlGen     : Generic.Aux[Tuple, DSHL],
      mapper      : Mapper.Aux[DataSourcesToPipes.dataSourceToPipe.type, DSHL, PipesHL],
@@ -111,7 +114,7 @@ trait SourceBinderInstances {
      typesIsCons: IsHCons.Aux[Types, TypesHead, TypesTail],
 
      // Zip everything together
-     tnp: ToNextPipe.Aux[PipesTail, TypesTail ,NextPipes],
+     tnp: ToNextPipe.Aux[PipesTail, TypesTail, NextPipes],
 
      // Proof that head is a pipe
      pipeIsHead: P[HeadElement] =:= PipesHead,
@@ -124,7 +127,9 @@ trait SourceBinderInstances {
      //and finally turning to tuple
      typesTupler: Tupler.Aux[Types, TypesTuple]
 
-      ) = MultiJoinedBinder(in, j.join, j.filter)
+   ) = // inIsCons & typesIsCons are currently ambiguous, hence explicitly providing implicits
+    MultiJoinedBinder(in)(implicitly[Lift[P]], dshlGen, mapper, pipesConv, inIsCons, typesIsCons,
+                          tnp, pipeIsHead, headIsPipe, zipper, leftFolder, typesTupler)
 }
 
 case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, From[S], P] {
@@ -178,9 +183,9 @@ case class MultiJoinedBinder[
   // (NextPipes, Joins)
   Zipped <: HList,
 
-  TypesTuple <: Product]
-  (in: Tuple, j: CompleteJoinHl[Types, Joins], filter: Option[TypesTuple => Boolean])
-  (implicit
+  TypesTuple <: Product
+](in: Tuple)
+ (implicit
    //Map data source tuple to pipes tuple
    dshlGen         : Generic.Aux[Tuple, DSHL],
    mapper          : Mapper.Aux[DataSourcesToPipes.dataSourceToPipe.type, DSHL, PipesHL],
@@ -193,7 +198,7 @@ case class MultiJoinedBinder[
    typesIsCons: IsHCons.Aux[Types, TypesHead, TypesTail],
 
    // Zip everything together
-   tnp: ToNextPipe.Aux[PipesTail, TypesTail ,NextPipes],
+   tnp: ToNextPipe.Aux[PipesTail, TypesTail, NextPipes],
 
    // Proof that head is a pipe
    pipeIsHead: P[HeadElement] =:= PipesHead,
@@ -205,15 +210,12 @@ case class MultiJoinedBinder[
 
   //and finally turning to tuple
   typesTupler: Tupler.Aux[Types, TypesTuple]
-
-  ) extends SourceBinder[TypesTuple, Unit, P] {
-  //in the case of multiway joins, binding needs to be more eager. Otherwise type inference breaks. Putting in
-  //Unit placeholder in bind
-  def bind(u: Unit): P[TypesTuple] = {
+) extends SourceBinder[TypesTuple, CompleteJoinHlFeatureSource[Types, Joins, TypesTuple], P] {
+  def bind(fs: CompleteJoinHlFeatureSource[Types, Joins, TypesTuple]): P[TypesTuple] = {
     val lift = implicitly[Lift[P]]
     val inPipes: PipesTuple = DataSourcesToPipes.convert(in)
-    val joined = lift.liftMultiwayJoin(j)(inPipes)
-    val filtered = filter.fold(joined)(f => lift.liftFilter(joined, f))
+    val joined = lift.liftMultiwayJoin(fs.join)(inPipes)
+    val filtered = fs.filter.fold(joined)(f => lift.liftFilter(joined, f))
     filtered
   }
 }
