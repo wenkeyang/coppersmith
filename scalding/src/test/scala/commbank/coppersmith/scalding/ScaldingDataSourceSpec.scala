@@ -90,8 +90,8 @@ object TypedPipeSourceSpec extends ThermometerSpec { def is = s2"""
 """
   def bind = typecheck { """
     import scalding._
-    val pipe: TypedPipe[Customer] = TypedPipe.empty
-    val bound: BoundFeatureSource[Customer, TypedPipe] = From[Customer].bind(from(pipe))
+    val dataSource = TypedPipeSource[Customer](TypedPipe.empty)
+    val bound: BoundFeatureSource[Customer, TypedPipe] = From[Customer].bind(from(dataSource))
   """ }
 
   def load = forAll { (recs: Iterable[Customer]) =>

@@ -844,11 +844,13 @@ object MillionthCustomerFeatures extends FeatureSetWithTime[String] {
 }
 
 case class MillionthCustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[String] {
+  // FIXME: replace with a more compelling example, after we switch our examples
+  // over to a new (non-banking) domain.
   val step           = 1000000
   val max            = step * 10
   val customerIds    = TypedPipe.from(step to max by step).map(_.toString)
 
-  val featureSource  = MillionthCustomerFeatures.source.bind(from(customerIds))
+  val featureSource  = MillionthCustomerFeatures.source.bind(from(TypedPipeSource(customerIds)))
   val featureSink    = HydroSink.configure("dd", new Path("dev"), "customers")
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 8, 29, 0, 0))
 }
