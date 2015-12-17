@@ -77,3 +77,8 @@ case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : Tup
     TypedPipe.from(ParquetScroogeSource[S](partitions.toPaths(basePath).map(_.toString): _*))
   }
 }
+
+/** Akin to an SQL view, allow features to be derived from an arbitrary [[TypedPipe]] */
+case class TypedPipeSource[T](pipe: TypedPipe[T]) extends DataSource[T, TypedPipe] {
+  def load = pipe
+}

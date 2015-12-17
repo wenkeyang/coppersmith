@@ -1,8 +1,12 @@
 package commbank.coppersmith.scalding
 
+import org.specs2.execute._, Typecheck._
+
 import org.scalacheck.Prop.forAll
 
 import cascading.flow.FlowException
+
+import com.twitter.scalding.typed.TypedPipe
 
 import scalaz.syntax.std.list.ToListOpsFromList
 import scalaz.syntax.std.option.ToOptionIdOps
@@ -12,8 +16,12 @@ import au.com.cba.omnia.maestro.api._, Maestro._
 import au.com.cba.omnia.thermometer.core.Thermometer._
 import au.com.cba.omnia.thermometer.core.ThermometerSpec
 
-import commbank.coppersmith.test.thrift.{Customer, Account}
+import commbank.coppersmith.api._
+import commbank.coppersmith.{DataSource, BoundFeatureSource}
 import ScaldingDataSource.Partitions
+
+import commbank.coppersmith.test.thrift.{Customer, Account}
+import commbank.coppersmith.Arbitraries._
 
 class HiveTextSourceSpec extends ThermometerSpec { def is = s2"""
   HiveTextSource
@@ -72,5 +80,22 @@ class HiveTextSourceSpec extends ThermometerSpec { def is = s2"""
     withEnvironment(path(getClass.getResource("/hiveTextSource").toString)) {
       run(dataSource.load) must beFailedTry.withThrowable[FlowException]  // this wraps the actual coppersmith exception
     }
+  }
+}
+
+object TypedPipeSourceSpec extends ThermometerSpec { def is = s2"""
+  TypedPipeSource
+    should bind to a From[T]       $bind
+    should load from a typed pipe  $load
+"""
+  def bind = typecheck { """
+    import scalding._
+    val dataSource = TypedPipeSource[Customer](TypedPipe.empty)
+    val bound: BoundFeatureSource[Customer, TypedPipe] = From[Customer].bind(from(dataSource))
+  """ }
+
+  def load = forAll { (recs: Iterable[Customer]) =>
+    val dataSource = TypedPipeSource(TypedPipe.from(recs))
+    runsSuccessfully(dataSource.load).toSet must_== recs.toSet
   }
 }

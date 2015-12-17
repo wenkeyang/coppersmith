@@ -77,6 +77,7 @@ object build extends Build {
         ++ Seq(
         libraryDependencies ++= depend.scalding(),
         libraryDependencies ++= depend.hadoopClasspath,
+        libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
         sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
           val infile = "USERGUIDE.markdown"
           val source = io.Source.fromFile(infile)

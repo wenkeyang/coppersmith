@@ -11,8 +11,8 @@ package object scalding {
 
   val ScaldingDataSource = commbank.coppersmith.scalding.ScaldingDataSource
   val HiveTextSource = commbank.coppersmith.scalding.HiveTextSource
+  val TypedPipeSource = commbank.coppersmith.scalding.TypedPipeSource
   val HydroSink = commbank.coppersmith.scalding.HydroSink
 
   implicit val framework: Lift[TypedPipe] = commbank.coppersmith.scalding.lift.scalding
-
 }
