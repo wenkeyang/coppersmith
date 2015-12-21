@@ -255,6 +255,7 @@ For unpartitioned tables, use the following pattern:
 import org.apache.hadoop.fs.Path
 
 import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
+
 import commbank.coppersmith.api.scalding._
 import commbank.coppersmith.example.thrift.Customer
 
@@ -624,6 +625,39 @@ object JoinFeatures extends AggregationFeatureSet[(Customer, Account)] {
   val aggregationFeatures = List(totalBalanceForCustomersBornPre1970)
 }
 ```
+
+In the accompanying `FeatureJobConfig` class,
+bind the source using either `join` or `leftJoin`, as appropriate.
+For example:
+
+```scala
+import org.apache.hadoop.fs.Path
+
+import com.twitter.scalding.Config
+
+import org.joda.time.DateTime
+
+import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
+
+import commbank.coppersmith.api._, scalding._
+import commbank.coppersmith.example.thrift.{Customer, Account}
+
+case class JoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Customer, Account)] {
+  val customers      = HiveTextSource[Customer, Nothing](new Path("data/customers"),
+                         ScaldingDataSource.Partitions.unpartitioned)
+  val accounts       = HiveTextSource[Account, Nothing](new Path("data/accounts"),
+                         ScaldingDataSource.Partitions.unpartitioned)
+
+  val featureSource  = JoinFeatures.source.bind(join(customers, accounts))
+  val featureSink    = HydroSink.configure("dd", new Path("dev"), "balances")
+  val featureContext = ExplicitGenerationTime(new DateTime(2015, 8, 29, 0, 0))
+}
+
+object JoinFeaturesJob extends SimpleFeatureJob {
+  def job = generate(JoinFeaturesConfig(_), JoinFeatures)
+}
+```
+
 
 ### Multiway joins
 
