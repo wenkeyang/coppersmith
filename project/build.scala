@@ -16,6 +16,7 @@ object build extends Build {
     uniformPublicDependencySettings ++
     strictDependencySettings ++
     Seq(
+      concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),  // because thermometer tests cannot run in parallel
       scalacOptions += "-Xfatal-warnings",
       scalacOptions in (Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
       scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
@@ -46,8 +47,7 @@ object build extends Build {
           libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
             exclude("org.scala-lang", "scala-compiler"),
           libraryDependencies ++= depend.testing(),
-          libraryDependencies ++= depend.omnia("maestro", maestroVersion),
-          parallelExecution in Test := false
+          libraryDependencies ++= depend.omnia("maestro", maestroVersion)
       )
   ).configs( IntegrationTest )
 
@@ -61,8 +61,7 @@ object build extends Build {
         ++ Seq(
         libraryDependencies ++= depend.hadoopClasspath,
         libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
-        libraryDependencies ++= depend.parquet(),
-        parallelExecution in Test := false
+        libraryDependencies ++= depend.parquet()
       )
   ).dependsOn(core % "compile->compile;test->test")
 
