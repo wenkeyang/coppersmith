@@ -5,7 +5,7 @@ import au.com.cba.omnia.maestro.api.JobFinished
 import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
 object MillionthCustomerSpec extends ThermometerHiveSpec { def is = s2"""
-  MillionthCustomerFeaturesJob must return expected values  $test
+  MillionthCustomerFeaturesJob must return expected values  $test  ${tag("slow")}
 """
   def test = {
     executesSuccessfully(MillionthCustomerFeaturesJob.job) must_== JobFinished

@@ -11,7 +11,7 @@ import org.scalacheck.Gen
 import commbank.coppersmith.example.thrift.{Customer, Account}
 
 object JoinFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
-  JoinFeaturesJob must return expected values  $test
+  JoinFeaturesJob must return expected values  $test  ${tag("slow")}
 """
   def test = {
     def cust(id: String, dob: String) = Gen.resultOf(Customer.apply _).sample.get.copy(id = id, dob = dob)
