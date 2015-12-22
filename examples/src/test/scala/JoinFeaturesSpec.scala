@@ -1,3 +1,5 @@
+package commbank.coppersmith.examples.userguide
+
 import org.apache.hadoop.fs.Path
 
 import au.com.cba.omnia.maestro.api.JobFinished
@@ -8,7 +10,7 @@ import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
 import org.scalacheck.Gen
 
-import commbank.coppersmith.example.thrift.{Customer, Account}
+import commbank.coppersmith.examples.thrift.{Customer, Account}
 
 object JoinFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
   JoinFeaturesJob must return expected values  $test  ${tag("slow")}

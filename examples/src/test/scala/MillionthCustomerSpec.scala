@@ -1,3 +1,5 @@
+package commbank.coppersmith.examples.userguide
+
 import org.apache.hadoop.fs.Path
 
 import au.com.cba.omnia.maestro.api.JobFinished

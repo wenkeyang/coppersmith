@@ -48,10 +48,12 @@ we'll see how this can be made a lot easier.
 // recommended approach. Consider using the convenience methods of a
 // FeatureSet subclass or the featureBuilder API (see below for both).
 
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 object CustomerBirthYear extends Feature[Customer, Integral](
   Metadata[Customer, Integral](namespace   = "userguide.examples",
@@ -96,10 +98,12 @@ Here is an example using `BasicFeatureSet`
 For details of the other classes available, refer to the **Advanced** section.
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 object CustomerFeatures extends BasicFeatureSet[Customer] {
   val namespace              = "userguide.examples"
@@ -159,6 +163,8 @@ Here is an example of a job which materialises the feature set
 which we defined in the previous section:
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.apache.hadoop.fs.Path
 
 import com.twitter.scalding.Config
@@ -170,7 +176,7 @@ import org.joda.time.DateTime
 
 import commbank.coppersmith.api._, scalding._
 
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Customer] {
   type Partition    = (String, String, String) // (Year, Month, Day)
@@ -199,6 +205,8 @@ Individual data sources that are common to different feature sources can be
 pulled up to their own type for reuse, for example:
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.apache.hadoop.fs.Path
 
 import org.joda.time.DateTime
@@ -207,7 +215,7 @@ import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}
 import Maestro.{DerivedDecode, Fields}
 import commbank.coppersmith.api.scalding._
 
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 case class CustomerSourceConfig(date: DateTime) {
   type Partition = (String, String, String) // (Year, Month, Day)
@@ -222,6 +230,7 @@ case class CustomerSourceConfig(date: DateTime) {
 }
 ```
 
+
 ### Partition selection
 
 For partitioned tables, you can list more than one partition.
@@ -235,7 +244,7 @@ import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}
 import Maestro.{DerivedDecode, Fields}
 import commbank.coppersmith.api.scalding._
 
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 object MultiPartitionSnippet {
   type Partition = (String, String, String)
@@ -257,14 +266,13 @@ import org.apache.hadoop.fs.Path
 import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
 
 import commbank.coppersmith.api.scalding._
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 object UnpartitionedSnippet {
   val customers = HiveTextSource[Customer, Nothing](new Path("/data/customers"),
                     ScaldingDataSource.Partitions.unpartitioned)
 }
 ```
-
 
 
 Intermediate
@@ -310,11 +318,13 @@ Finally, we call `asFeature` to specify the feature metadata,
 returning a `Feature` object.
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
 
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 object CustomerFeaturesFluent extends FeatureSet[Customer] {
   val namespace              = "userguide.examples"
@@ -352,9 +362,11 @@ you may find that defining a "rich" version of the thrift struct
 can help to keep feature definitions clear and concise.
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.{DateTime, Period}
 
-import commbank.coppersmith.example.thrift.{Customer, Account}
+import commbank.coppersmith.examples.thrift.{Customer, Account}
 
 object Implicits {
   implicit class RichCustomer(cust: Customer) {
@@ -386,9 +398,11 @@ easily create a feature set containing all the input fields
 as separate features.
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import commbank.coppersmith.api._
 
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 import Implicits.RichCustomer
 
@@ -430,10 +444,12 @@ and this defines both the window for aggregation
 as well as the value for "T" in the EAVT output for hydro.
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.example.thrift.Account
+import commbank.coppersmith.examples.thrift.Account
 
 import Implicits.RichAccount
 
@@ -474,6 +490,7 @@ to the `AggregationFeatureSet` source type. See the
 [note](#source-view-aggregator-note) in the source views guide for an example
 of this.
 
+
 ### Filtering (aka `WHERE`)
 
 Features need not be defined for every input value.
@@ -483,10 +500,12 @@ one or more filters can be added using the `where` method
 to improve readability when there are multiple conditions).
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 import Implicits.RichCustomer
 
@@ -517,10 +536,12 @@ the filter can be defined on the source itself to prevent
 repetition in the feature definitions.
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 import Implicits.RichCustomer
 
@@ -551,10 +572,12 @@ but the filter varies,
 consider using the `QueryFeatureSet`:
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 import Implicits.RichCustomer
 
@@ -600,10 +623,12 @@ might be the total balance across all accounts
 for customers born before 1970:
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.example.thrift.{Customer, Account}
+import commbank.coppersmith.examples.thrift.{Customer, Account}
 
 import Implicits.RichCustomer
 
@@ -631,6 +656,8 @@ bind the source using either `join` or `leftJoin`, as appropriate.
 For example:
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.apache.hadoop.fs.Path
 
 import com.twitter.scalding.Config
@@ -640,7 +667,7 @@ import org.joda.time.DateTime
 import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
 
 import commbank.coppersmith.api._, scalding._
-import commbank.coppersmith.example.thrift.{Customer, Account}
+import commbank.coppersmith.examples.thrift.{Customer, Account}
 
 case class JoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Customer, Account)] {
   val customers      = HiveTextSource[Customer, Nothing](new Path("data/customers"),
@@ -667,11 +694,12 @@ For example, (also contrived) the customer's total balance across all accounts
 which have additional account holders:
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.example.thrift.Customer
-import commbank.coppersmith.example.thrift.Account
+import commbank.coppersmith.examples.thrift.{Customer, Account}
 
 object JoinFeatures2 extends AggregationFeatureSet[(Customer, Account, Option[Customer])] {
   val namespace = "userguide.examples"
@@ -703,6 +731,7 @@ to the compiler. Each stage of the join needs two functions: one producing
 a join column for all of the left values so far, and one for the current right
 value.
 
+
 ### Source views
 
 Sometimes it is convenient to work with a different view of
@@ -720,10 +749,12 @@ as it has already been extracted as part of matching against
 `Some` in the `collect`.
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 object SourceViewFeatures extends FeatureSet[Customer] {
   val namespace              = "userguide.examples"
@@ -749,12 +780,14 @@ aggregator functions can no longer be used and the aggregator must be explicitly
 specified.
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import com.twitter.algebird.Aggregator
 
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 import Implicits.RichCustomer
 
 object SourceViewAggregationFeatures extends AggregationFeatureSet[Customer] {
@@ -774,6 +807,7 @@ object SourceViewAggregationFeatures extends AggregationFeatureSet[Customer] {
 }
 ```
 
+
 ### Generating values from job context
 
 Sometimes it is necessary to use job specific data for generating feature
@@ -784,10 +818,12 @@ generating a feature.
 This can be achieved by incorporating a context with the `FeatureSet`'s source.
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.DateTime
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 import Implicits.RichCustomer
 // The context, a DateTime in this case, forms part of the FeatureSource
@@ -812,13 +848,15 @@ object ContextFeatures extends FeatureSet[(Customer, DateTime)] {
 The context is passed through at the time of binding the concrete `DataSource`(s).
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.joda.time.{DateTime, format}, format.DateTimeFormat
 
 import com.twitter.scalding.Config
 
 import commbank.coppersmith.api._, scalding._
 
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 abstract class ContextFeaturesConfig(conf: Config)
     extends FeatureJobConfig[(Customer, DateTime)] {
@@ -834,6 +872,7 @@ abstract class ContextFeaturesConfig(conf: Config)
     ContextFeatures.source.bindWithContext(from(customers), date)
 }
 ```
+
 
 ### Generating features from custom scalding code
 
@@ -855,6 +894,8 @@ you can bind it to the feature source.
 An SQL analogy would be using a view, in place of a concrete table.
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.apache.hadoop.fs.Path
 
 import com.twitter.scalding.Config
@@ -893,6 +934,7 @@ object MillionthCustomerFeaturesJob extends SimpleFeatureJob {
   def job = generate(MillionthCustomerFeaturesConfig(_), MillionthCustomerFeatures)
 }
 ```
+
 
 ### Testing
 

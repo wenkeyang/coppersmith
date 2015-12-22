@@ -2,7 +2,7 @@ package commbank.coppersmith.examples
 
 import commbank.coppersmith.Feature._
 import commbank.coppersmith.{lift => _, _}
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 import au.com.cba.omnia.maestro.core.codec.{DecodeError, DecodeOk, DecodeResult}
 
 

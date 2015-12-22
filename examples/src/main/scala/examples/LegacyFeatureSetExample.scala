@@ -3,7 +3,7 @@ package examples
 import commbank.coppersmith.api._
 import commbank.coppersmith.MetadataOutput
 
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 
 /**
  * An example of defining metadata for features that are defined elsewhere.
