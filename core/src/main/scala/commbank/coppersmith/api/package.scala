@@ -5,14 +5,17 @@ import scala.reflect.runtime.universe.TypeTag
 
 package object api {
 
-  implicit def fromFS[S](fs: FeatureSource[S, _]) = commbank.coppersmith.FeatureBuilderSource.fromFS[S](fs: FeatureSource[S, _])
-  implicit def fromCFS[S, C: TypeTag](fs: ContextFeatureSource[S, C, _]) = commbank.coppersmith.FeatureBuilderSource.fromCFS[S, C](fs: ContextFeatureSource[S, C, _])
+  implicit def fromFS[S](fs: FeatureSource[S, _]) =
+    commbank.coppersmith.FeatureBuilderSource.fromFS(fs)
+  implicit def fromCFS[S, C: TypeTag](fs: ContextFeatureSource[S, C, _]) =
+    commbank.coppersmith.FeatureBuilderSource.fromCFS(fs)
 
-  def from[S, P[_] : Lift](dataSource: DataSource[S, P]) = commbank.coppersmith.SourceBinder.from[S, P](dataSource: DataSource[S, P])
+  def from[S, P[_] : Lift](dataSource: DataSource[S, P]) =
+    commbank.coppersmith.SourceBinder.from(dataSource)
   def join[L, R, J : Ordering, P[_] : Lift](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
-    commbank.coppersmith.SourceBinder.join[L, R, J, P](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P])
+    commbank.coppersmith.SourceBinder.join(leftSrc, rightSrc)
   def leftJoin[L, R, J : Ordering, P[_] : Lift](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
-    commbank.coppersmith.SourceBinder.leftJoin[L, R, J, P](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P])
+    commbank.coppersmith.SourceBinder.leftJoin(leftSrc, rightSrc)
 
   type Feature[S, +V <: Value] = commbank.coppersmith.Feature[S, V]
   type FeatureSet[S] = commbank.coppersmith.FeatureSet[S]
