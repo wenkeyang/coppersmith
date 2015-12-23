@@ -4,7 +4,7 @@ import commbank.coppersmith.Feature.Value.Str
 import commbank.coppersmith.Feature._
 import commbank.coppersmith.PivotMacro._
 import commbank.coppersmith.{lift => _, _}
-import commbank.coppersmith.example.thrift.Customer
+import commbank.coppersmith.examples.thrift.Customer
 import commbank.coppersmith.lift.memory._
 import org.joda.time.DateTime
 
