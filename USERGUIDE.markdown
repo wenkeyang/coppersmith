@@ -238,6 +238,8 @@ Additionally, you can use any glob/wildcard pattern that Hadoop supports.
 For example:
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.apache.hadoop.fs.Path
 
 import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}
@@ -261,6 +263,8 @@ object MultiPartitionSnippet {
 For unpartitioned tables, use the following pattern:
 
 ```scala
+package commbank.coppersmith.examples.userguide
+
 import org.apache.hadoop.fs.Path
 
 import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
