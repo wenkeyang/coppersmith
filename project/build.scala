@@ -43,7 +43,6 @@ object build extends Build {
    ++ uniform.project("coppersmith-core", "commbank.coppersmith")
    ++ uniformThriftSettings
    ++ Seq(
-          libraryDependencies += "io.github.lukehutch" % "fast-classpath-scanner" % "1.9.7",
           libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
             exclude("org.scala-lang", "scala-compiler"),
           libraryDependencies ++= depend.testing(),
@@ -108,21 +107,6 @@ object build extends Build {
 
   ).dependsOn(core)
 
-  val sbtCPTask = taskKey[Unit]("tools/test:sbtCPTask")
-
-  lazy val tools2 = Project(
-    id = "tools2"
-    , base = file("tools2")
-    , settings =
-      Defaults.coreDefaultSettings
-        ++ uniformDependencySettings
-        ++ uniform.project("coppersmith-tools", "commbank.coppersmith.tools")
-        ++ Seq(fork in Test := true)
-        ++ Seq(libraryDependencies ++= Seq(
-        "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test")
-      )
-  ).dependsOn(core)
-
   lazy val tools = Project(
     id = "tools"
     , base = file("tools")
@@ -131,24 +115,26 @@ object build extends Build {
         ++ uniformDependencySettings
         ++ uniform.project("coppersmith-tools", "commbank.coppersmith.tools")
         ++ Seq(libraryDependencies ++= Seq(
-        "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test")
-      )
-        ++ Seq(sbtCPTask := {
+             "io.github.lukehutch" % "fast-classpath-scanner" % "1.9.7",
+             "org.specs2"         %% "specs2-matcher-extra"   % versions.specs % "test"
+           )
+        )
+        ++ Seq(
+          fork in Test := true,
+          javaOptions in Test += {
             val files: Seq[File] = (fullClasspath in Compile).value.files
             val sbtClasspath: String = files.map(x => x.getAbsolutePath).mkString(":")
-            println("Set SBT classpath to 'sbt-classpath' environment variable")
-            System.setProperty("sbt-classpath", sbtClasspath)
-          })
-        ++ Seq((testExecution in test in Test) <<= (testExecution in test in Test) dependsOn (sbtCPTask))
-        ++ Seq((testExecution in testOnly in Test) <<= (testExecution in test in Test) dependsOn (sbtCPTask))
+            s"-Dsbt-classpath=$sbtClasspath"
+          }
+        )
         ++ Seq(resourceGenerators in Compile <+= (resourceManaged in Compile, streams) map {
-        (outdir: File, s) =>
-          val infile = "tools/src/main/bash/CoppersmithBootstrap.sh"
-          val infile2 = "tools/src/main/scala/CoppersmithBootstrap.scala"
-          val outfile = outdir / "CoppersmithBootstrap.sh"
-          outfile.getParentFile.mkdirs
-          s"cat ${infile} ${infile2}" #> outfile !! s.log
-          Seq(outfile)
-      })
+          (outdir: File, s) =>
+            val infile = "tools/src/main/bash/CoppersmithBootstrap.sh"
+            val infile2 = "tools/src/main/scala/CoppersmithBootstrap.scala"
+            val outfile = outdir / "CoppersmithBootstrap.sh"
+            outfile.getParentFile.mkdirs
+            s"cat ${infile} ${infile2}" #> outfile !! s.log
+            Seq(outfile)
+        })
   ).dependsOn(core)
 }
