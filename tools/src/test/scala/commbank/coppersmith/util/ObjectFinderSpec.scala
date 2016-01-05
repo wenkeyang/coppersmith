@@ -1,5 +1,4 @@
-
-
+import org.specs2.Specification
 
 package commbank.coppersmith.util {
   trait T
@@ -8,7 +7,6 @@ package commbank.coppersmith.util {
   object A extends T
   object B extends T
   object C extends U
-
 
   trait P[A]
   trait Q[A] extends P[A]
@@ -26,7 +24,6 @@ package commbank.coppersmith.util {
           Can find objects of a trait from another package $findObjectsTraitOtherPackage
       """
 
-
     def findObjects = Seq(
       ObjectFinder.findObjects[T]("commbank.coppersmith.util") === Set(A, B),
       ObjectFinder.findObjects[U]("commbank.coppersmith.util", "scala") === Set(C)
@@ -41,10 +38,12 @@ package commbank.coppersmith.util {
       // Note the need to add the trait package to the list of package. This sucks and
       // is a bug in fast-classpath-scanner.
       // Raised at https://github.com/lukehutch/fast-classpath-scanner/issues/29
-      ObjectFinder.findObjects[someothersillypackage.Outside]("commbank.coppersmith.util", "someothersillypackage") === Set(F)
+      ObjectFinder.findObjects[someothersillypackage.Outside](
+        "commbank.coppersmith.util",
+        "someothersillypackage"
+      ) === Set(F)
     )
   }
-
 }
 
 package someothersillypackage {
