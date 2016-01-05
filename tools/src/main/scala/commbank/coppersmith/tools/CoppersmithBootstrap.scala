@@ -1,3 +1,6 @@
+// Package deliberately commented so file can be run as a script
+//package commbank.coppersmith.tools
+
 import java.io.{File, FileInputStream, PrintStream}
 
 import scala.io.Source

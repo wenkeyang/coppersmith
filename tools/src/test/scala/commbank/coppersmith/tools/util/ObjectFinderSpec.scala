@@ -1,6 +1,6 @@
 import org.specs2.Specification
 
-package commbank.coppersmith.util {
+package commbank.coppersmith.tools.util {
   trait T
   trait U
 
@@ -25,13 +25,13 @@ package commbank.coppersmith.util {
       """
 
     def findObjects = Seq(
-      ObjectFinder.findObjects[T]("commbank.coppersmith.util") === Set(A, B),
-      ObjectFinder.findObjects[U]("commbank.coppersmith.util", "scala") === Set(C)
+      ObjectFinder.findObjects[T]("commbank.coppersmith.tools.util") === Set(A, B),
+      ObjectFinder.findObjects[U]("commbank.coppersmith.tools.util", "scala") === Set(C)
     )
 
     def findObjectsParam = Seq(
-      ObjectFinder.findObjects[Q[_]]("commbank.coppersmith.util") === Set(E),
-      ObjectFinder.findObjects[P[_]]("commbank.coppersmith.util") === Set(D, E)
+      ObjectFinder.findObjects[Q[_]]("commbank.coppersmith.tools.util") === Set(E),
+      ObjectFinder.findObjects[P[_]]("commbank.coppersmith.tools.util") === Set(D, E)
     )
 
     def findObjectsTraitOtherPackage = Seq(
@@ -39,7 +39,7 @@ package commbank.coppersmith.util {
       // is a bug in fast-classpath-scanner.
       // Raised at https://github.com/lukehutch/fast-classpath-scanner/issues/29
       ObjectFinder.findObjects[someothersillypackage.Outside](
-        "commbank.coppersmith.util",
+        "commbank.coppersmith.tools.util",
         "someothersillypackage"
       ) === Set(F)
     )

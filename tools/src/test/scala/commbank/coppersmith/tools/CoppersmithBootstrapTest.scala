@@ -1,3 +1,6 @@
+// Package deliberately commented to reflect CoppersmithBootstrap
+//package commbank.coppersmith.tools
+
 import java.io.{File, PrintStream}
 import java.nio.file.Files
 
