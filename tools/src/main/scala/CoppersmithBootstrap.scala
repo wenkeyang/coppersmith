@@ -14,19 +14,17 @@ import scala.io.Source
  * where valueType is one of "double", "int" or "string" and featureType is one of
  * "continuous" or "categorical"
  *
- * Setup: Save as CoppersmithBootstrap.sh and make executable (chmod +x CoppersmithBootstrap.scala)
+ * Example command-line usage:
  *
- * Example usage:
- *
- * ./CoppersmithBootstrap.sh --source-type Customer --file /path/to/metadata.psv --out CustomerFeatures.scala
+ * scala CoppersmithBootstrap.scala --source-type Customer --file /path/to/metadata.psv --out CustomerFeatures.scala
  *
  * If --out is missing, result is printed to STDOUT.
  */
 object CoppersmithBootstrap {
   def main(rawArgs: Array[String]): Unit = {
     val args       = parseArgs(rawArgs)
-    val sourceType = args.getOrElse("source-type", sys.error("source-type arg missing"))
-    val inFile     = new File(args.getOrElse("file", sys.error("file arg missing")))
+    val sourceType = args.getOrElse("source-type", sys.error("--source-type arg missing"))
+    val inFile     = new File(args.getOrElse("file", sys.error("--file arg missing")))
     val outFile    = args.get("out").map(new File(_))
 
     val sep = inFile.getName.reverse.takeWhile(_ != '.').reverse.toLowerCase match {
@@ -41,7 +39,7 @@ object CoppersmithBootstrap {
         e => {
           System.err.println(e)
         },
-        _ => System.err.println("Done")
+        _ => System.exit(0)
       )
     } finally {
       out.foreach(_.close)

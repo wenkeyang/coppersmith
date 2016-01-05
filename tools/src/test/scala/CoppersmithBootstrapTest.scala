@@ -1,4 +1,4 @@
-import java.io.File
+import java.io.{File, PrintStream}
 import java.nio.file.Files
 
 import org.specs2.mutable.Specification
@@ -11,12 +11,11 @@ class CoppersmithBootstrapTest extends Specification {
   "CoppersmithBootstrap" should {
     "generate valid classes" in {
       val tempDir = Files.createTempDirectory(null)
-      val infile  = "src/test/resources/simple_test.psv"
+      val infile  = new File("src/test/resources/simple_test.psv")
       val outfile = new File(tempDir.toFile, "Customer.scala")
-      val cmdArgs = Array("--source-type", "Customer", "--file", infile, "--out", outfile.getAbsolutePath)
 
       try {
-        CoppersmithBootstrap.main(cmdArgs)
+        CoppersmithBootstrap.run("Customer", infile, '|', Some(new PrintStream(outfile)))
         success("Generate class from PSV")
       } catch {
         case e: Exception => failure("Generator failed to generate class: " + e.getMessage)

@@ -127,14 +127,5 @@ object build extends Build {
             s"-Dsbt-classpath=$sbtClasspath"
           }
         )
-        ++ Seq(resourceGenerators in Compile <+= (resourceManaged in Compile, streams) map {
-          (outdir: File, s) =>
-            val infile = "tools/src/main/bash/CoppersmithBootstrap.sh"
-            val infile2 = "tools/src/main/scala/CoppersmithBootstrap.scala"
-            val outfile = outdir / "CoppersmithBootstrap.sh"
-            outfile.getParentFile.mkdirs
-            s"cat ${infile} ${infile2}" #> outfile !! s.log
-            Seq(outfile)
-        })
   ).dependsOn(core)
 }
