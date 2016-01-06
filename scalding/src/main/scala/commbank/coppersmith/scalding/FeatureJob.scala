@@ -3,9 +3,10 @@ package commbank.coppersmith.scalding
 import com.twitter.algebird.Aggregator
 
 import com.twitter.scalding.typed._
-import com.twitter.scalding.{Config, Execution}
+import com.twitter.scalding.{Args, Config, Execution}
 
 import au.com.cba.omnia.maestro.api._
+import au.com.cba.omnia.maestro.scalding.ExecutionOps._
 
 import commbank.coppersmith.Feature._
 import commbank.coppersmith._
@@ -42,6 +43,18 @@ trait SimpleFeatureJobOps {
       values  = transform(input, conf.featureContext)
       _      <- conf.featureSink.write(values)
     } yield JobFinished
+  }
+
+  def generateWithArgs[S](
+    cfg:       Config => FeatureJobConfig[S],
+    transform: (TypedPipe[S], FeatureContext) => TypedPipe[(FeatureValue[_], Time)],
+    argsModifier : Args => Args = identity[Args]
+  ): Execution[JobStatus] = {
+    for {
+      conf <- Execution.getConfig
+      confWithArgs = conf.setArgs(argsModifier(conf.getArgs))
+      status <- generate(cfg, transform).withSubConfig(_ => confWithArgs)
+    } yield status
   }
 
   private def generateOneToMany[S](
