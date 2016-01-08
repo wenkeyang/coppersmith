@@ -1,6 +1,7 @@
 package commbank.coppersmith.tools
 
 import commbank.coppersmith.{MetadataOutput, MetadataSet}
+import commbank.coppersmith.Feature.Conforms, Conforms.conforms_?
 import commbank.coppersmith.tools.util.ObjectFinder
 
 object MetadataMain {
@@ -13,9 +14,12 @@ object MetadataMain {
     }
 
     val metadataSets = ObjectFinder.findObjects[MetadataSet[_]](packagge, "commbank.coppersmith")
+    val allConforms =
+      ObjectFinder.findObjects[Conforms[_, _]](args(0), "commbank.coppersmith", "au.com.cba.omnia")
 
     metadataSets.foreach { ms =>
-      val outputString = MetadataOutput.metadataString(ms, format)
+      val metadataConformsSet = ms.metadata.map(m => (m, allConforms.find(c => conforms_?(c, m)))).toList
+      val outputString = MetadataOutput.metadataString(metadataConformsSet, MetadataOutput.LuaTable)
       println(outputString)
     }
   }
