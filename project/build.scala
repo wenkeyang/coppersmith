@@ -74,6 +74,7 @@ object build extends Build {
         ++ uniformThriftSettings
         ++ uniformAssemblySettings
         ++ Seq(
+        watchSources <++= baseDirectory map(path => (path / "../USERGUIDE.markdown").get),
         libraryDependencies ++= depend.scalding(),
         libraryDependencies ++= depend.hadoopClasspath,
         libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
