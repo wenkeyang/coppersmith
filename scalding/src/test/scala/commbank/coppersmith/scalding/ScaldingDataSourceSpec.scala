@@ -74,11 +74,15 @@ class HiveTextSourceSpec extends ThermometerSpec { def is = s2"""
 
   def decodeFailure = {
     // reuse input data from [[unpartitioned]], but attempt to decode using Account thrift
-
     val dataSource = HiveTextSource[Account, Nothing](path("unpartitioned"), Partitions.unpartitioned)
 
     withEnvironment(path(getClass.getResource("/hiveTextSource").toString)) {
-      run(dataSource.load) must beFailedTry.withThrowable[FlowException]  // this wraps the actual coppersmith exception
+      // Suppress error that is normally logged by the framework when the expected exception is raised
+      TestUtil.withoutLogging("cascading.flow.stream") {
+
+        // this wraps the actual coppersmith exception
+        run(dataSource.load) must beFailedTry.withThrowable[FlowException]
+      }
     }
   }
 }
