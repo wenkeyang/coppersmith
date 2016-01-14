@@ -18,12 +18,12 @@ import org.joda.time.DateTime
 
 case class MovieFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie, Rating)] {
   val partitions    = ScaldingDataSource.Partitions.unpartitioned
-  val ratings       = HiveTextSource[Rating, Nothing](new Path("/data/rating"), partitions)
+  val ratings       = HiveTextSource[Rating, Nothing](new Path("/data/rating"), partitions, "\t")
   val movies        = HiveTextSource[Movie, Nothing](new Path("/data/movie"), partitions)
 
   override def featureSink: FeatureSink = FlatFeatureSink("/data/output")
 
-  override def featureContext: FeatureContext = ExplicitGenerationTime(new DateTime(2015, 8, 29, 0, 0))
+  override def featureContext: FeatureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 
   override def featureSource: BoundFeatureSource[(Movie, Rating), TypedPipe] = MovieFeatures.source.bind(join(movies, ratings))
 }
@@ -44,7 +44,7 @@ case class FlatFeatureSink(output: String) extends FeatureSink {
 }
 
 object MovieFeatures extends AggregationFeatureSet[(Movie, Rating)]{
-  override def entity(s: (Movie, Rating)): EntityId = s._1.id
+  override def entity(s: (Movie, Rating)): EntityId = s._1.title
 
   override def aggregationFeatures = List(averageRating)
 
