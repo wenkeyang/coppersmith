@@ -8,6 +8,9 @@ and should be read in full.
 The [**Intermediate**](#intermediate) section is also highly recommended.
 The [**Advanced**](#advanced) section serves as a reference
 to additional features of the library.
+The [**Example**](#example) section contains a simple example of how Coppersmith 
+could be used to create a feature from the publicly available 
+[MovieLens](http://grouplens.org/datasets/movielens/) dataset.
 
 
 Basics
@@ -943,3 +946,72 @@ object MillionthCustomerFeaturesJob extends SimpleFeatureJob {
 ### Testing
 
 Guidelines for unit testing are still forthcoming.
+
+Example
+-------
+
+This is an example of using Coppersmith with a publicly available data set in order to demonstrate 
+its functionality and make the objectives of the project clearer. There is a lot more that can be 
+done in Coppersmith but this is intended as a quick "Hello Feature" job.
+
+### Setup 
+
+In order to run the example you first need to obtain the famous Movie Lens data set that was used 
+in the Netflix challenge.
+
+http://grouplens.org/datasets/movielens/
+
+unzip the ml-100k.zip in your project directory under data/ml-100k/ 
+
+Then if you, like me, are running Hadoop on Vagrant (there are easy instructions on how to do that 
+here 
+https://blog.cloudera.com/blog/2014/06/how-to-install-a-virtual-apache-hadoop-cluster-with-vagrant-and-cloudera-manager/) 
+you would do something similar to:
+
+As user hdfs in my case:
+```
+hdfs dfs -mkdir -p /data/rating
+hdfs dfs -mkdir /data/movie
+hdfs dfs -chmod -R a+rwx /data
+```
+
+As user vagrant:
+```
+hdfs dfs -copyFromLocal /vagrant/data/ml-100k/u.item /data/movie/
+hdfs dfs -copyFromLocal /vagrant/data/ml-100k/u.data /data/rating/
+```
+
+
+In my case as this is a fresh cluster I had to create the home directory for the vagrant user 
+(as user hdfs): 
+```
+hdfs dfs -mkdir /user/vagrant
+hdfs dfs -chown vagrant /user/vagrant
+```
+
+### Defining the feature
+
+In this case we want to obtain the average movie rating. In order to achieve that we need to join 
+the u.data table that contains the actual ratings, with the u.item ratings that contains the movie titles.
+
+The first step in achieving that is creating the thrift structure where the fields are contained. 
+In this case two are needed that can be found in:
+[Movie.thrift](examples/src/main/thrift/Movie.thrift)
+and
+[Rating.thrift](examples/src/main/thrift/Rating.thrift)
+
+Finally the method of generating the required aggregation and join feature and the job setup need to be defined:
+[MovieLens.scala](examples/src/main/scala/commbank/coppersmith/examples/MovieLens.scala)
+
+### Running the example
+
+In order to run the example you will need to do something like:
+```
+hadoop jar /vagrant/examples/target/scala-2.11/coppersmith-examples-assembly-0.5.3-20160114033303-c83b6ab-SNAPSHOT.jar commbank.coppersmith.examples.userguide.MovieFeaturesJob -hdfs
+```
+
+You can then inspect the output on hdfs under /data/output where the problem with the data set becomes obvious:
+```
+Star Trek: Generations (1994)|AVERAGE_MOVIE_RATING|3.336206896551725
+```
+It should be 5 as there can't possibly any other rating for that movie.
