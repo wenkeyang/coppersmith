@@ -41,8 +41,9 @@ object CoppersmithBootstrap {
       run(sourceType, inFile, sep, out).fold(
         e => {
           System.err.println(e)
+          System.exit(1)
         },
-        _ => System.exit(0)
+        _ => ()
       )
     } finally {
       out.foreach(_.close)

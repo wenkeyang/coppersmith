@@ -18,7 +18,11 @@ class CoppersmithBootstrapTest extends Specification {
       val outfile = new File(tempDir.toFile, "Customer.scala")
 
       try {
-        CoppersmithBootstrap.run("Customer", infile, '|', Some(new PrintStream(outfile)))
+        CoppersmithBootstrap.main(Array(
+          "--source-type", "Customer",
+          "--file", "src/test/resources/simple_test.psv",
+          "--out", outfile.getAbsolutePath
+        ))
         success("Generate class from PSV")
       } catch {
         case e: Exception => failure("Generator failed to generate class: " + e.getMessage)
