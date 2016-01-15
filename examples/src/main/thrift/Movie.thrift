@@ -17,26 +17,26 @@
 struct Movie {
   1 	: string  id
   2 	: string  title
-  3 	: string  date
-  4 	: string  field1
-  5 	: string  field2
-  6 	: string  field3
-  7 	: string  field4
-  8 	: string  field5
-  9 	: string  field6
-  10 	: string  field7
-  11 	: string  field8
-  12 	: string  field9
-  13 	: string  field10
-  14 	: string  field11
-  15 	: string  field12
-  16 	: string  field13
-  17 	: string  field14
-  18 	: string  field15
-  19 	: string  field16
-  20 	: string  field17
-  21 	: string  field18
-  22 	: string  field19
-  23 	: string  field20
-  24 	: string  field21
+  3 	: string  release_date
+  4 	: string  video_release_date 
+  5 	: string  imdb_url
+  6 	: string  unknown 
+  7 	: string  action 
+  8 	: string  adventure 
+  9 	: string  animation 
+  10 	: string  childrens 
+  11 	: string  comedy 
+  12 	: string  crime 
+  13 	: string  documentary 
+  14 	: string  drama 
+  15 	: string  fantasy 
+  16 	: string  filmnoir 
+  17 	: string  horror 
+  18 	: string  musical 
+  19 	: string  mystery 
+  20 	: string  romance 
+  21 	: string  scifi 
+  22 	: string  thriller 
+  23 	: string  war 
+  24 	: string  western 
  }

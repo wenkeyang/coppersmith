@@ -951,7 +951,7 @@ Example
 -------
 
 This is an example of using Coppersmith with a publicly available data set in order to demonstrate 
-it's functionality and make the objectives of the project clearer. There is a lot more that can be 
+its functionality and make the objectives of the project clearer. There is a lot more that can be 
 done in Coppersmith but this is intended as a quick "Hello Feature" job.
 
 ### Setup 
