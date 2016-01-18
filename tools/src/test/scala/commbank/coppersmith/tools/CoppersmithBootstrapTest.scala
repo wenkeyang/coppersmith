@@ -1,4 +1,7 @@
-import java.io.File
+// Package deliberately commented to reflect CoppersmithBootstrap
+//package commbank.coppersmith.tools
+
+import java.io.{File, PrintStream}
 import java.nio.file.Files
 
 import org.specs2.mutable.Specification
@@ -11,16 +14,18 @@ class CoppersmithBootstrapTest extends Specification {
   "CoppersmithBootstrap" should {
     "generate valid classes" in {
       val tempDir = Files.createTempDirectory(null)
-      val infile  = "tools/src/test/resources/simple_test.psv"
-      val outfile  = new File(tempDir.toFile, "Customer.scala")
-      val cmdArgs: Array[String] = Array("--source-type", "Customer", "--file", s"$infile", "--out", s"${outfile.getAbsolutePath}")
+      val infile  = new File("src/test/resources/simple_test.psv")
+      val outfile = new File(tempDir.toFile, "Customer.scala")
 
       try {
-        CoppersmithBootstrap.main(cmdArgs)
+        CoppersmithBootstrap.main(Array(
+          "--source-type", "Customer",
+          "--file", "src/test/resources/simple_test.psv",
+          "--out", outfile.getAbsolutePath
+        ))
         success("Generate class from PSV")
-      }
-      catch {
-        case t: Throwable => failure("Generator failed to generate class: " + t.getMessage)
+      } catch {
+        case e: Exception => failure("Generator failed to generate class: " + e.getMessage)
       }
 
       val s = new Settings()
@@ -38,22 +43,18 @@ class CoppersmithBootstrapTest extends Specification {
 
       val tryClass = "CustomerFeatureSet"
       try {
-
-            val clazz = classLoader.loadClass(tryClass) // load class
-            success("Load generated class: " + tryClass)
-      }
-      catch {
-        case t: Throwable => failure("Load generated class: " + t.getMessage)
+        val clazz = classLoader.loadClass(tryClass) // load class
+        success("Load generated class: " + tryClass)
+      } catch {
+        case e: Exception => failure("Load generated class: " + e.getMessage)
       }
 
       val tryClass2 = "Customer"
       try {
-
         val clazz = classLoader.loadClass(tryClass2) // load class
         success("Load generated class: " + tryClass2)
-      }
-      catch {
-        case t: Throwable => failure("Load generated class: " + t.getMessage)
+      } catch {
+        case e: Exception => failure("Load generated class: " + e.getMessage)
       }
       ok
     }

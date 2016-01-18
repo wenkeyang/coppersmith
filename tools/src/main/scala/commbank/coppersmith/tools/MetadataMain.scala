@@ -1,6 +1,7 @@
-package commbank.coppersmith
+package commbank.coppersmith.tools
 
-import commbank.coppersmith.util.ObjectFinder
+import commbank.coppersmith.{MetadataOutput, MetadataSet}
+import commbank.coppersmith.tools.util.ObjectFinder
 
 object MetadataMain {
   def main(args:Array[String]) = {

@@ -1,4 +1,4 @@
-package commbank.coppersmith.util
+package commbank.coppersmith.tools.util
 
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 
