@@ -12,7 +12,7 @@ and note the location of the output. Also note the package in which the job's fe
 
 - Step 2 - Build the metadata tool. In coppersmith's directory:
 ```bash
-sbt 'project tools2' package
+sbt 'project tools' package
 ```
 noting the location of the jar.
 
