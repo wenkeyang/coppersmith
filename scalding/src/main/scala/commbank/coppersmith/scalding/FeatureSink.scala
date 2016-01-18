@@ -183,7 +183,7 @@ object HiveSupport {
              location         = Option(conf.path),
              delimiter        = conf.delimiter
            )
-      _ <- Hive.queries(List(s"use ${conf.database}", s"msck repair table ${conf.tablename}"))
+      _ <- Hive.queries(List(s"use `${conf.database}`", s"msck repair table `${conf.tablename}`"))
     } yield ()
 
   // Adapted from ParseUtils in util.etl project
