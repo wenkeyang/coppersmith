@@ -1,6 +1,6 @@
 # Metadata tool
 
-The metadata tool is a tool to generate Lua metadata from feature job jars. The 
+The metadata tool is a tool to generate Lua/PSV metadata from feature job jars. The 
 following are instructions on it. We intend to improve this process but the instructions
 below work
 
@@ -19,5 +19,7 @@ noting the location of the jar.
 Now, running
 
 ```bash
-java -jar <assembly-jar>:<tools-jar> commbank.coppersmith.MetadataMain <feature-package>
+java -jar <assembly-jar>:<tools-jar> --lua commbank.coppersmith.tools.MetadataMain <feature-package>
 ```
+
+Note that the `--lua` option can be replaced by `--psv` for Hydro PSV output.
