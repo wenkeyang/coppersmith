@@ -19,7 +19,7 @@ noting the location of the jar.
 Now, running
 
 ```bash
-java -jar <assembly-jar>:<tools-jar> --lua commbank.coppersmith.tools.MetadataMain <feature-package>
+java -cp <assembly-jar>:<tools-jar> commbank.coppersmith.tools.MetadataMain --lua <feature-package>
 ```
 
 Note that the `--lua` option can be replaced by `--psv` for Hydro PSV output.
