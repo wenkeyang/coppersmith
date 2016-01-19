@@ -1,7 +1,7 @@
 package examples
 
 import commbank.coppersmith.api._
-import commbank.coppersmith.MetadataOutput
+import commbank.coppersmith.{Feature, MetadataOutput}
 
 import commbank.coppersmith.examples.thrift.Customer
 
@@ -20,8 +20,21 @@ object LegacyFeatureSetExample extends MetadataSet[Customer] {
   def metadata = List(legacyFeature1, legacyFeature2)
 
   def main(args: Array[String]): Unit = {
-    import MetadataOutput._
+    import Feature._, MetadataOutput._, Conforms.conforms_?
+    val allConforms = List(
+      NominalStr,
+      OrdinalDecimal,
+      ContinuousDecimal,
+      OrdinalIntegral,
+      ContinuousIntegral,
+      DiscreteIntegral
+    )
 
-    println(metadataString(LegacyFeatureSetExample, LuaTable))
+    println(
+      metadataString(
+        LegacyFeatureSetExample.metadata.map(m => (m, allConforms.find(conforms_?(_, m)))),
+        LuaTable
+      )
+    )
   }
 }

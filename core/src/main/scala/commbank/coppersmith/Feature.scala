@@ -43,7 +43,10 @@ object Feature {
 
   // Legal type/value combinations
   @implicitNotFound("Features with value type ${V} cannot be ${T}")
-  sealed trait Conforms[T <: Type, V <: Value]
+  abstract class Conforms[T <: Type : TypeTag, V <: Value : TypeTag] {
+    def typeTag:  TypeTag[T] = implicitly
+    def valueTag: TypeTag[V] = implicitly
+  }
   implicit object NominalStr          extends Conforms[Type.Nominal.type, Value.Str]
 
   implicit object OrdinalDecimal      extends Conforms[Type.Ordinal.type, Value.Decimal]
@@ -53,6 +56,14 @@ object Feature {
   implicit object ContinuousIntegral  extends Conforms[Type.Continuous.type,  Value.Integral]
 
   implicit object DiscreteIntegral    extends Conforms[Type.Discrete.type, Value.Integral]
+
+  object Conforms {
+    def conforms_?(conforms: Conforms[_, _], metadata: Metadata[_, _]) = {
+      def getClazz[_](tag: TypeTag[_]) = tag.mirror.runtimeClass(tag.tpe.typeSymbol.asClass)
+      metadata.featureType.getClass == getClazz(conforms.typeTag) &&
+        getClazz(metadata.valueTag) == getClazz(conforms.valueTag)
+    }
+  }
 
   implicit class RichFeature[S : TypeTag, V <: Value : TypeTag](f: Feature[S, V]) {
     def as[T <: Feature.Type](t: T)(implicit ev: Conforms[T, V], neq: T =:!= Nothing) = {
@@ -95,6 +106,7 @@ object Feature {
       }
 
     def sourceTag: TypeTag[S] = implicitly
+    def valueTag:  TypeTag[_] = implicitly[TypeTag[V]]
   }
 }
 
