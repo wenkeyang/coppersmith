@@ -39,6 +39,18 @@ object MetadataOutput {
         |    typesConform = "${oConforms.isDefined}"
         |}
      """.stripMargin
+  
+  val Json: MetadataPrinter = (md, oConforms) =>
+    s"""|{
+        |    "name":"${md.name}",
+        |    "namespace":"${md.namespace}",
+        |    "description":"${md.description}",
+        |    "source":"${md.sourceTag.tpe}",
+        |    "featureType":"${genericFeatureTypeToString(md.featureType)}",
+        |    "valueType":"${genericValueTypeToString(md.valueType)}",
+        |    "typesConform":"${oConforms.isDefined}"
+        |}
+     """.stripMargin
 
   trait HasMetadata[S] {
     def metadata: Iterable[Metadata[S, Value]]
