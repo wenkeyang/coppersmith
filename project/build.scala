@@ -45,8 +45,8 @@ object build extends Build {
    ++ Seq(
           libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
             exclude("org.scala-lang", "scala-compiler"),
-          libraryDependencies ++= depend.testing(),
-          libraryDependencies +=  "io.argonaut" %% "argonaut" % "6.1", //we should already have the dependencies
+          libraryDependencies +=  "io.argonaut" %% "argonaut" % "6.1", 
+          libraryDependencies ++= depend.testing(configuration = "test"),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion)
       )
   ).configs( IntegrationTest )
@@ -103,9 +103,9 @@ object build extends Build {
         ++ uniform.project("coppersmith-test", "commbank.coppersmith.test")
         ++ uniformThriftSettings
         ++ Seq(
-        libraryDependencies ++= depend.testing()
-      )
-
+          libraryDependencies ++= depend.testing(configuration = "test"),
+          libraryDependencies ++= depend.omnia("maestro-test", maestroVersion)
+        )
   ).dependsOn(core)
 
   lazy val tools = Project(
