@@ -46,6 +46,7 @@ object build extends Build {
           libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
             exclude("org.scala-lang", "scala-compiler"),
           libraryDependencies ++= depend.testing(),
+          libraryDependencies +=  "io.argonaut" %% "argonaut" % "6.1", //we should already have the dependencies
           libraryDependencies ++= depend.omnia("maestro", maestroVersion)
       )
   ).configs( IntegrationTest )
@@ -116,7 +117,7 @@ object build extends Build {
         ++ uniform.project("coppersmith-tools", "commbank.coppersmith.tools")
         ++ Seq(libraryDependencies ++= Seq(
              "io.github.lukehutch" % "fast-classpath-scanner" % "1.9.7",
-             "org.specs2"         %% "specs2-matcher-extra"   % versions.specs % "test"
+              "org.specs2"         %% "specs2-matcher-extra"   % versions.specs % "test"
            )
         )
         ++ Seq(
