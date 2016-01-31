@@ -34,6 +34,7 @@ object MetadataOutputSpec extends Specification with ScalaCheck { def is = s2"""
   }}
 
   def luaTable = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, value: Value) => {
+    import com.pavlinic.util.lua.Eval._
     val (metadata, expectedValueType) = value match {
       case Integral(_) => (Metadata[Customer, Integral](namespace, name, desc, fType), "integral")
       case Decimal(_)  => (Metadata[Customer, Decimal] (namespace, name, desc, fType), "decimal")
@@ -53,17 +54,25 @@ object MetadataOutputSpec extends Specification with ScalaCheck { def is = s2"""
     val expectedTypesConform = oConforms.isDefined
 
     val luaMetadata = MetadataOutput.LuaTable(metadata, oConforms)
+    val luaFunctionDefiniton =
+      """
+        |function FeatureMetadata (t)
+        | return t
+        |end
+      """.stripMargin
 
-    luaMetadata must_==
-      s"""FeatureMetadata{
-         |    name = "${metadata.name}",
-         |    namespace = "${metadata.namespace}",
-         |    description = "${metadata.description}",
-         |    source = "${metadata.sourceTag.tpe}",
-         |    featureType = "${expectedFeatureType}",
-         |    valueType = "${expectedValueType}",
-         |    typesConform = "${expectedTypesConform}"
-         |}
-     """.stripMargin
+    Seq(
+      withScript(luaFunctionDefiniton).eval[Map[String, String]]("return " + luaMetadata) === Map(
+        "name" -> metadata.name,
+        "namespace" -> metadata.namespace,
+        "description" -> metadata.description,
+        "source" -> metadata.sourceTag.tpe.toString,
+        "featureType" -> expectedFeatureType,
+        "valueType" -> expectedValueType,
+        "typesConform" -> expectedTypesConform.toString
+      )
+    )
+
+
   }}
 }

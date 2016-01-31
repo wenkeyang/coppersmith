@@ -45,6 +45,7 @@ object build extends Build {
    ++ Seq(
           libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
             exclude("org.scala-lang", "scala-compiler"),
+          libraryDependencies += "com.pavlinic" %% "luautils" % "0.2.0",
           libraryDependencies ++= depend.testing(configuration = "test"),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion)
       )
