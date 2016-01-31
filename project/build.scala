@@ -117,7 +117,7 @@ object build extends Build {
         ++ uniform.project("coppersmith-tools", "commbank.coppersmith.tools")
         ++ Seq(libraryDependencies ++= Seq(
              "io.github.lukehutch" % "fast-classpath-scanner" % "1.9.7",
-              "org.specs2"         %% "specs2-matcher-extra"   % versions.specs % "test"
+             "org.specs2"         %% "specs2-matcher-extra"   % versions.specs % "test"
            )
         )
         ++ Seq(

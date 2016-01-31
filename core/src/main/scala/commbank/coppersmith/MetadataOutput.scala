@@ -5,9 +5,9 @@ import Feature._
 import Metadata._
 
 object MetadataOutput {
-  case class MetadataPrinter (fn: (Metadata[_, Feature.Value], Option[Conforms[_, _]]) => String, combiner: List[String] => String = defaultCombiner) {
-    def apply(md: Metadata[_, Feature.Value], cf: Option[Conforms[_, _]]) = fn(md, cf)
-  }
+  case class MetadataPrinter (
+    fn: (Metadata[_, Feature.Value], Option[Conforms[_, _]]) => String,
+    combiner: List[String] => String = defaultCombiner)
 
   val defaultCombiner = (list: List[String]) => list.mkString("\n")
 
@@ -45,16 +45,6 @@ object MetadataOutput {
      """.stripMargin)
 
   val JsonObject: MetadataPrinter = MetadataPrinter((md, oConforms) => {
-//    s"""|{
-//       |    "name":"${md.name}",
-//       |    "namespace":"${md.namespace}",
-//       |    "description":"${md.description}",
-//       |    "source":"${md.sourceTag.tpe}",
-//       |    "featureType":"${genericFeatureTypeToString(md.featureType)}",
-//       |    "valueType":"${genericValueTypeToString(md.valueType)}",
-//       |    "typesConform":"${oConforms.isDefined}"
-//       |}
-//     """.stripMargin
 
     import argonaut._, Argonaut._
 
@@ -65,7 +55,8 @@ object MetadataOutput {
       "source" -> jString(md.sourceTag.tpe.toString),
       "featureType" -> jString(genericFeatureTypeToString(md.featureType)),
       "valueType" -> jString(genericValueTypeToString(md.valueType)),
-      "typesConform" -> jBool(oConforms.isDefined)).nospaces
+      "typesConform" -> jBool(oConforms.isDefined)
+    ).nospaces
   }, lst => s"[${lst.mkString(",")}}]")
 
 
