@@ -29,7 +29,7 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       case c: Categorical => "categorical"
     }
 
-    val hydroMetadata = MetadataOutput.HydroPsv(metadata, None)
+    val hydroMetadata = MetadataOutput.HydroPsv.fn(metadata, None)
 
     hydroMetadata must_==
       s"${namespace.toLowerCase}.${name.toLowerCase}|$expectedValueType|$expectedFeatureType"
@@ -54,7 +54,7 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
     }
     val expectedTypesConform = oConforms.isDefined
 
-    val luaMetadata = MetadataOutput.LuaTable(metadata, oConforms)
+    val luaMetadata = MetadataOutput.LuaTable.fn(metadata, oConforms)
 
     luaMetadata must_==
       s"""FeatureMetadata{
@@ -88,7 +88,7 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
     }
     val expectedTypesConform = oConforms.isDefined
 
-    val jsonOutput = MetadataOutput.JsonObject(metadata, oConforms)
+    val jsonOutput = MetadataOutput.JsonObject.fn(metadata, oConforms)
     Seq(
       jsonOutput must /("name" -> metadata.name),
       jsonOutput must /("namespace" -> metadata.namespace),
