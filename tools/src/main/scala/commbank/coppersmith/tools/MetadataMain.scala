@@ -9,6 +9,7 @@ object MetadataMain {
     val (format, packagge) = args.take(2) match {
       case Array("--psv", pkg)  => ( MetadataOutput.HydroPsv, pkg)
       case Array("--lua", pkg)  => ( MetadataOutput.LuaTable, pkg)
+      case Array("--json", pkg) => ( MetadataOutput.JsonObject, pkg)
       case Array(pkg)           => ( MetadataOutput.LuaTable, pkg)
       case _                    => println("Invalid input"); sys.exit(1)
     }
