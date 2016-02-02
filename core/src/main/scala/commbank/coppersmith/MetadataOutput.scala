@@ -5,7 +5,11 @@ import Feature._
 import Metadata._
 
 object MetadataOutput {
-  type MetadataPrinter = (Metadata[_, Feature.Value], Option[Conforms[_, _]]) => String
+  case class MetadataPrinter (
+    fn: (Metadata[_, Feature.Value], Option[Conforms[_, _]]) => String,
+    combiner: List[String] => String = defaultCombiner)
+
+  val defaultCombiner = (list: List[String]) => list.mkString("\n")
 
   private def hydroValueTypeToString(v: ValueType) = v match {
     case ValueType.IntegralType => "int"
@@ -22,14 +26,15 @@ object MetadataOutput {
 
   private def genericValueTypeToString(v: ValueType) = v.toString.replace("Type", "").toLowerCase
 
-  val HydroPsv: MetadataPrinter = (m, _) => {
+  val HydroPsv: MetadataPrinter = MetadataPrinter((m, _) => {
       val valueType = hydroValueTypeToString(m.valueType)
       val featureType = hydroFeatureTypeToString(m.featureType)
       List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
-  }
+  })
 
-  val LuaTable: MetadataPrinter = (md, oConforms) => {
+  val LuaTable: MetadataPrinter = MetadataPrinter {(md, oConforms) =>
     import com.pavlinic.util.lua.Escape.escape
+
     s"""|FeatureMetadata{
         |    name = ${escape(md.name)},
         |    namespace = ${escape(md.namespace)},
@@ -41,6 +46,23 @@ object MetadataOutput {
         |}
      """.stripMargin
   }
+
+
+  val JsonObject: MetadataPrinter = MetadataPrinter((md, oConforms) => {
+
+    import argonaut._, Argonaut._
+
+    Json(
+      "name" -> jString(md.name),
+      "namespace" -> jString(md.namespace),
+      "description" -> jString(md.description),
+      "source" -> jString(md.sourceTag.tpe.toString),
+      "featureType" -> jString(genericFeatureTypeToString(md.featureType)),
+      "valueType" -> jString(genericValueTypeToString(md.valueType)),
+      "typesConform" -> jBool(oConforms.isDefined)
+    ).nospaces
+  }, lst => s"[${lst.mkString(",")}}]")
+
 
   trait HasMetadata[S] {
     def metadata: Iterable[Metadata[S, Value]]
@@ -58,6 +80,6 @@ object MetadataOutput {
     metadata: List[(Metadata[S, Feature.Value], Option[Conforms[_, _]])],
     printer: MetadataPrinter
   ): String = {
-    s"${metadata.map(printer.tupled).mkString("\n")}"
+    printer.combiner(metadata.map(printer.fn.tupled))
   }
 }

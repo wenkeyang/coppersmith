@@ -22,4 +22,4 @@ Now, running
 java -cp <assembly-jar>:<tools-jar> commbank.coppersmith.tools.MetadataMain --lua <feature-package>
 ```
 
-Note that the `--lua` option can be replaced by `--psv` for Hydro PSV output.
+Note that the `--lua` option can be replaced by `--psv` for Hydro PSV output, or `--json` for Json output.
