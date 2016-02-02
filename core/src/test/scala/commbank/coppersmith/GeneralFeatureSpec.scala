@@ -32,51 +32,68 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     must use value as defined            $valueValue
 """
 
-  def general[V <: Value : TypeTag](
+  def general(
+    field:     Field[Customer, _],
+    filter:    Boolean,
     namespace: Namespace             = "",
     name:      Name                  = "",
     desc:      Description           = "",
     fType:     Type                  = Nominal,
-    entity:    Customer => EntityId  = _.id,
-    fValue:    Customer => Option[V] = (_: Customer) => Some(null)
-  ) = Patterns.general(namespace, name, desc, fType, entity, fValue)
+    entity:    Customer => EntityId  = _.id
+  ) = {
+    val feature: (Namespace, Name, Description, Type, Customer => EntityId) => Feature[Customer, Value] =
+      field match {
+        case f if f == Fields[Customer].Name   => general[Str](fValue = c => filter.option(c.name))
+        case f if f == Fields[Customer].Age    => general[Integral](fValue = c => filter.option(c.age))
+        case f if f == Fields[Customer].Height => general[Decimal](fValue = c => filter.option(c.height))
+      }
+    feature.apply(namespace, name, desc, fType, entity)
+  }
 
-  def metadataNamespace = forAll { (namespace: Namespace) => {
-    val feature = general(namespace = namespace)
+  def general[V <: Value : TypeTag](
+    fValue: Customer => Option[V]
+  )(
+    namespace: Namespace,
+    name:      Name,
+    desc:      Description,
+    fType:     Type,
+    entity:    Customer => EntityId
+  ) = Patterns.general[Customer, V, V](namespace, name, desc, fType, entity, fValue)
+
+  def metadataNamespace = forAll { (field: Field[Customer, _], filter: Boolean, namespace: Namespace) => {
+    val feature = general(field, filter, namespace = namespace)
     feature.metadata.namespace must_== namespace
   }}
 
-  def metadataName = forAll { (name: Name) => {
-    val feature = general(name = name)
+  def metadataName = forAll { (field: Field[Customer, _], filter: Boolean, name: Name) => {
+    val feature = general(field, filter, name = name)
     feature.metadata.name must_== name
   }}
 
-  def metadataDescription = forAll { (desc: Description) => {
-    val feature = general(desc = desc)
+  def metadataDescription = forAll { (field: Field[Customer, _], filter: Boolean, desc: Description) => {
+    val feature = general(field, filter, desc = desc)
     feature.metadata.description must_== desc
   }}
 
-  def metadataFeatureType = forAll { (fType: Type) => {
-    val feature = general(fType = fType)
+  def metadataFeatureType = forAll { (field: Field[Customer, _], filter: Boolean, fType: Type) => {
+    val feature = general(field, filter, fType = fType)
     feature.metadata.featureType must_== fType
   }}
 
-  def valueEntity = forAll { (c: Customer) => {
-    val feature = general(entity = _.id)
+  def valueEntity = forAll { (field: Field[Customer, _], c: Customer) => {
+    val feature = general(field, true, entity = _.id)
     feature.generate(c) must beSome.like { case v => v.entity must_== c.id }
   }}
 
-  def valueName = forAll { (namespace: Namespace, name: String, fType: Type, c: Customer) => {
-    val feature = general(name = name)
-    feature.generate(c) must beSome.like { case v => v.name must_== name }
-  }}
-
-  def valueValue = forAll { (c: Customer, field: Field[Customer, _], filter: Boolean) => {
-    val feature = field match {
-      case f if f == Fields[Customer].Name   => general[Str](fValue = c => filter.option(c.name))
-      case f if f == Fields[Customer].Age    => general[Integral](fValue = c => filter.option(c.age))
-      case f if f == Fields[Customer].Height => general[Decimal](fValue = c => filter.option(c.height))
+  def valueName = forAll {
+    (field: Field[Customer, _], ns: Namespace, name: String, fType: Type, c: Customer) => {
+      val feature = general(field, true, name = name)
+      feature.generate(c) must beSome.like { case v => v.name must_== name }
     }
+  }
+
+  def valueValue = forAll { (field: Field[Customer, _], filter: Boolean, c: Customer) => {
+    val feature = general(field, filter)
 
     val expectedValue = field match {
       case f if f == Fields[Customer].Name   => Str(Option(c.name))
@@ -85,6 +102,7 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     }
 
     val featureValue = feature.generate(c)
-    if (!filter) featureValue must beNone else featureValue must beSome.like { case v => v.value must_== expectedValue }
+    if (!filter) featureValue must beNone
+    else featureValue must beSome.like { case v => v.value must_== expectedValue }
   }}
 }

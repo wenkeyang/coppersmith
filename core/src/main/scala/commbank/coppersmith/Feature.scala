@@ -1,9 +1,11 @@
 package commbank.coppersmith
 
+import scalaz.syntax.std.list.ToListOpsFromList
+
 import shapeless.=:!=
 
 import scala.annotation.implicitNotFound
-import scala.reflect.runtime.universe.{TypeTag, typeOf}
+import scala.reflect.runtime.universe.{TypeTag, Type => ScalaType, typeOf}
 
 object Feature {
   type Namespace   = String
@@ -47,21 +49,22 @@ object Feature {
     def typeTag:  TypeTag[T] = implicitly
     def valueTag: TypeTag[V] = implicitly
   }
-  implicit object NominalStr          extends Conforms[Type.Nominal.type, Value.Str]
+  implicit object NominalStr         extends Conforms[Type.Nominal.type,    Value.Str]
 
-  implicit object OrdinalDecimal      extends Conforms[Type.Ordinal.type, Value.Decimal]
-  implicit object ContinuousDecimal   extends Conforms[Type.Continuous.type,  Value.Decimal]
+  implicit object OrdinalDecimal     extends Conforms[Type.Ordinal.type,    Value.Decimal]
+  implicit object ContinuousDecimal  extends Conforms[Type.Continuous.type, Value.Decimal]
 
-  implicit object OrdinalIntegral     extends Conforms[Type.Ordinal.type, Value.Integral]
-  implicit object ContinuousIntegral  extends Conforms[Type.Continuous.type,  Value.Integral]
+  implicit object OrdinalIntegral    extends Conforms[Type.Ordinal.type,    Value.Integral]
+  implicit object ContinuousIntegral extends Conforms[Type.Continuous.type, Value.Integral]
 
-  implicit object DiscreteIntegral    extends Conforms[Type.Discrete.type, Value.Integral]
+  implicit object DiscreteIntegral   extends Conforms[Type.Discrete.type,   Value.Integral]
 
   object Conforms {
-    def conforms_?(conforms: Conforms[_, _], metadata: Metadata[_, _]) = {
-      def getClazz[_](tag: TypeTag[_]) = tag.mirror.runtimeClass(tag.tpe.typeSymbol.asClass)
+
+    def conforms_?[V <: Value : TypeTag](conforms: Conforms[_, _], metadata: Metadata[_, _]) = {
+      def getClazz(tag: TypeTag[_]) = tag.mirror.runtimeClass(tag.tpe.typeSymbol.asClass)
       metadata.featureType.getClass == getClazz(conforms.typeTag) &&
-        getClazz(metadata.valueTag) == getClazz(conforms.valueTag)
+        metadata.valueType == Metadata.valueType[V]
     }
   }
 
@@ -81,33 +84,51 @@ object Feature {
   }
 
   object Metadata {
-    sealed trait ValueType
-    object ValueType {
-      case object IntegralType extends ValueType
-      case object DecimalType  extends ValueType
-      case object StringType   extends ValueType
-    }
-  }
-
-  import Metadata.ValueType
-
-  case class Metadata[S : TypeTag, +V <: Value : TypeTag](
-    namespace:   Namespace,
-    name:        Name,
-    description: Description,
-    featureType: Type
-  )(implicit neq: V =:!= Nothing) {
-    def valueType =
-      typeOf[V] match {
+    def valueType[V <: Value : TypeTag]: ValueType = typeOf[V] match {
         // Would be nice to get exhaustiveness checking here
         case t if t =:= typeOf[Value.Integral] => ValueType.IntegralType
         case t if t =:= typeOf[Value.Decimal] =>  ValueType.DecimalType
         case t if t =:= typeOf[Value.Str] =>      ValueType.StringType
       }
 
-    def sourceTag: TypeTag[S] = implicitly
-    def valueTag:  TypeTag[_] = implicitly[TypeTag[V]]
+    sealed trait ValueType
+    object ValueType {
+      case object IntegralType extends ValueType
+      case object DecimalType  extends ValueType
+      case object StringType   extends ValueType
+    }
+
+    case class TypeInfo(typeName: String, typeArgs: List[TypeInfo]) {
+      override def toString = typeName + typeArgs.toNel.map(_.list.mkString("[", ",", "]")).getOrElse("")
+    }
+    object TypeInfo {
+      def apply[T : TypeTag]: TypeInfo = TypeInfo(implicitly[TypeTag[T]].tpe)
+      def apply(t: ScalaType): TypeInfo = TypeInfo(t.typeSymbol.fullName, t.typeArgs.map(TypeInfo(_)))
+    }
+
+    def apply[S : TypeTag, V <: Value : TypeTag](
+      namespace:   Namespace,
+      name:        Name,
+      description: Description,
+      featureType: Type
+    )(implicit neq: V =:!= Nothing): Metadata[S, V] = {
+      Metadata[S, V](namespace, name, description, featureType, valueType[V], TypeInfo.apply[S])
+    }
   }
+
+  import Metadata.{TypeInfo, ValueType}
+
+  // Hold references to basic source and value type instances instead of requiring
+  // TagType instances, as the latter can cause serialisation regressions in some
+  // cases where the metadata is closed over.
+  case class Metadata[S, +V <: Value] private(
+    namespace:   Namespace,
+    name:        Name,
+    description: Description,
+    featureType: Feature.Type,
+    valueType:   ValueType,
+    sourceType:  TypeInfo
+  )
 }
 
 import Feature._

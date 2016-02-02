@@ -1,5 +1,13 @@
 Change log
 ==========
+## 0.6.0
+- Remove `sourceTag` and `valueTag` from `Metadata` case class due to
+ serialisation problems.
+
+ ### Upgrading
+ Source and value type information can now be retrieved from `sourceType`
+ and `valueType` respectively.
+
 
 ## 0.5.0
 - Remove `HydroSink.configure(MaestroConfig, String, DelimiterConflictStrategy)`
@@ -24,11 +32,11 @@ Change log
 - Added feature context to the `FeatureSet` time functions. Allows
  feature sets to have feature times derived from either data or
  the feature generation time (coming from the context). The default
- implementation comes from the context. 
- 
+ implementation comes from the context.
+
  ### Upgrading
- 
- To upgrade, ensure that the `time` method on feature sets overrides the 
- parent and takes two parameters: `S`, and `FeatureSet`. Usually the default 
- implementation is fine so  upgrading is simply a case of deleting the `time` 
+
+ To upgrade, ensure that the `time` method on feature sets overrides the
+ parent and takes two parameters: `S`, and `FeatureSet`. Usually the default
+ implementation is fine so  upgrading is simply a case of deleting the `time`
  method from your `FeatureSet`.

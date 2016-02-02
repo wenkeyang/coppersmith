@@ -1,17 +1,22 @@
 package commbank.coppersmith.scalding.lift
 
-import au.com.cba.omnia.thermometer.core.ThermometerSpec
 import com.twitter.scalding.typed._
-import commbank.coppersmith._
+
+import au.com.cba.omnia.thermometer.core.ThermometerSpec
+
+import commbank.coppersmith.Feature.Value.Integral
+import commbank.coppersmith.api._
 import commbank.coppersmith.scalding.lift.scalding._
 import commbank.coppersmith.test.thrift._
 
 class ScaldingSpec extends ThermometerSpec {
   def is = s2"""
-     inner join $joins
-     left join  $leftJoins
-  """
+     Inner join $joins
+     Left join  $leftJoins
 
+     Lift feature     $liftFeature
+     Lift feature set $liftFeatureSet
+  """
 
   val cs = List(
     C(1, "1"),
@@ -55,5 +60,38 @@ class ScaldingSpec extends ThermometerSpec {
 
     val joinedPipe = liftLeftJoin(Join.left[C].to[D].on(_.id, _.id))(IterablePipe(cs), IterablePipe(ds))
     runsSuccessfully(joinedPipe) must_== expected
+  }
+
+  object TestFeatureSet extends FeatureSet[Customer] {
+    val source = From[Customer]()
+    val entity = (cust: Customer) => cust.id
+    val select = source.featureSetBuilder(namespace, entity)
+
+    def namespace = "test"
+
+    val ageFeature = select(_.age).asFeature(Continuous, "CUST_AGE", "Age fo the customer")
+
+    val features = List(ageFeature)
+  }
+
+  val customerPipe = IterablePipe(List(
+    Customer("1", "name1", 30, 2.0, None, 1L),
+    Customer("2", "name2", 40, 1.5, None, 1L)
+  ))
+
+  def liftFeature = {
+    val result = runsSuccessfully(scalding.lift(TestFeatureSet.ageFeature)(customerPipe))
+    result === List(
+      FeatureValue("1", "CUST_AGE", Integral(Some(30))),
+      FeatureValue("2", "CUST_AGE", Integral(Some(40)))
+    )
+  }
+
+  def liftFeatureSet = {
+    val result = runsSuccessfully(scalding.lift(TestFeatureSet)(customerPipe))
+    result === List(
+      FeatureValue("1", "CUST_AGE", Integral(Some(30))),
+      FeatureValue("2", "CUST_AGE", Integral(Some(40)))
+    )
   }
 }

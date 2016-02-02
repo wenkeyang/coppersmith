@@ -28,7 +28,7 @@ object PivotMacro {
         val featureValueType = typeToFeatureValueType(c)(returnType)
         val mapperFn = typeMapper(c)(returnType)
         val continuous = isContinuous(c)(returnType)
-        val fieldDescription = s"Feature auto-pivoted from ${typ.typeSymbol.toString}.${field}"
+        val fieldDescription = s"Feature auto-pivoted from ${typ.typeSymbol.fullName}.${field}"
         val feature =
           q"""{
               import commbank.coppersmith._, Feature.Metadata

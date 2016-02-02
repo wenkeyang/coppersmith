@@ -39,7 +39,7 @@ object MetadataOutput {
         |    name = ${escape(md.name)},
         |    namespace = ${escape(md.namespace)},
         |    description = ${escape(md.description)},
-        |    source = ${escape(md.sourceTag.tpe.toString)},
+        |    source = ${escape(md.sourceType.toString)},
         |    featureType = ${escape(genericFeatureTypeToString(md.featureType))},
         |    valueType = ${escape(genericValueTypeToString(md.valueType))},
         |    typesConform = ${escape(oConforms.isDefined.toString)}
@@ -56,7 +56,7 @@ object MetadataOutput {
       "name" -> jString(md.name),
       "namespace" -> jString(md.namespace),
       "description" -> jString(md.description),
-      "source" -> jString(md.sourceTag.tpe.toString),
+      "source" -> jString(md.sourceType.toString),
       "featureType" -> jString(genericFeatureTypeToString(md.featureType)),
       "valueType" -> jString(genericValueTypeToString(md.valueType)),
       "typesConform" -> jBool(oConforms.isDefined)

@@ -69,14 +69,12 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
         "name" -> metadata.name,
         "namespace" -> metadata.namespace,
         "description" -> metadata.description,
-        "source" -> metadata.sourceTag.tpe.toString,
+        "source" -> metadata.sourceType.toString,
         "featureType" -> expectedFeatureType,
         "valueType" -> expectedValueType,
         "typesConform" -> expectedTypesConform.toString
       )
     )
-
-
   }}
 
   def json = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, value: Value) => {
@@ -103,12 +101,10 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       jsonOutput must /("name" -> metadata.name),
       jsonOutput must /("namespace" -> metadata.namespace),
       jsonOutput must /("description" -> metadata.description),
-      jsonOutput must /("source" -> metadata.sourceTag.tpe.toString),
+      jsonOutput must /("source" -> metadata.sourceType.toString),
       jsonOutput must /("featureType" -> expectedFeatureType),
       jsonOutput must /("valueType" -> expectedValueType),
       jsonOutput must /("typesConform" -> expectedTypesConform)
-      )
+    )
   }}
-
-
 }
