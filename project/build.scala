@@ -20,7 +20,8 @@ object build extends Build {
       scalacOptions += "-Xfatal-warnings",
       scalacOptions in (Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
       scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
-      scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value
+      scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value,
+      dependencyOverrides += "com.chuusai" %% "shapeless" % "2.2.5" //until maestro is updated
     )
 
   lazy val all = Project(
@@ -45,6 +46,7 @@ object build extends Build {
    ++ Seq(
           libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
             exclude("org.scala-lang", "scala-compiler"),
+          libraryDependencies += "com.pavlinic" %% "luautils" % "0.3.2",
           libraryDependencies +=  "io.argonaut" %% "argonaut" % "6.1", 
           libraryDependencies ++= depend.testing(configuration = "test"),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion)

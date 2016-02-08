@@ -32,17 +32,21 @@ object MetadataOutput {
       List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
   })
 
-  val LuaTable: MetadataPrinter = MetadataPrinter ((md, oConforms) =>
+  val LuaTable: MetadataPrinter = MetadataPrinter {(md, oConforms) =>
+    import com.pavlinic.util.lua.Escape.escape
+
     s"""|FeatureMetadata{
-        |    name = "${md.name}",
-        |    namespace = "${md.namespace}",
-        |    description = "${md.description}",
-        |    source = "${md.sourceTag.tpe}",
-        |    featureType = "${genericFeatureTypeToString(md.featureType)}",
-        |    valueType = "${genericValueTypeToString(md.valueType)}",
-        |    typesConform = "${oConforms.isDefined}"
+        |    name = ${escape(md.name)},
+        |    namespace = ${escape(md.namespace)},
+        |    description = ${escape(md.description)},
+        |    source = ${escape(md.sourceTag.tpe.toString)},
+        |    featureType = ${escape(genericFeatureTypeToString(md.featureType))},
+        |    valueType = ${escape(genericValueTypeToString(md.valueType))},
+        |    typesConform = ${escape(oConforms.isDefined.toString)}
         |}
-     """.stripMargin)
+     """.stripMargin
+  }
+
 
   val JsonObject: MetadataPrinter = MetadataPrinter((md, oConforms) => {
 
