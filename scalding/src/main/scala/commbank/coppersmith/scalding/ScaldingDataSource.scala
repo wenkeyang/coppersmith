@@ -97,7 +97,3 @@ object HiveParquetSource {
 case class TypedPipeSource[T](pipe: TypedPipe[T]) extends DataSource[T, TypedPipe] {
   def load = pipe
 }
-
-
-
-
