@@ -45,13 +45,12 @@ object ScaldingDataSource {
 import ScaldingDataSource.Partitions
 
 case class HiveTextSource[S <: ThriftStruct : Decode, P](
-  basePath:   Path,
-  partitions: Partitions[P],
-  delimiter:  String = "|"
+  listOfPaths: List[Path],
+  delimiter:  String
 ) extends DataSource[S, TypedPipe] {
   def load = {
     val decoder = implicitly[Decode[S]]
-    val input: TextLineScheme = MultipleTextLineFiles(partitions.toPaths(basePath).map(_.toString): _*)
+    val input: TextLineScheme = MultipleTextLineFiles(listOfPaths.map(_.toString): _*)
     input.map { raw =>
       decoder.decode(none = "\\N", Splitter.delimited(delimiter).run(raw).toList)
     }.collect {
@@ -69,16 +68,36 @@ case class HiveTextSource[S <: ThriftStruct : Decode, P](
   }
 }
 
+object HiveTextSource {
+  def apply[S <: ThriftStruct : Decode, P](
+    basePath: Path,
+    partitions: Partitions[P],
+    delimiter:  String = "|"
+  ): HiveTextSource[S, P] =
+    HiveTextSource[S, P](partitions.toPaths(basePath), delimiter)
+}
+
 case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter, P](
-  basePath:   Path,
-  partitions: Partitions[P]
+  listOfPaths: List[Path]
 ) extends DataSource[S, TypedPipe] {
   def load = {
-    TypedPipe.from(ParquetScroogeSource[S](partitions.toPaths(basePath).map(_.toString): _*))
+    TypedPipe.from(ParquetScroogeSource[S](listOfPaths.map(_.toString): _*))
   }
+}
+
+object HiveParquetSource {
+  def apply[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter , P](
+    basePath: Path,
+    partitions: Partitions[P]
+  ): HiveParquetSource[S, P] =
+    HiveParquetSource[S, P](partitions.toPaths(basePath))
 }
 
 /** Akin to an SQL view, allow features to be derived from an arbitrary [[TypedPipe]] */
 case class TypedPipeSource[T](pipe: TypedPipe[T]) extends DataSource[T, TypedPipe] {
   def load = pipe
 }
+
+
+
+
