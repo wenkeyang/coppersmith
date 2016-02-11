@@ -121,14 +121,14 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      Metadata[Customer, Integral](namespace, "size",    "Agg feature",  Discrete),
-      Metadata[Customer, Integral](namespace, "count",   "Agg feature",  Continuous),
-      Metadata[Customer, Decimal] (namespace, "sum",     "Agg feature",  Continuous),
-      Metadata[Customer, Decimal] (namespace, "max",     "Agg feature",  Continuous),
-      Metadata[Customer, Decimal] (namespace, "min",     "Agg feature",  Continuous),
-      Metadata[Customer, Decimal] (namespace, "avg",     "Agg feature",  Continuous),
-      Metadata[Customer, Integral](namespace, "ucb",     "Agg feature",  Continuous),
-      Metadata[Customer, Decimal] (namespace, "collect", "Agg feature",  Continuous)
+      Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "size",    "Agg feature",  Discrete),
+      Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "count",   "Agg feature",  Continuous),
+      Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "sum",     "Agg feature",  Continuous),
+      Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "max",     "Agg feature",  Continuous),
+      Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "min",     "Agg feature",  Continuous),
+      Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "avg",     "Agg feature",  Continuous),
+      Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "ucb",     "Agg feature",  Continuous),
+      Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "collect", "Agg feature",  Continuous)
     )
   }
 

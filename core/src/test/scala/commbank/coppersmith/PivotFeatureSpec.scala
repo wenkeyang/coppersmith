@@ -58,29 +58,33 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
   }
 
   def generateMetadataCompareMacro = {
-    def copyNoDesc(oldMetadata: Metadata[Customer, Value]) = {
-      Metadata[Customer, Value](
-        namespace   = oldMetadata.namespace,
-        name        = oldMetadata.name,
-        description = "",
-        featureType = oldMetadata.featureType
-      )
-    }
-    val macroMetadata = CustomerFeatureSet.metadata.toSeq.map(copyNoDesc)
-
     val metadata = PivotMacro.pivotThrift[Customer](
       CustomerFeatureSet.namespace,
       CustomerFeatureSet.entity
-    ).features.map(_.metadata).map(copyNoDesc _)
+    ).features.map(_.metadata)
 
-    metadata must containAllOf(macroMetadata)
+    import CustomerFeatureSet.namespace
+    val fields = Fields[Customer]
+
+    def macroDesc(fieldName: String) =
+      "Feature auto-pivoted from commbank.coppersmith.test.thrift.Customer." + fieldName
+
+    metadata.toSet must_== Set(
+      Metadata[Customer, Str]     (namespace, fields.Id.name,     macroDesc("id"),     Nominal),
+      Metadata[Customer, Integral](namespace, fields.Time.name,   macroDesc("time"),   Nominal),
+      Metadata[Customer, Str]     (namespace, fields.Name.name,   macroDesc("name"),   Nominal),
+      Metadata[Customer, Integral](namespace, fields.Age.name,    macroDesc("age"),    Nominal),
+      Metadata[Customer, Decimal] (namespace, fields.Height.name, macroDesc("height"), Continuous),
+      Metadata[Customer, Decimal] (namespace, fields.Credit.name, macroDesc("credit"), Continuous)
+    )
   }
 
   def generateFeatureValuesCompareMacro = forAll { (c:Customer) =>
+    import CustomerFeatureSet.{namespace, entity}
     val values = CustomerFeatureSet.generate(c)
-    val macroValues = PivotMacro.pivotThrift[Customer](CustomerFeatureSet.namespace, CustomerFeatureSet.entity).generate(c)
+    val macroValues = PivotMacro.pivotThrift[Customer](namespace, entity).generate(c)
 
-    macroValues.map(it => (it.entity, it.value)) must containAllOf(values.toSeq.map(it => (it.entity, it.value)))
+    macroValues must containAllOf(values.toSeq)
   }
 
   def generateFeatureValues = forAll { (c: Customer) => {
