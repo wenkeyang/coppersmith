@@ -72,7 +72,7 @@ object HiveTextSource {
   def apply[S <: ThriftStruct : Decode, P](
     basePath: Path,
     partitions: Partitions[P],
-    delimiter:  String = "|"
+    delimiter: String = "|"
   ): HiveTextSource[S, P] =
     HiveTextSource[S, P](partitions.toPaths(basePath), delimiter)
 }
