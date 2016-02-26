@@ -81,7 +81,7 @@ case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : Tup
   paths: List[Path]
 ) extends DataSource[S, TypedPipe] {
   def load = {
-    TypedPipe.from(ParquetScroogeSource[S](paths.map(_.toString): _*))
+    ParquetScroogeSource[S](paths.map(_.toString): _*)
   }
 }
 
