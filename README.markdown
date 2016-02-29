@@ -21,3 +21,5 @@ This library is originated from the Feature Engineering squad within Analytics
 We have a richly detailed [user guide](USERGUIDE.markdown),
 which we consider a good introduction to **coppersmith**. PR's to the user
 guide as you become familiar with the library are especially encouraged!!!
+
+There is also a [troubleshooting guide](TROUBLESHOOTING.markdown) available.

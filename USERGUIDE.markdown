@@ -8,9 +8,12 @@ and should be read in full.
 The [**Intermediate**](#intermediate) section is also highly recommended.
 The [**Advanced**](#advanced) section serves as a reference
 to additional features of the library.
-The [**Example**](#example) section contains a simple example of how Coppersmith 
-could be used to create a feature from the publicly available 
+The [**Example**](#example) section contains a simple example of how Coppersmith
+could be used to create a feature from the publicly available
 [MovieLens](http://grouplens.org/datasets/movielens/) dataset.
+
+In addition to this document, there is also a
+[troubleshooting guide](TROUBLESHOOTING.markdown) available.
 
 
 Basics
@@ -950,22 +953,22 @@ Guidelines for unit testing are still forthcoming.
 Example
 -------
 
-This is an example of using Coppersmith with a publicly available data set in order to demonstrate 
-its functionality and make the objectives of the project clearer. There is a lot more that can be 
+This is an example of using Coppersmith with a publicly available data set in order to demonstrate
+its functionality and make the objectives of the project clearer. There is a lot more that can be
 done in Coppersmith but this is intended as a quick "Hello Feature" job.
 
-### Setup 
+### Setup
 
-In order to run the example you first need to obtain the famous Movie Lens data set that was used 
+In order to run the example you first need to obtain the famous Movie Lens data set that was used
 in the Netflix challenge.
 
 http://grouplens.org/datasets/movielens/
 
-unzip the ml-100k.zip in your project directory under data/ml-100k/ 
+unzip the ml-100k.zip in your project directory under data/ml-100k/
 
-Then if you, like me, are running Hadoop on Vagrant (there are easy instructions on how to do that 
-here 
-https://blog.cloudera.com/blog/2014/06/how-to-install-a-virtual-apache-hadoop-cluster-with-vagrant-and-cloudera-manager/) 
+Then if you, like me, are running Hadoop on Vagrant (there are easy instructions on how to do that
+here
+https://blog.cloudera.com/blog/2014/06/how-to-install-a-virtual-apache-hadoop-cluster-with-vagrant-and-cloudera-manager/)
 you would do something similar to:
 
 As user hdfs in my case:
@@ -982,8 +985,8 @@ hdfs dfs -copyFromLocal /vagrant/data/ml-100k/u.data /data/rating/
 ```
 
 
-In my case as this is a fresh cluster I had to create the home directory for the vagrant user 
-(as user hdfs): 
+In my case as this is a fresh cluster I had to create the home directory for the vagrant user
+(as user hdfs):
 ```
 hdfs dfs -mkdir /user/vagrant
 hdfs dfs -chown vagrant /user/vagrant
@@ -991,10 +994,10 @@ hdfs dfs -chown vagrant /user/vagrant
 
 ### Defining the feature
 
-In this case we want to obtain the average movie rating. In order to achieve that we need to join 
+In this case we want to obtain the average movie rating. In order to achieve that we need to join
 the u.data table that contains the actual ratings, with the u.item ratings that contains the movie titles.
 
-The first step in achieving that is creating the thrift structure where the fields are contained. 
+The first step in achieving that is creating the thrift structure where the fields are contained.
 In this case two are needed that can be found in:
 [Movie.thrift](examples/src/main/thrift/Movie.thrift)
 and
