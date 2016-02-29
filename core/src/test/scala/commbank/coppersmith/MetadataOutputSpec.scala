@@ -66,9 +66,9 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
 
     Seq(
       withScript(luaFunctionDefiniton).eval[Map[String, String]]("return " + luaMetadata) === Map(
-        "name" -> metadata.name,
-        "namespace" -> metadata.namespace,
-        "description" -> metadata.description,
+        "name" -> metadata.name.trim,
+        "namespace" -> metadata.namespace.trim,
+        "description" -> metadata.description.trim,
         "source" -> metadata.sourceType.toString,
         "featureType" -> expectedFeatureType,
         "valueType" -> expectedValueType,

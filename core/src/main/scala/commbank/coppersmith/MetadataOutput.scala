@@ -36,9 +36,9 @@ object MetadataOutput {
     import com.pavlinic.util.lua.Escape.escape
 
     s"""|FeatureMetadata{
-        |    name = ${escape(md.name)},
-        |    namespace = ${escape(md.namespace)},
-        |    description = ${escape(md.description)},
+        |    name = ${escape(md.name.trim)},
+        |    namespace = ${escape(md.namespace.trim)},
+        |    description = ${escape(md.description.trim)},
         |    source = ${escape(md.sourceType.toString)},
         |    featureType = ${escape(genericFeatureTypeToString(md.featureType))},
         |    valueType = ${escape(genericValueTypeToString(md.valueType))},
