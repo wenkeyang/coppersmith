@@ -8,9 +8,8 @@ object MetadataMain {
   def main(args:Array[String]) = {
     val (format, packagge) = args.take(2) match {
       case Array("--psv", pkg)  => ( MetadataOutput.HydroPsv, pkg)
-      case Array("--lua", pkg)  => ( MetadataOutput.LuaTable, pkg)
       case Array("--json", pkg) => ( MetadataOutput.JsonObject, pkg)
-      case Array(pkg)           => ( MetadataOutput.LuaTable, pkg)
+      case Array(pkg)           => ( MetadataOutput.JsonObject, pkg)
       case _                    => println("Invalid input"); sys.exit(1)
     }
 
@@ -20,7 +19,7 @@ object MetadataMain {
 
     metadataSets.foreach { ms =>
       val metadataConformsSet = ms.metadata.map(m => (m, allConforms.find(c => conforms_?(c, m)))).toList
-      val outputString = MetadataOutput.metadataString(metadataConformsSet, MetadataOutput.LuaTable)
+      val outputString = MetadataOutput.metadataString(metadataConformsSet, format)
       println(outputString)
     }
   }

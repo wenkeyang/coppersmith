@@ -28,7 +28,7 @@ import commbank.coppersmith.test.thrift.{Account, Customer}
 import ScaldingJobSpec.{RegularFeatures, AggregationFeatures}
 
 class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
-    Running a regluar feature set job
+    Running a regular feature set job
       writes all regular feature values $regularFeaturesJob ${tag("slow")}
 
     Running an aggregation feature set job

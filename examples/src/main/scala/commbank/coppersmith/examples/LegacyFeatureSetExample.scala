@@ -33,7 +33,7 @@ object LegacyFeatureSetExample extends MetadataSet[Customer] {
     println(
       metadataString(
         LegacyFeatureSetExample.metadata.map(m => (m, allConforms.find(conforms_?(_, m)))),
-        LuaTable
+        JsonObject
       )
     )
   }
