@@ -13,7 +13,6 @@ import Arbitraries._
 
 object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatchers { def is = s2"""
   HydroPsv creates expected metadata $hydroPsv
-  LuaTable creates expected metadata $luaTable
   Json creates expected metadata $json
 """
 
@@ -33,48 +32,6 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
 
     hydroMetadata must_==
       s"${namespace.toLowerCase}.${name.toLowerCase}|$expectedValueType|$expectedFeatureType"
-  }}
-
-  def luaTable = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, value: Value) => {
-    import com.pavlinic.util.lua._, Eval._, generic.FromLua._, SimpleConversions._
-
-    val (metadata, expectedValueType) = value match {
-      case Integral(_) => (Metadata[Customer, Integral](namespace, name, desc, fType), "integral")
-      case Decimal(_)  => (Metadata[Customer, Decimal] (namespace, name, desc, fType), "decimal")
-      case Str(_)      => (Metadata[Customer, Str]     (namespace, name, desc, fType), "string")
-    }
-
-    val expectedFeatureType = fType.toString.toLowerCase
-    val oConforms = (fType, value) match {
-      case (Nominal,    Str(_))      => Some(NominalStr)
-      case (Ordinal,    Decimal(_))  => Some(OrdinalDecimal)
-      case (Continuous, Decimal(_))  => Some(ContinuousDecimal)
-      case (Ordinal,    Integral(_)) => Some(OrdinalIntegral)
-      case (Continuous, Integral(_)) => Some(ContinuousIntegral)
-      case (Discrete,   Integral(_)) => Some(DiscreteIntegral)
-      case _                         => None
-    }
-    val expectedTypesConform = oConforms.isDefined
-
-    val luaMetadata = MetadataOutput.LuaTable.fn(metadata, oConforms)
-    val luaFunctionDefiniton =
-      """
-        |function FeatureMetadata (t)
-        | return t
-        |end
-      """.stripMargin
-
-    Seq(
-      withScript(luaFunctionDefiniton).eval[Map[String, String]]("return " + luaMetadata) === Map(
-        "name" -> metadata.name.trim,
-        "namespace" -> metadata.namespace.trim,
-        "description" -> metadata.description.trim,
-        "source" -> metadata.sourceType.toString,
-        "featureType" -> expectedFeatureType,
-        "valueType" -> expectedValueType,
-        "typesConform" -> expectedTypesConform.toString
-      )
-    )
   }}
 
   def json = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, value: Value) => {
