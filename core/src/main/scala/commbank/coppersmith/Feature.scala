@@ -14,12 +14,15 @@
 
 package commbank.coppersmith
 
+import scala.annotation.implicitNotFound
+import scala.collection.immutable.ListSet
+import scala.reflect.runtime.universe.{TypeTag, Type => ScalaType, typeOf}
+
+import scalaz.Order
+import scalaz.syntax.order.ToOrderOps
 import scalaz.syntax.std.list.ToListOpsFromList
 
 import shapeless.=:!=
-
-import scala.annotation.implicitNotFound
-import scala.reflect.runtime.universe.{TypeTag, Type => ScalaType, typeOf}
 
 object Feature {
   type Namespace   = String
@@ -32,10 +35,10 @@ object Feature {
   sealed trait Type
   object Type {
     sealed trait Categorical extends Type
-    sealed trait Numeric extends Type
+    sealed trait Numeric     extends Type
 
-    case object Continuous  extends Numeric
-    case object Discrete  extends Numeric
+    case object Continuous extends Numeric
+    case object Discrete   extends Numeric
 
     case object Ordinal extends Categorical
     case object Nominal extends Categorical
@@ -55,6 +58,18 @@ object Feature {
     implicit def fromOLong(l: Option[Long]):     Integral = Integral(l)
     implicit def fromODouble(d: Option[Double]): Decimal  = Decimal(d)
     implicit def fromOString(s: Option[String]): Str      = Str(s)
+
+    abstract class Range[+V : Order] {
+      // V needs to be covariant to satisfy Metadata type constraint, so can't be in contravariant
+      // position here. This problem goes away when switching to arbitrary value types.
+      // def contains(v: V): Boolean
+    }
+    case class MinMaxRange[V : Order](min: V, max: V) extends Range[V] {
+      def contains(v: V) = v >= min && v <= max
+    }
+    case class SetRange[V : Order](values: ListSet[V]) extends Range[V] {
+      def contains(v: V) = values.contains(v)
+    }
   }
 
   // Legal type/value combinations
@@ -124,9 +139,10 @@ object Feature {
       namespace:   Namespace,
       name:        Name,
       description: Description,
-      featureType: Type
+      featureType: Type,
+      valueRange:  Option[Value.Range[V]] = None
     )(implicit neq: V =:!= Nothing): Metadata[S, V] = {
-      Metadata[S, V](namespace, name, description, featureType, valueType[V], TypeInfo.apply[S])
+      Metadata[S, V](namespace, name, description, featureType, valueType[V], valueRange, TypeInfo.apply[S])
     }
   }
 
@@ -141,6 +157,7 @@ object Feature {
     description: Description,
     featureType: Feature.Type,
     valueType:   ValueType,
+    valueRange:  Option[Value.Range[V]],
     sourceType:  TypeInfo
   )
 }
