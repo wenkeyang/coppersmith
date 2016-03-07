@@ -63,12 +63,17 @@ object Feature {
       // V needs to be covariant to satisfy Metadata type constraint, so can't be in contravariant
       // position here. This problem goes away when switching to arbitrary value types.
       // def contains(v: V): Boolean
+      def widestValueSize: Option[Int]
     }
     case class MinMaxRange[V : Order](min: V, max: V) extends Range[V] {
       def contains(v: V) = v >= min && v <= max
+      def widestValueSize = None
     }
     case class SetRange[V : Order](values: ListSet[V]) extends Range[V] {
       def contains(v: V) = values.contains(v)
+      def widestValueSize = values.collect {
+        case Str(s) => s.map(_.length).getOrElse(0)
+      }.toList.toNel.map(_.foldRight1(math.max(_, _)))
     }
   }
 
