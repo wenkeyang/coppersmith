@@ -35,8 +35,7 @@ The two type parameters, `S` and `V`, are the *source* (or input)
 type and the *value* (or output) type respectively.
 You can think of it as a function from `S` to `V`:
 - The source type is typically a thrift struct,
-  describing the schema of a raw table
-  or (more likely) an *Analytical Record*.
+  describing the schema of a source table.
 - The value type is one of `Integral`, `Decimal`, or `Str`.
 
 A feature must also define some metadata, including:
