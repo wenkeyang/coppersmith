@@ -9,7 +9,7 @@ import au.com.cba.omnia.uniform.thrift.UniformThriftPlugin._
 import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
-  val maestroVersion = "2.17.+"
+  val maestroVersion = "2.19.1-20160204041454-9918a33"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
@@ -46,7 +46,7 @@ object build extends Build {
    ++ Seq(
           libraryDependencies += "org.specs2" %% "specs2-matcher-extra" % versions.specs % "test"
             exclude("org.scala-lang", "scala-compiler"),
-          libraryDependencies +=  "io.argonaut" %% "argonaut" % "6.1", 
+          libraryDependencies +=  "io.argonaut" %% "argonaut" % "6.1",
           libraryDependencies ++= depend.testing(configuration = "test"),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion)
       )
