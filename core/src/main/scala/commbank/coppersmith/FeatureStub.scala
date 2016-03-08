@@ -28,10 +28,18 @@ object FeatureStub {
   */
 
 class FeatureStub[S : TypeTag, V <: Value : TypeTag] {
-  def asFeatureMetadata(featureType: Type,
-                        namespace: Namespace,
-                        name: Name,
-                        desc: Description
-                       ) = Metadata[S, V](namespace, name, desc, featureType)
+  def asFeatureMetadata(
+    featureType: Type,
+    namespace:   Namespace,
+    name:        Name,
+    desc:        Description
+  ): Metadata[S, V] = asFeatureMetadata(featureType, namespace, name, None, desc)
 
+  def asFeatureMetadata(
+    featureType: Type,
+    namespace:   Namespace,
+    name:        Name,
+    range:       Option[Value.Range[V]],
+    desc:        Description
+  ): Metadata[S, V] = Metadata[S, V](namespace, name, desc, featureType, range)
 }

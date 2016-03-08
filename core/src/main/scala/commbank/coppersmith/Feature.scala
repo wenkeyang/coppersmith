@@ -77,6 +77,9 @@ object Feature {
         case Str(s) => s.map(_.length).getOrElse(0)
       }.toList.toNel.map(_.foldRight1(math.max(_, _)))
     }
+    object SetRange {
+      def apply[V : Order](values: List[V]): Range[V] = SetRange(ListSet(values: _*))
+    }
   }
 
   // Legal type/value combinations
