@@ -2,7 +2,7 @@ Change log
 ==========
 
 ## 0.7.0
-Renamed `HydroSink` to `EavtSink`.
+- Renamed `HydroSink` to `EavtSink`.
 
 ## 0.6.0
 - Remove `sourceTag` and `valueTag` from `Metadata` case class due to
