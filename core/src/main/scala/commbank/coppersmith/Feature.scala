@@ -18,9 +18,7 @@ import scala.annotation.implicitNotFound
 import scala.collection.immutable.ListSet
 import scala.reflect.runtime.universe.{TypeTag, Type => ScalaType, typeOf}
 
-import scalaz.Order
-import scalaz.syntax.order.ToOrderOps
-import scalaz.syntax.std.list.ToListOpsFromList
+import scalaz.{Name => _, Value => _, _}, Scalaz._, Order.orderBy
 
 import shapeless.=:!=
 
@@ -58,6 +56,10 @@ object Feature {
     implicit def fromOLong(l: Option[Long]):     Integral = Integral(l)
     implicit def fromODouble(d: Option[Double]): Decimal  = Decimal(d)
     implicit def fromOString(s: Option[String]): Str      = Str(s)
+
+    implicit val intOrder: Order[Integral] = orderBy(_.value)
+    implicit val decOrder: Order[Decimal] = orderBy(_.value)
+    implicit val strOrder: Order[Str] = orderBy(_.value)
 
     abstract class Range[+V : Order] {
       // V needs to be covariant to satisfy Metadata type constraint, so can't be in contravariant
