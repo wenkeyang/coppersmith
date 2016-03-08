@@ -57,4 +57,6 @@ package object api {
   val Metadata = commbank.coppersmith.Feature.Metadata
   val FeatureValue = commbank.coppersmith.FeatureValue
   val PivotMacro = commbank.coppersmith.PivotMacro
+  val MinMaxRange = Value.MinMaxRange
+  val SetRange = Value.SetRange
 }
