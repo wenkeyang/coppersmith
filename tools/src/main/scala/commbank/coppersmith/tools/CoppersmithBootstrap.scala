@@ -168,7 +168,7 @@ object ${sourceType}FeatureSet extends MetadataSet[$sourceType] {
 ${metadata.map{ case (ns, name, vType, fType, desc, range) =>
     s"""  val ${camelCase(name)} = FeatureStub[$sourceType, $vType].asFeatureMetadata(
     $fType, "$ns", "$name",
-    ${rangeToScala(range)},
+    ${rangeToScala(range, vType)},
     "$desc")
 """
   }.mkString("\n\n")}
@@ -180,14 +180,14 @@ ${metadata.map{ case (ns, name, vType, fType, desc, range) =>
   )
 }"""
 
-  def rangeToScala(range: Option[Range]) = range.map(_.fold(
+  def rangeToScala(range: Option[Range], vType: String) = range.map(_.fold(
     values => {
-      val quotedValues = values.map("\"" + _ + "\"").mkString(", ")
-      s"Some(Value.ListRange($quotedValues))"
+      val literalValues = if (vType == "Str") values.map("\"" + _ + "\"") else values
+      s"Some(SetRange(List[$vType](${literalValues.mkString(", ")})))"
     },
     minMax => {
       val (min, max) = minMax
-      s"Some(Value.MinMaxRange($min, $max))"
+      s"Some(MinMaxRange($min, $max))"
     }
   )).getOrElse("None")
 
