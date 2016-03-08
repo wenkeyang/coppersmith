@@ -22,4 +22,4 @@ Now, running
 java -cp <assembly-jar>:<tools-jar> commbank.coppersmith.tools.MetadataMain --json <feature-package>
 ```
 
-Note that the `--json` option can be replaced by `--psv` for Hydro PSV output.
+Note that the `--json` option can be replaced by `--psv` for PSV output.

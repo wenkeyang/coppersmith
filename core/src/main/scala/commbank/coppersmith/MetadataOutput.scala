@@ -11,13 +11,13 @@ object MetadataOutput {
 
   val defaultCombiner = (list: List[String]) => list.mkString("\n")
 
-  private def hydroValueTypeToString(v: ValueType) = v match {
+  private def psvValueTypeToString(v: ValueType) = v match {
     case ValueType.IntegralType => "int"
     case ValueType.DecimalType  => "double"
     case ValueType.StringType   => "string"
   }
 
-  private def hydroFeatureTypeToString(f: Feature.Type) = f match {
+  private def psvFeatureTypeToString(f: Feature.Type) = f match {
     case t : Type.Categorical => "categorical"
     case t : Type.Numeric     => "continuous"
   }
@@ -26,9 +26,9 @@ object MetadataOutput {
 
   private def genericValueTypeToString(v: ValueType) = v.toString.replace("Type", "").toLowerCase
 
-  val HydroPsv: MetadataPrinter = MetadataPrinter((m, _) => {
-      val valueType = hydroValueTypeToString(m.valueType)
-      val featureType = hydroFeatureTypeToString(m.featureType)
+  val Psv: MetadataPrinter = MetadataPrinter((m, _) => {
+      val valueType = psvValueTypeToString(m.valueType)
+      val featureType = psvFeatureTypeToString(m.featureType)
       List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
   })
 

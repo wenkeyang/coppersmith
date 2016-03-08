@@ -7,7 +7,7 @@ import commbank.coppersmith.tools.util.ObjectFinder
 object MetadataMain {
   def main(args:Array[String]) = {
     val (format, packagge) = args.take(2) match {
-      case Array("--psv", pkg)  => ( MetadataOutput.HydroPsv, pkg)
+      case Array("--psv", pkg)  => ( MetadataOutput.Psv, pkg)
       case Array("--json", pkg) => ( MetadataOutput.JsonObject, pkg)
       case Array(pkg)           => ( MetadataOutput.JsonObject, pkg)
       case _                    => println("Invalid input"); sys.exit(1)

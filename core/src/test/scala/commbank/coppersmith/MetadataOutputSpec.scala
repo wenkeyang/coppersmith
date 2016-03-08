@@ -12,11 +12,11 @@ import org.specs2.{ScalaCheck, Specification}
 import Arbitraries._
 
 object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatchers { def is = s2"""
-  HydroPsv creates expected metadata $hydroPsv
+  Psv creates expected metadata $psv
   Json creates expected metadata $json
 """
 
-  def hydroPsv = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, value: Value) => {
+  def psv = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, value: Value) => {
     val (metadata, expectedValueType) = value match {
       case Integral(_) => (Metadata[Customer, Integral](namespace, name, desc, fType), "int")
       case Decimal(_)  => (Metadata[Customer, Decimal] (namespace, name, desc, fType), "double")
@@ -28,9 +28,9 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       case c: Categorical => "categorical"
     }
 
-    val hydroMetadata = MetadataOutput.HydroPsv.fn(metadata, None)
+    val psvMetadata = MetadataOutput.Psv.fn(metadata, None)
 
-    hydroMetadata must_==
+    psvMetadata must_==
       s"${namespace.toLowerCase}.${name.toLowerCase}|$expectedValueType|$expectedFeatureType"
   }}
 
