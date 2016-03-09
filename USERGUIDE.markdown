@@ -160,9 +160,8 @@ Coppersmith currently supports the following source types:
 
 and one sink type:
 
-- `HydroSink`: a file in the format required for ingestion into Hydro
-  (CBA's internal feature store, which is currently a text-encoded EAVT
-  format, but will evolve to support future versions of Hydro as well)
+- `EavtSink`: a file in the format required for ingestion into the feature store (
+  text-encoded EAVT format)
 
 Here is an example of a job which materialises the feature set
 which we defined in the previous section:
@@ -198,7 +197,7 @@ case class CustomerFeaturesConfig(conf: Config) extends FeatureJobConfig[Custome
   val dbRoot        = new Path(conf.getArgs("db-root"))
   val tableName     = conf.getArgs("table-name")
 
-  val featureSink   = HydroSink.configure(dbPrefix, dbRoot, tableName)
+  val featureSink   = EavtSink.configure(dbPrefix, dbRoot, tableName)
 }
 
 object CustomerFeaturesJob extends SimpleFeatureJob {
@@ -450,7 +449,7 @@ per calendar year
 once per day at close of business)
 Notice that `time` is set to be the year,
 and this defines both the window for aggregation
-as well as the value for "T" in the EAVT output for hydro.
+as well as the value for "T" in the EAVT output.
 
 ```scala
 package commbank.coppersmith.examples.userguide
@@ -685,7 +684,7 @@ case class JoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Customer, 
                          ScaldingDataSource.Partitions.unpartitioned)
 
   val featureSource  = JoinFeatures.source.bind(join(customers, accounts))
-  val featureSink    = HydroSink.configure("dd", new Path("dev"), "balances")
+  val featureSink    = EavtSink.configure("dd", new Path("dev"), "balances")
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 8, 29, 0, 0))
 }
 
@@ -935,7 +934,7 @@ case class MillionthCustomerFeaturesConfig(conf: Config) extends FeatureJobConfi
   val customerIds    = TypedPipe.from(step to max by step).map(_.toString)
 
   val featureSource  = MillionthCustomerFeatures.source.bind(from(TypedPipeSource(customerIds)))
-  val featureSink    = HydroSink.configure("dd", new Path("dev"), "customers")
+  val featureSink    = EavtSink.configure("dd", new Path("dev"), "customers")
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 8, 29, 0, 0))
 }
 

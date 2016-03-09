@@ -33,7 +33,7 @@ trait FeatureSink {
   def write(features: TypedPipe[(FeatureValue[_], Time)]): Execution[Unit]
 }
 
-object HydroSink {
+object EavtSink {
   type DatabaseName = String
   type TableName    = String
 
@@ -48,8 +48,8 @@ object HydroSink {
                 dbRoot:    Path,
                 tableName: TableName,
                 group:     Option[String] = None,
-                dcs:       DelimiterConflictStrategy[Eavt] = FailJob[Eavt]()): HydroSink =
-    HydroSink(
+                dcs:       DelimiterConflictStrategy[Eavt] = FailJob[Eavt]()): EavtSink =
+    EavtSink(
       Config(
         s"${dbPrefix}_features",
         new Path(dbRoot, s"view/warehouse/features/${group.map(_ + "/").getOrElse("")}$tableName"),
@@ -81,10 +81,10 @@ object HydroSink {
   }
 }
 
-case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
+case class EavtSink(conf: EavtSink.Config) extends FeatureSink {
   def write(features: TypedPipe[(FeatureValue[_], Time)]) = {
     val hiveConfig = conf.hiveConfig
-    val eavtPipe = features.map { case (fv, t) => HydroSink.toEavt(fv, t) }
+    val eavtPipe = features.map { case (fv, t) => EavtSink.toEavt(fv, t) }
 
     for {
       partitions <- HiveSupport.writeTextTable(hiveConfig, eavtPipe)
@@ -99,7 +99,6 @@ case class HydroSink(conf: HydroSink.Config) extends FeatureSink {
 
 // Maestro's HiveTable currently assumes the underlying format to be Parquet. This code generalises
 // code from different feature gen projects, which supports storing the final EAVT records as text.
-// Won't be required once Hydro moves to Parquet format
 object HiveSupport {
   trait DelimiterConflictStrategy[T] {
     def handle(row: T, result: String, sep: String): Option[String]

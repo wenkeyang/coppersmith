@@ -54,7 +54,7 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
   def prepareData(
     custAccts:   CustomerAccounts,
     jobTime:     DateTime,
-    hydroConfig: HydroSink.Config
+    eavtConfig: EavtSink.Config
   ): FeatureJobConfig[Account] = {
 
     val accounts = custAccts.cas.flatMap(_.as)
@@ -82,39 +82,39 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
     new FeatureJobConfig[Account] {
       val featureContext = ExplicitGenerationTime(jobTime)
       val featureSource  = From[Account].bind(SourceBinder.from(accountDataSource))
-      val featureSink    = HydroSink(hydroConfig)
+      val featureSink    = EavtSink(eavtConfig)
     }
   }
 
   val eavtReader  = delimitedThermometerRecordReader[Eavt]('|', "\\N", implicitly[Decode[Eavt]])
   val defaultArgs = Map("hdfs-root" -> List(s"$dir/user"))
-  val hydroConfig = HydroSink.Config("features_db", path(s"$dir/user/features_db"), "features")
+  val eavtConfig = EavtSink.Config("features_db", path(s"$dir/user/features_db"), "features")
 
-  // Use alphaStr to avoid problems with serialising new lines and hydro field delimiters
+  // Use alphaStr to avoid problems with serialising new lines and eavt field delimiters
   implicit val arbCustAccts: Arbitrary[CustomerAccounts] = arbCustomerAccounts(alphaStr)
 
   def regularFeaturesJob =
     forAll { (custAccts: CustomerAccounts, jobTime: DateTime) => {
-      val cfg = prepareData(custAccts, jobTime, hydroConfig)
+      val cfg = prepareData(custAccts, jobTime, eavtConfig)
       val expected = RegularFeatures.expectedFeatureValues(custAccts, jobTime)
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         executesSuccessfully(SimpleFeatureJob.generate((_: Config) => cfg, RegularFeatures), defaultArgs)
         facts(
-          path(s"${hydroConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected)
+          path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected)
         )
       }
     }}.set(minTestsOk = 5)
 
   def aggregationFeaturesJob =
     forAll { (custAccts: CustomerAccounts, jobTime: DateTime) => {
-      val cfg = prepareData(custAccts, jobTime, hydroConfig)
+      val cfg = prepareData(custAccts, jobTime, eavtConfig)
       val expected = AggregationFeatures.expectedFeatureValues(custAccts, jobTime)
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         executesSuccessfully(SimpleFeatureJob.generate((_: Config) => cfg, AggregationFeatures), defaultArgs)
         facts(
-          path(s"${hydroConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected)
+          path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected)
         )
       }
     }}.set(minTestsOk = 5)
@@ -144,7 +144,7 @@ object ScaldingJobSpec {
                   List(FeatureValue[Decimal] (acct.id, "balance", acct.balance)),
           acct.age.map(FeatureValue[Integral](acct.id, "age",     _)).toList
         ).flatten
-        values.map(HydroSink.toEavt(_, time.getMillis))
+        values.map(EavtSink.toEavt(_, time.getMillis))
       })).toList
     }
   }
@@ -189,7 +189,7 @@ object ScaldingJobSpec {
                  List(FeatureValue[Decimal] (cag.c.id, "min",     min)),
           collect.map(FeatureValue[Integral](cag.c.id, "collect", _)).toList
         ).flatten
-        values.map(HydroSink.toEavt(_, time.getMillis))
+        values.map(EavtSink.toEavt(_, time.getMillis))
       }).toList
     }
   }

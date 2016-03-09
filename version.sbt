@@ -1,3 +1,3 @@
-version in ThisBuild := "0.6.4"
+version in ThisBuild := "0.7.0"
 
 uniqueVersionSettings
