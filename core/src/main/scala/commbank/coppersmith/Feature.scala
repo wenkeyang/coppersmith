@@ -78,7 +78,8 @@ object Feature {
       }.toList.toNel.map(_.foldRight1(math.max(_, _)))
     }
     object SetRange {
-      def apply[V : Order](values: List[V]): Range[V] = SetRange(ListSet(values: _*))
+      // Should return Range[V] once V is made invariant on Range and contains is added back
+      def apply[V : Order](values: List[V]): SetRange[V] = SetRange(ListSet(values: _*))
     }
   }
 
