@@ -89,7 +89,8 @@ object CoppersmithBootstrap {
   type ValueType   = String
   type FeatureType = String
   type Description = String
-  type Metadata    = (Namespace, Name, ValueType, FeatureType, Description)
+  type Range       = Either[List[String], (String, String)]
+  type Metadata    = (Namespace, Name, ValueType, FeatureType, Description, Option[Range])
 
   def bootstrapScala(sourceType: String, metadata: Source, sep: Char): Either[String, String] = {
     val featureMetadata: Either[String, List[Metadata]] =
@@ -112,14 +113,14 @@ object CoppersmithBootstrap {
     val values = s.split(sep)
     val parts: Either[String, (String, String, String)] = values.toList.take(3) match {
       case List(qName, vTypeStr, fTypeStr) => Right((qName, vTypeStr, fTypeStr))
-      case _                               => Left(s"Could not parse separated values from '$s'")
+      case _                               => Left(s"Could not parse $sep-separated values from '$s'")
     }
 
     parts.right.flatMap { case (qName, vTypeStr, fTypeStr) =>
       parseName(qName).right.flatMap { case (namespace, name) =>
         parseTypes(vTypeStr, fTypeStr).right.map { case (vType, fType) => {
           val desc = if (values.size == 4) values(3) else s"Description for $name"
-          (namespace, name, vType, fType, desc)
+          (namespace, name, vType, fType, desc, None)
         }}
       }
     }
@@ -164,8 +165,11 @@ import commbank.coppersmith.MetadataOutput
 trait $sourceType
 
 object ${sourceType}FeatureSet extends MetadataSet[$sourceType] {
-${metadata.map{ case (ns, name, vType, fType, desc) =>
-    s"""  val ${camelCase(name)} = FeatureStub[$sourceType, $vType].asFeatureMetadata($fType, "$ns", "$name", "$desc")
+${metadata.map{ case (ns, name, vType, fType, desc, range) =>
+    s"""  val ${camelCase(name)} = FeatureStub[$sourceType, $vType].asFeatureMetadata(
+    $fType, "$ns", "$name",
+    ${rangeToScala(range, vType)},
+    "$desc")
 """
   }.mkString("\n\n")}
 
@@ -175,6 +179,18 @@ ${metadata.map{ case (ns, name, vType, fType, desc) =>
   }
   )
 }"""
+
+  def rangeToScala(range: Option[Range], vType: String) = range.map(_.fold(
+    values => {
+      val literalValues = if (vType == "Str") values.map("\"" + _ + "\"") else values
+      s"Some(SetRange(List[$vType](${literalValues.mkString(", ")})))"
+    },
+    minMax => {
+      val (min, max) = minMax
+      s"Some(MinMaxRange($min, $max))"
+    }
+  )).getOrElse("None")
+
 
   def camelCase(s: String) = (s.split('_').toList match {
     case h :: t => h :: t.flatMap(w => w.headOption.map(i => i.toUpper + w.tail))
