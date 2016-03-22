@@ -1,0 +1,5 @@
+> plugins
+-> metadata:export
+> sub/metadata:export
+-$ exists target/metadata-0.1-DEMO.json
+$ exists subproject/target/metadata-0.1-DEMO.json

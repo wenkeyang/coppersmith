@@ -1,0 +1,4 @@
+> plugins
+> metadata:export
+$ exists target/metadata-0.1-DEMO.json
+> publishLocal
