@@ -10,14 +10,14 @@ import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
 case class SourceViewAggregationFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie, Rating)] {
   val partitions     = ScaldingDataSource.Partitions.unpartitioned
-  val movies = HiveTextSource[Movie, Nothing](new Path("/data/movies"), partitions)
-  val ratings = HiveTextSource[Rating, Nothing](new Path("/data/ratings"), partitions, "\t")
+  val movies = HiveTextSource[Movie, Nothing](new Path("data/movies"), partitions)
+  val ratings = HiveTextSource[Rating, Nothing](new Path("data/ratings"), partitions, "\t")
 
   val featureSource  = SourceViewAggregationFeatures.source.bind(join(movies, ratings))
 
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 
-  val featureSink    = EavtSink.configure("userguide", new Path("/dev"), "movies")
+  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "movies")
 }
 
 object SourceViewAggregationFeaturesJob extends SimpleFeatureJob {

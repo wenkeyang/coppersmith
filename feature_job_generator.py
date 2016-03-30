@@ -13,7 +13,7 @@ class FeatureSet:
     self.name = name
     self.set_type = set_type
     self.type_params = type_params
-    self.data_source_template = "  val %(val)s = HiveTextSource[%(type)s, Nothing](new Path(\"/data/%(dir)s\"), partitions%(delim)s)"
+    self.data_source_template = "  val %(val)s = HiveTextSource[%(type)s, Nothing](new Path(\"data/%(dir)s\"), partitions%(delim)s)"
     self.delims = { "Movie": "", "User": "", "Rating": ", \"\\t\"" }
   def split_types(self):
     return self.type_params.translate(None, "()").split(", ")
@@ -86,7 +86,7 @@ case class %(name)sConfig(conf: Config) extends FeatureJobConfig[%(type_params)s
 
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 
-  val featureSink    = EavtSink.configure("userguide", new Path("/dev"), "%(table_name)s")
+  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "%(table_name)s")
 }
 
 object %(name)sJob extends SimpleFeatureJob {
