@@ -37,15 +37,14 @@ object DirectorFeaturesSpec extends ThermometerHiveSpec {
     implicit def arbSafeHiveTextString: Arbitrary[String] = Arbitrary(Gen.identifier)
 
     def movie(id: String, title: String) =
-      Gen.resultOf(Movie.apply(id,_,_,_,_,_,_,_,_,_,_,0,0,0,0,0,0,0,0,0,0,0,0,0,0)).sample.get.copy(id = id, title = title)
-//      Movie(id, title, "Jan-01-1995", None, None, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+      Movie(id, title, "Jan-01-1995", None, None, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
     def rating(movie: String, rating: Int) =
       Gen.resultOf(Rating.apply _).sample.get.copy(movieId = movie, rating = rating)
 
     writeRecords[Movie](s"$dir/user/data/movies/data.txt", Seq(
-      movie("1", "Air Bud (1997)"), // non-comedy
-      movie("2", "Fair Bud (1998)") // comedy
+      movie("1", "Air Bud (1997)"),
+      movie("2", "Fair Bud (1998)")
     ), "|")
 
     writeRecords[Rating](s"$dir/user/data/ratings/data.txt", Seq(
