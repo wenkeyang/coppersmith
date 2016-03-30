@@ -14,6 +14,7 @@
 
 package commbank.coppersmith.examples.userguide
 
+import commbank.coppersmith.examples.thrift.{Rating, Movie}
 import org.apache.hadoop.fs.Path
 
 import au.com.cba.omnia.maestro.api.JobFinished
@@ -21,47 +22,56 @@ import au.com.cba.omnia.maestro.api.Maestro.DerivedEncode
 import au.com.cba.omnia.maestro.core.codec.Encode
 
 import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
+import org.scalacheck.{Gen, Arbitrary}
 
-import org.scalacheck.{Arbitrary, Gen}
-
-import commbank.coppersmith.examples.thrift.{Movie, Rating}
-
-object JoinFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
-  JoinFeaturesJob must return expected values  $test  ${tag("slow")}
+object DirectorFeaturesSpec extends ThermometerHiveSpec {
+  def is =
+    s2"""
+  DirectorFeaturesJob must return expected values  $test  ${tag("slow")}
 """
+
   def test = {
     // Override the default implicit Arbitrary[String] (brought into scope by Arbitrary.arbString)
     // to avoid generating Customer & Account records with strings that can't be safely written to
     // a Hive Text store (due to newline or field separator characters being generated).
     implicit def arbSafeHiveTextString: Arbitrary[String] = Arbitrary(Gen.identifier)
 
-    def movie(id: String, comedy: Int) =
-      Movie(id, "title", "Jan-01-1995", None, None,0,0,0,0,0,comedy,0,0,0,0,0,0,0,0,0,0,0,0,0)
+    def movie(id: String, title: String) =
+      Gen.resultOf(Movie.apply(id,_,_,_,_,_,_,_,_,_,_,0,0,0,0,0,0,0,0,0,0,0,0,0,0)).sample.get.copy(id = id, title = title)
+//      Movie(id, title, "Jan-01-1995", None, None, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 
     def rating(movie: String, rating: Int) =
       Gen.resultOf(Rating.apply _).sample.get.copy(movieId = movie, rating = rating)
 
     writeRecords[Movie](s"$dir/user/data/movies/data.txt", Seq(
-      movie("1", 0),  // non-comedy
-      movie("2", 1)   // comedy
+      movie("1", "Air Bud (1997)"), // non-comedy
+      movie("2", "Fair Bud (1998)") // comedy
     ), "|")
 
     writeRecords[Rating](s"$dir/user/data/ratings/data.txt", Seq(
       rating("1", 3),
       rating("2", 2),
-      rating("2", 5)
+      rating("2", 4)
     ), "\t")
 
-    executesSuccessfully(JoinFeaturesJob.job) must_== JobFinished
+    // Odd structure to mimic IMDb format
+    // Reversed to mimic behaviour on HDFS
+    writeRecords[String](s"$dir/user/data/directors/data.txt", Seq(
+      "Jim\tAir Bud (1997)",
+      "\tFair Bud (1998)",
+      "Bob\tDracula (1931)"
+    ).reverse, "")
 
-    val outPath = s"$dir/user/dev/view/warehouse/features/ratings/year=2015/month=01/day=01/*"
+    executesSuccessfully(DirectorFeaturesJob.job) must_== JobFinished
+
+    val outPath = s"$dir/user/dev/view/warehouse/features/directors/year=2015/month=01/day=01/*"
     expectations { context =>
       context.lines(new Path(outPath)).toSet must_==
-        Set("2|COMEDY_MOVIE_AVG_RATING|3.5|2015-01-01")
+        Set("Jim|DIRECTOR_AVG_RATING|3.0|2015-01-01")
     }
   }
 
-  def writeRecords[T : Encode](path: String, records: Seq[T], delim: String): Unit = {
+  def writeRecords[T: Encode](path: String, records: Seq[T], delim: String): Unit = {
     val lines = records.map(t => Encode.encode("", t).mkString(delim))
     writeLines(path, lines)
   }
@@ -73,7 +83,9 @@ object JoinFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
     file.getParentFile.mkdirs()
     val writer = new PrintWriter(file)
     try {
-      lines.foreach { writer.println(_) }
+      lines.foreach {
+        writer.println(_)
+      }
     }
     finally {
       writer.close()
