@@ -16,24 +16,20 @@ package commbank.coppersmith.scalding
 
 import com.twitter.algebird.Aggregator
 import com.twitter.scalding.typed.{PartitionedTextLine, TypedPipe}
-import com.twitter.scalding.{Config, Execution, TupleConverter, TupleSetter}
-
-import com.twitter.scrooge.ThriftStruct
+import com.twitter.scalding.{Execution, TupleConverter, TupleSetter}
 
 import org.apache.hadoop.fs.Path
 import org.joda.time.DateTime
 
+import scalaz.NonEmptyList
 import scalaz.std.list.listInstance
 import scalaz.std.option.optionInstance
 import scalaz.syntax.bind.ToBindOps
-import scalaz.syntax.foldable.ToFoldableOps
 import scalaz.syntax.functor.ToFunctorOps
-import scalaz.syntax.std.option.ToOptionIdOps
 import scalaz.syntax.std.list.ToListOpsFromList
 import scalaz.syntax.traverse.ToTraverseOps
 
-import au.com.cba.omnia.maestro.api.Maestro._
-import au.com.cba.omnia.maestro.api._
+import au.com.cba.omnia.maestro.api._, Maestro._
 import au.com.cba.omnia.maestro.scalding.ConfHelper.createUniqueFilenames
 
 import commbank.coppersmith.Feature.Value._
@@ -45,8 +41,46 @@ import commbank.coppersmith.thrift.Eavt
 
 import HiveSupport.{DelimiterConflictStrategy, FailJob}
 
+import FeatureSink.{AttemptedWriteToCommitted, WriteResult}
+
 trait FeatureSink {
-  def write(features: TypedPipe[(FeatureValue[_], Time)]): Execution[Unit]
+  /**
+    * Persist feature values, returning the list of paths written (for committing at the
+    * end of the job) or an error if trying to write to a path that is already committed
+    */
+  def write(features: TypedPipe[(FeatureValue[_], Time)]): WriteResult
+}
+
+object FeatureSink {
+  sealed trait WriteError
+  case class AlreadyCommitted(paths: NonEmptyList[Path]) extends WriteError
+  case class AttemptedWriteToCommitted(path: Path) extends WriteError
+
+  type WriteResult = Execution[Either[WriteError, Set[Path]]]
+
+  def commitFlag(path: Path) = new Path(path, "_SUCCESS")
+  def isCommitted(path: Path): Execution[Boolean] = Execution.fromHdfs(Hdfs.exists(commitFlag(path)))
+
+  type CommitResult = Execution[Either[WriteError, Unit]]
+  // Note: Check for committed flags and subsequent writing thereof is not atomic
+  def commit(paths: Set[Path]): CommitResult = {
+
+    // Check all paths for committed state first. Avoids committing earlier paths
+    // if a latter path is already committed and would fail the job overall.
+    val pathCommits: Execution[List[(Path, Boolean)]] =
+      paths.toList.map(p => isCommitted(p).map((p, _))).sequence
+
+    pathCommits.flatMap(pathCommitStates => {
+      val committedPaths = pathCommitStates.collect { case (path, true) => path }
+      committedPaths.toNel.map(committed =>
+        Execution.from(Left(AlreadyCommitted(committed)))
+      ).getOrElse(
+        paths.toList.map(path =>
+          Execution.fromHdfs(Hdfs.create(commitFlag(path)))
+        ).sequence.unit.map(Right(_))
+      )
+    })
+  }
 }
 
 object EavtSink {
@@ -98,18 +132,12 @@ object EavtSink {
 }
 
 case class EavtSink(conf: EavtSink.Config) extends FeatureSink {
+  def path = conf.hiveConfig.path
   def write(features: TypedPipe[(FeatureValue[_], Time)]) = {
     val hiveConfig = conf.hiveConfig
     val eavtPipe = features.map { case (fv, t) => EavtSink.toEavt(fv, t) }
 
-    for {
-      oPartitions <- HiveSupport.writeTextTable(hiveConfig, eavtPipe)
-      _           <- oPartitions.map(partitions => Execution.fromHdfs {
-                      partitions.toPaths(hiveConfig.path).toList.traverse_[Hdfs](eachPath =>
-                        Hdfs.create(s"${eachPath.toString}/_SUCCESS".toPath).map(_ => ())
-                      )
-                    }).sequence
-    } yield ()
+    HiveSupport.writeTextTable(hiveConfig, eavtPipe)
   }
 }
 
@@ -140,7 +168,7 @@ object HiveSupport {
   ](
     conf: HiveConfig[T, P],
     pipe: TypedPipe[T]
-  ): Execution[Option[Partitions[P]]] = {
+  ): WriteResult = {
 
     import conf.partition
     val partitioned: TypedPipe[(P, String)] = pipe.map(v =>
@@ -163,9 +191,9 @@ object HiveSupport {
           oPartitions  = oPValues.map(_.toSet.toList).toList.flatten.toNel.map(pValues =>
                            Partitions(conf.partition, pValues.head, pValues.tail: _*)
                          )
-          _           <- oPartitions.map(moveToTarget(tempDir, conf.path, _)).sequence
+          result      <- moveToTarget(tempDir, conf.path, oPartitions)
           _           <- Execution.fromHive(ensureTextTableExists(conf))
-        } yield oPartitions
+        } yield result
       }.ensure(Execution.fromHdfs(Hdfs.delete(tempDir, recDelete = true)))
     })
   }
@@ -173,20 +201,32 @@ object HiveSupport {
   private def moveToTarget(
     sourceDir:  Path,
     targetDir:  Path,
-    partitions: Partitions[_]
-  ): Execution[Unit] = {
-    val partitionRelPaths = partitions.relativePaths
-    partitionRelPaths.map(partitionRelPath => {
-      val sourcePartition = new Path(sourceDir, partitionRelPath)
-      val targetPartition = new Path(targetDir, partitionRelPath)
-      Execution.fromHdfs(
-        for {
-          parts <- Hdfs.glob(sourcePartition, "*")
-          _     <- Hdfs.mkdirs(targetPartition)
-          _     <- parts.map(part => Hdfs.move(part, new Path(targetPartition, part.getName))).sequence
-        } yield ()
-      )
-    }).sequence.unit
+    partitions: Option[Partitions[_]]
+  ): WriteResult = {
+    val partitionRelPaths = partitions.map(_.relativePaths).getOrElse(List())
+
+    partitionRelPaths.foldLeft[WriteResult](Execution.from(Right(Set())))((acc, partitionRelPath) =>
+      acc.flatMap {
+        case l@Left(_) => Execution.from(l)
+        case Right(pathsSoFar) => {
+          val sourcePartition = new Path(sourceDir, partitionRelPath)
+          val targetPartition = new Path(targetDir, partitionRelPath)
+          FeatureSink.isCommitted(targetPartition).flatMap {
+            case true => Execution.from(Left(AttemptedWriteToCommitted(targetPartition)))
+            case false =>
+              Execution.fromHdfs(
+                for {
+                  parts <- Hdfs.glob(sourcePartition, "*")
+                  _     <- Hdfs.mkdirs(targetPartition)
+                  _     <- parts.map(part =>
+                             Hdfs.move(part, new Path(targetPartition, part.getName))
+                           ).sequence
+                } yield Right(pathsSoFar + targetPartition)
+              )
+          }
+        }
+      }
+    )
   }
 
   def ensureTextTableExists[T <: ThriftStruct : Manifest](conf: HiveConfig[T, _]): Hive[Unit] =

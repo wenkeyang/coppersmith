@@ -528,9 +528,10 @@ Also note that non-aggregation features cannot be defined in an `AggregationFeat
 In order to keep similar features organised, two `FeatureSet` objects
 should be created, and called using one `FeatureJob`.
 
-In the below example, because there are two feature sources (`Movie` and `Rating`),
-it's necessary to create two `FeatureJobConfig` objects. If the two `FeatureSet` objects
-used the same source, only one `FeatureJobConfig` would be required.
+In the below example, because there are two feature sets that have different
+sources (`Movie` and `Rating`), it's necessary to create two `FeatureJobConfig`
+objects. If the two `FeatureSet` objects used the same source and wrote to the
+same sink, only one `FeatureJobConfig` would be required.
 
 ```scala
 package commbank.coppersmith.examples.userguide
@@ -584,44 +585,43 @@ import org.joda.time.DateTime
 import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
-case class AggregationFeaturesConfig(conf: Config) extends FeatureJobConfig[Rating] {
-  val partitions     = ScaldingDataSource.Partitions.unpartitioned
-  val ratings        = HiveTextSource[Rating, Nothing](new Path("data/ratings"), partitions, "\t")
-
-  val featureSource  = From[Rating]().bind(from(ratings))
+trait CommonConfig {
+  def conf: Config
 
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
-
   val featureSink    = EavtSink.configure("userguide", new Path("dev"), "movies")
 }
 
-case class NonAggregationFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
+case class AggregationFeaturesConfig(conf: Config)
+    extends FeatureJobConfig[Rating] with CommonConfig {
+
+  val partitions     = ScaldingDataSource.Partitions.unpartitioned
+  val ratings        = HiveTextSource[Rating, Nothing](new Path("data/ratings"), partitions, "\t")
+  val featureSource  = From[Rating]().bind(from(ratings))
+}
+
+case class NonAggregationFeaturesConfig(conf: Config)
+    extends FeatureJobConfig[Movie] with CommonConfig {
   val partitions     = ScaldingDataSource.Partitions.unpartitioned
   val movies         = HiveTextSource[Movie, Nothing](new Path("data/movies"), partitions)
-
   val featureSource  = From[Movie]().bind(from(movies))
-
-  val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
-
-  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "movies")
 }
 
 object AggregationFeaturesJob extends SimpleFeatureJob {
   def job = generate(AggregationFeaturesConfig(_), AggregationFeatures)
 }
 
-
 object NonAggregationFeaturesJob extends SimpleFeatureJob {
   def job = generate(NonAggregationFeaturesConfig(_), NonAggregationFeatures)
 }
 
 object CombinedFeaturesJob extends SimpleFeatureJob {
-  def job = AggregationFeaturesJob.job.zip(NonAggregationFeaturesJob.job).map(_ match {
-    case (JobFinished, JobFinished) => JobFinished
-    case (a, JobFinished) => a
-    case (JobFinished, c) => c
-    case (a, _) => a
-  })
+  def job = generate(
+    FeatureSetExecutions(
+      FeatureSetExecution(AggregationFeaturesConfig(_), AggregationFeatures),
+      FeatureSetExecution(NonAggregationFeaturesConfig(_), NonAggregationFeatures)
+    )
+  )
 }
 ```
 
