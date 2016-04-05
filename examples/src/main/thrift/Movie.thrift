@@ -18,25 +18,25 @@ struct Movie {
   1 	: string  id
   2 	: string  title
   3 	: string  release_date
-  4 	: string  video_release_date 
-  5 	: string  imdb_url
-  6 	: string  unknown 
-  7 	: string  action 
-  8 	: string  adventure 
-  9 	: string  animation 
-  10 	: string  childrens 
-  11 	: string  comedy 
-  12 	: string  crime 
-  13 	: string  documentary 
-  14 	: string  drama 
-  15 	: string  fantasy 
-  16 	: string  filmnoir 
-  17 	: string  horror 
-  18 	: string  musical 
-  19 	: string  mystery 
-  20 	: string  romance 
-  21 	: string  scifi 
-  22 	: string  thriller 
-  23 	: string  war 
-  24 	: string  western 
+  4 	: optional string  video_release_date
+  5 	: optional string  imdb_url
+  6 	: i32     unknown
+  7 	: i32     action
+  8 	: i32     adventure
+  9 	: i32     animation
+  10 	: i32     childrens
+  11 	: i32     comedy
+  12 	: i32     crime
+  13 	: i32     documentary
+  14 	: i32     drama
+  15 	: i32     fantasy
+  16 	: i32     filmnoir
+  17 	: i32     horror
+  18 	: i32     musical
+  19 	: i32     mystery
+  20 	: i32     romance
+  21 	: i32     scifi
+  22 	: i32     thriller
+  23 	: i32     war
+  24 	: i32     western
  }
