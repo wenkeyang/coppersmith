@@ -32,28 +32,28 @@ package object api {
   def from[S, P[_] : Lift](dataSource: DataSource[S, P]) =
     commbank.coppersmith.SourceBinder.from(dataSource)
 
-  def join[L, R, J: Ordering, P[_] : Lift](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
+  def join[L, R, J : Ordering, P[_] : Lift](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     commbank.coppersmith.SourceBinder.join(leftSrc, rightSrc)
 
-  def leftJoin[L, R, J: Ordering, P[_] : Lift](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
+  def leftJoin[L, R, J : Ordering, P[_] : Lift](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     commbank.coppersmith.SourceBinder.leftJoin(leftSrc, rightSrc)
 
   def joinMulti[
-  P[_] : Lift,
-  Tuple <: Product,
-  Types <: HList,
-  Joins <: HList,
-  DSHL <: HList,
-  PipesHL <: HList,
-  PipesTuple <: Product,
-  PipesHead,
-  PipesTail <: HList,
-  TypesHead,
-  TypesTail <: HList,
-  NextPipes <: HList,
-  HeadElement,
-  Zipped <: HList,
-  TypesTuple <: Product
+    P[_] : Lift,
+    Tuple <: Product,
+    Types <: HList,
+    Joins <: HList,
+    DSHL <: HList,
+    PipesHL <: HList,
+    PipesTuple <: Product,
+    PipesHead,
+    PipesTail <: HList,
+    TypesHead,
+    TypesTail <: HList,
+    NextPipes <: HList,
+    HeadElement,
+    Zipped <: HList,
+    TypesTuple <: Product
   ](in: Tuple, j: CompleteJoinHlFeatureSource[Types, Joins, TypesTuple])
    (implicit
     //Map data source tuple to pipes tuple
