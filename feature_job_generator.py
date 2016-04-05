@@ -13,7 +13,7 @@ class FeatureSet:
     self.name = name
     self.set_type = set_type
     self.type_params = type_params
-    self.data_source_template = "  val %(val)s = HiveTextSource[%(type)s, Nothing](new Path(\"data/%(dir)s\"), partitions%(delim)s)"
+    self.data_source_template = "  val %(val)-14s = HiveTextSource[%(type)s, Nothing](new Path(\"data/%(dir)s\"), partitions%(delim)s)"
     self.delims = { "Movie": "", "User": "", "Rating": ", \"\\t\"" }
   def split_types(self):
     return self.type_params.translate(None, "()").split(", ")
@@ -71,10 +71,13 @@ for f in files:
 template = """package commbank.coppersmith.examples.userguide
 
 import org.apache.hadoop.fs.Path
+
 import com.twitter.scalding.Config
-import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}
-import Maestro.{DerivedDecode, Fields}
+
 import org.joda.time.DateTime
+
+import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
+
 import commbank.coppersmith.api._, scalding._
 import commbank.coppersmith.examples.thrift.%(thrift_imports)s
 

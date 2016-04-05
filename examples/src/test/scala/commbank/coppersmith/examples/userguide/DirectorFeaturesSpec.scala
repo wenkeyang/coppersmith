@@ -54,12 +54,11 @@ object DirectorFeaturesSpec extends ThermometerHiveSpec {
     ), "\t")
 
     // Odd structure to mimic IMDb format
-    // Reversed to mimic behaviour on HDFS
     writeRecords[String](s"$dir/user/data/directors/data.txt", Seq(
       "Jim\tAir Bud (1997)",
       "\tFair Bud (1998)",
       "Bob\tDracula (1931)"
-    ).reverse, "")
+    ), "")
 
     executesSuccessfully(DirectorFeaturesJob.job) must_== JobFinished
 
