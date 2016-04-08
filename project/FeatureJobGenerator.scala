@@ -6,34 +6,41 @@ object FeatureJobGenerator {
     constructors(files) map { f => f.name -> f.construct }
   }
 
-  private class FeatureJobConstructor(val name: String, setType: String, typeParams: String) {
-    private val delims = Map("Rating" -> Some("""\t""")).withDefaultValue(None)
-    private val splitTypes = typeParams.replaceAll("[()]", "").split(", ")
+  class FeatureJobConstructor(val name: String, typeParams: String) {
+    val delims = Map("Rating" -> """\t""")
+    val splitTypes = typeParams.replaceAll("[()]", "").split(", ").toList
 
-    private def dataSourceString(collectionName: String, typeParam: String, delim: Option[String]) = {
+    def dataSourceString(collectionName: String, typeParam: String, delim: Option[String]) = {
       val delimString = (delim map (d => s""", \"$d\"""")).getOrElse("")
       f"val $collectionName%-14s = HiveTextSource[$typeParam, Nothing]" +
         f"""(new Path(\"data/$collectionName\"), partitions$delimString)"""
     }
 
-    private def removeOption(t: String) =
+    def removeOption(t: String) =
       t.replace("Option[", "").replace("]", "")
 
-    private def toLowerPlural(s: String) =
+    def toLowerPlural(s: String) =
       s.toLowerCase + "s"
 
-    val collectionNames: Array[String] = splitTypes map (removeOption _ andThen toLowerPlural)
+    val collectionNames: List[String] = splitTypes map (removeOption _ andThen toLowerPlural)
+
+    def tableName: String = collectionNames match {
+      case n :: _ => n
+      case _ => ""
+    }
 
     val thriftImport = {
       val importTypes = splitTypes map removeOption
-      if (importTypes.length == 1) importTypes.head
-      else s"{${importTypes.mkString(", ")}}"
+      importTypes match {
+        case List(single) => single
+        case imports       => imports.mkString("{", ", ", "}")
+      }
     }
 
     val dataSources = {
       (for {
         t <- splitTypes map removeOption
-      } yield dataSourceString(toLowerPlural(t), t, delims(t))).mkString("\n  ")
+      } yield dataSourceString(toLowerPlural(t), t, delims.get(t))).mkString("\n  ")
     }
 
     val binding = {
@@ -65,7 +72,7 @@ object FeatureJobGenerator {
           |
           |  val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
           |
-          |  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "${collectionNames.head}")
+          |  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "$tableName")
           |}
           |
           |object ${name}Job extends SimpleFeatureJob {
@@ -75,24 +82,24 @@ object FeatureJobGenerator {
     }
   }
 
-  private val featureSetPattern = """(\w+) extends (\w*FeatureSet\w*)\[((?:\([\w\,\s\[\]]+\))|(?:\w+))""".r.unanchored
-  private val jobPattern = """(\w+)Job extends \w+Job""".r.unanchored
+  val featureSetPattern = """(\w+) extends \w*FeatureSet\w*\[((?:\([\w\,\s\[\]]+\))|(?:\w+))""".r.unanchored
+  val jobPattern = """(\w+)Job extends \w+Job""".r.unanchored
 
-  private def existingJobs(files: Seq[File]): Seq[String] =
+  def existingJobs(files: Seq[File]): Seq[String] =
     for {
       file <- files
       line <- Source.fromFile(file).getLines()
       List(job) <- jobPattern.unapplySeq(line)
     } yield job
 
-  private def constructors(files: Seq[File]): Seq[FeatureJobConstructor] = {
+  def constructors(files: Seq[File]): Seq[FeatureJobConstructor] = {
     val existing = existingJobs(files)
     for {
       file <- files
       line <- Source.fromFile(file).getLines()
-      List(name, setType, typeParams) <- featureSetPattern.unapplySeq(line)
+      List(name, typeParams) <- featureSetPattern.unapplySeq(line)
       if !existing.contains(name)
-    } yield new FeatureJobConstructor(name, setType, typeParams)
+    } yield new FeatureJobConstructor(name, typeParams)
   }
 
 
