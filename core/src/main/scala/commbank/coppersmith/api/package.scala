@@ -123,7 +123,6 @@ package object api {
   val Ordinal = commbank.coppersmith.Feature.Type.Ordinal
   val Metadata = commbank.coppersmith.Feature.Metadata
   val FeatureValue = commbank.coppersmith.FeatureValue
-  val PivotMacro = commbank.coppersmith.PivotMacro
   val MinMaxRange = Value.MinMaxRange
   val SetRange = Value.SetRange
   val Patterns = commbank.coppersmith.Patterns

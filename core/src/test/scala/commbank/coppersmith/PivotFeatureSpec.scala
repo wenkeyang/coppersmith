@@ -36,10 +36,6 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
   An example feature set
     must generate expected metadata       $generateMetadata
     must generate expected feature values $generateFeatureValues
-
-  Macro feature set
-    must generate same metadata as test example $generateMetadataCompareMacro
-    must generate same values as test example   $generateFeatureValuesCompareMacro
 """
 
   import Type._
@@ -69,36 +65,6 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
       Metadata[Customer, Decimal] (namespace, fields.Height.name, "Customer height", Continuous),
       Metadata[Customer, Decimal] (namespace, fields.Credit.name, "Customer credit", Continuous)
     )
-  }
-
-  def generateMetadataCompareMacro = {
-    val metadata = PivotMacro.pivotThrift[Customer](
-      CustomerFeatureSet.namespace,
-      CustomerFeatureSet.entity
-    ).features.map(_.metadata)
-
-    import CustomerFeatureSet.namespace
-    val fields = Fields[Customer]
-
-    def macroDesc(fieldName: String) =
-      "Feature auto-pivoted from commbank.coppersmith.test.thrift.Customer." + fieldName
-
-    metadata.toSet must_== Set(
-      Metadata[Customer, Str]     (namespace, fields.Id.name,     macroDesc("id"),     Nominal),
-      Metadata[Customer, Integral](namespace, fields.Time.name,   macroDesc("time"),   Nominal),
-      Metadata[Customer, Str]     (namespace, fields.Name.name,   macroDesc("name"),   Nominal),
-      Metadata[Customer, Integral](namespace, fields.Age.name,    macroDesc("age"),    Nominal),
-      Metadata[Customer, Decimal] (namespace, fields.Height.name, macroDesc("height"), Continuous),
-      Metadata[Customer, Decimal] (namespace, fields.Credit.name, macroDesc("credit"), Continuous)
-    )
-  }
-
-  def generateFeatureValuesCompareMacro = forAll { (c:Customer) =>
-    import CustomerFeatureSet.{namespace, entity}
-    val values = CustomerFeatureSet.generate(c)
-    val macroValues = PivotMacro.pivotThrift[Customer](namespace, entity).generate(c)
-
-    macroValues must containAllOf(values.toSeq)
   }
 
   def generateFeatureValues = forAll { (c: Customer) => {
