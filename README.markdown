@@ -1,6 +1,6 @@
 Coppersmith - Feature Generation, as Functions
 ================================
-[![Build Status](https://magnum.travis-ci.com/CommBank/coppersmith.svg?token=kex8Z7sKUeUhdEMKT2on&branch=master)](https://magnum.travis-ci.com/CommBank/coppersmith)
+[![Build Status](https://travis-ci.com/CommBank/coppersmith.svg?token=kex8Z7sKUeUhdEMKT2on&branch=master)](https://travis-ci.com/CommBank/coppersmith)
 [![Gitter chat](https://badges.gitter.im/CommBank/coppersmith.png)](https://gitter.im/CommBank/coppersmith)
 
 
