@@ -101,11 +101,19 @@ object build extends Build {
           val codeFragments = (sourceCode findAllIn fileContent).matchData.map {
             _.group(1)
           }
-          codeFragments.zipWithIndex.map { case (frag, i) =>
+          val fragFiles = codeFragments.zipWithIndex.map { case (frag, i) =>
             val newFile = outdir / s"userGuideFragment$i.scala"
             IO.write(newFile, frag)
             newFile
           }.toSeq
+
+          val jobFiles = FeatureJobGenerator.gen(fragFiles).map { case (name, job) =>
+            val newFile = outdir / s"${name}Job.scala"
+            IO.write(newFile, job)
+            newFile
+          }
+
+          fragFiles ++ jobFiles
         }
       )
   ).dependsOn(core, scalding, testProject)
