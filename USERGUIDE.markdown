@@ -414,6 +414,34 @@ This pattern is known as "pivoting",
 because it transforms a wide input record
 into the narrow EAVT format.
 
+The `PivotFeatureSet` provides the convenience method `pivot()`, which
+allows you to pivot single fields. Note the use of `Maestro.Fields` to 
+specify the field of the thrift.
+
+```scala
+package commbank.coppersmith.examples.userguide
+
+import au.com.cba.omnia.maestro.api.Maestro.Fields
+
+import commbank.coppersmith.api._
+
+import commbank.coppersmith.examples.thrift.Movie
+
+object MoviePivotFeatures extends PivotFeatureSet[Movie] {
+  val namespace = "userguide.examples"
+  def entity(m: Movie) = m.id
+
+  val source = From[Movie]()
+
+  val title:       Feature[Movie, Str]      = pivot(Fields[Movie].Title,       "Movie title",        Nominal)
+  val imdbUrl:     Feature[Movie, Str]      = pivot(Fields[Movie].ImdbUrl,     "Movie IMDb URL",     Nominal)
+  val releaseDate: Feature[Movie, Str]      = pivot(Fields[Movie].ReleaseDate, "Movie release date", Nominal)
+  val action:      Feature[Movie, Integral] = pivot(Fields[Movie].Action,      "Movie is action",    Discrete)
+
+  def features = List(title, imdbUrl, releaseDate, action)
+  }
+```
+
 The `pivotThrift` macro can be used to
 easily create a feature set containing all the input fields
 as separate features.
