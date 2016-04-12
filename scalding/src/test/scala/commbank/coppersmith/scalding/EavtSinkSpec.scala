@@ -45,11 +45,13 @@ class EavtSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
   """
 
   implicit val arbConfig: Arbitrary[EavtSink.Config] =
-    Arbitrary(for {
-                dbName <- arbNonEmptyAlphaStr
-                dbPath <- arbitrary[Path]
-                tableName <- arbNonEmptyAlphaStr
-              } yield EavtSink.Config(dbName.value, new Path(dir, dbPath), tableName.value))
+    Arbitrary(
+      for {
+        dbName <- arbNonEmptyAlphaStr.map(_.value)
+        dbPath <- arbitrary[Path]
+        tableName <- arbNonEmptyAlphaStr.map(_.value)
+      } yield EavtSink.Config(dbName, new Path(dir, dbPath), tableName, EavtSink.defaultPartition)
+    )
 
   // Current EAVT sink implementation lacks support for encoding control characters.
 
@@ -114,7 +116,7 @@ class EavtSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
       def hiveNull(s: String) = if (s == EavtSink.NullValue) "NULL" else s
       val expected = vs.map(value => {
         val eavt = EavtSink.toEavt(value, dateTime.getMillis)
-        val (year, month, day) = EavtSink.partition.extract(eavt)
+        val (year, month, day) = eavtConfig.partition.underlying.extract(eavt)
         List(eavt.entity, eavt.attribute, hiveNull(eavt.value), eavt.time, year, month, day).mkString("\t")
       }).list.toSet
 
@@ -132,7 +134,7 @@ class EavtSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
   def expectedPartitionsMarkedSuccess =
     forAll { (vs: NonEmptyList[FeatureValue[Value]], eavtConfig: EavtSink.Config, dateTime: DateTime) =>  {
       val expectedPartitions = vs.map(v =>
-        EavtSink.partition.extract(EavtSink.toEavt(v, dateTime.getMillis))
+        eavtConfig.partition.underlying.extract(EavtSink.toEavt(v, dateTime.getMillis))
       ).list.toSet.toSeq
       withEnvironment(path(getClass.getResource("/").toString)) {
         val sink = EavtSink(eavtConfig)

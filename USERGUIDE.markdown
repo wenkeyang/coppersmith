@@ -196,7 +196,7 @@ import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 case class MovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
-  val partitions     = ScaldingDataSource.Partitions.unpartitioned
+  val partitions     = Partitions.unpartitioned
   val movies         = HiveTextSource[Movie, Nothing](new Path("data/movies"), partitions)
 
   val featureSource  = From[Movie]().bind(from(movies))
@@ -221,7 +221,7 @@ pulled up to their own type for reuse. For an example of this, see the
 
 ### Partition selection
 
-The source data used so far is not partitioned. In the below example, the 
+The source data used so far is not partitioned. In the below example, the
 hive text source is partitioned by year, based on `Movie.ReleaseDate`.
 
 The job will execute on all movies released in the year of the `generation-datetime`
@@ -242,9 +242,9 @@ import commbank.coppersmith.examples.thrift.Movie
 case class PartitionedMovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
   val generationDateTimeStr = conf.getArgs("generation-datetime")
   val generationDateTime    = DateTime.parse(generationDateTimeStr)
- 
+
   val partition             = HivePartition.byYear(Fields[Movie].ReleaseDate, "dd-MMM-yyyy")
-  val partitions            = ScaldingDataSource.Partitions(partition, generationDateTime.getYear.toString)
+  val partitions            = Partitions(partition, generationDateTime.getYear.toString)
   val movies                = HiveTextSource[Movie, String](new Path("data/movies"), partitions)
 
   val featureSource         = From[Movie]().bind(from(movies))
@@ -279,8 +279,8 @@ object MultiPartitionSnippet {
 
   // Last two days of July, and all of August
   val partition  = HivePartition.byDay(Fields[Movie].ReleaseDate, "dd-MMM-yyyy")
-  val partitions = ScaldingDataSource.Partitions(partition,
-    ("2015", "07", "30"), ("2015", "07", "31"), ("2015", "08", "*"))
+  val partitions =
+    Partitions(partition, ("2015", "07", "30"), ("2015", "07", "31"), ("2015", "08", "*"))
 
   val movies     = HiveTextSource[Movie, Partition](new Path("data/movies"), partitions)
 }
@@ -595,14 +595,14 @@ trait CommonConfig {
 case class AggregationFeaturesConfig(conf: Config)
     extends FeatureJobConfig[Rating] with CommonConfig {
 
-  val partitions     = ScaldingDataSource.Partitions.unpartitioned
+  val partitions     = Partitions.unpartitioned
   val ratings        = HiveTextSource[Rating, Nothing](new Path("data/ratings"), partitions, "\t")
   val featureSource  = From[Rating]().bind(from(ratings))
 }
 
 case class NonAggregationFeaturesConfig(conf: Config)
     extends FeatureJobConfig[Movie] with CommonConfig {
-  val partitions     = ScaldingDataSource.Partitions.unpartitioned
+  val partitions     = Partitions.unpartitioned
   val movies         = HiveTextSource[Movie, Nothing](new Path("data/movies"), partitions)
   val featureSource  = From[Movie]().bind(from(movies))
 }
@@ -793,10 +793,8 @@ import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
 case class JoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie, Rating)] {
-  val movies         = HiveTextSource[Movie, Nothing](new Path("data/movies"),
-                         ScaldingDataSource.Partitions.unpartitioned)
-  val ratings        = HiveTextSource[Rating, Nothing](new Path("data/ratings"),
-                         ScaldingDataSource.Partitions.unpartitioned, "\t")
+  val movies = HiveTextSource[Movie, Nothing](new Path("data/movies"), Partitions.unpartitioned)
+  val ratings = HiveTextSource[Rating, Nothing](new Path("data/ratings"), Partitions.unpartitioned, "\t")
 
   val featureSource  = JoinFeatures.source.bind(join(movies, ratings))
   val featureSink    = EavtSink.configure("userguide", new Path("dev"), "ratings")
@@ -845,9 +843,8 @@ object LeftJoinFeatures extends AggregationFeatureSet[(Director, Option[Movie])]
 }
 
 case class LeftJoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Director, Option[Movie])] {
-  val movies         = HiveTextSource[Movie, Nothing](new Path("data/movies"),
-                         ScaldingDataSource.Partitions.unpartitioned)
-  val directors      = DirectorSourceConfig.dataSource
+  val movies    = HiveTextSource[Movie, Nothing](new Path("data/movies"), Partitions.unpartitioned)
+  val directors = DirectorSourceConfig.dataSource
 
   val featureSource  = LeftJoinFeatures.source.bind(leftJoin(directors, movies))
   val featureSink    = EavtSink.configure("userguide", new Path("dev"), "directors")
@@ -904,11 +901,11 @@ object MultiJoinFeatures extends AggregationFeatureSet[(Movie, Rating, User)] {
 
 case class MultiJoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie, Rating, User)] {
   val movies: DataSource[Movie, TypedPipe]    = HiveTextSource[Movie, Nothing](new Path("data/movies"),
-                                                  ScaldingDataSource.Partitions.unpartitioned)
+                                                  Partitions.unpartitioned)
   val ratings: DataSource[Rating, TypedPipe]  = HiveTextSource[Rating, Nothing](new Path("data/ratings"),
-                                                  ScaldingDataSource.Partitions.unpartitioned, "\t")
+                                                  Partitions.unpartitioned, "\t")
   val users: DataSource[User, TypedPipe]      = HiveTextSource[User, Nothing](new Path("data/users"),
-                                                  ScaldingDataSource.Partitions.unpartitioned)
+                                                  Partitions.unpartitioned)
 
   val featureSource  = MultiJoinFeatures.source.bind(joinMulti((movies, ratings, users), MultiJoinFeatures.source))
   val featureSink    = EavtSink.configure("userguide", new Path("dev"), "ratings")
@@ -1060,7 +1057,7 @@ import commbank.coppersmith.examples.thrift.Movie
 case class ContextFeaturesConfig(conf: Config)
     extends FeatureJobConfig[(Movie, DateTime)] {
 
-  val partitions = ScaldingDataSource.Partitions.unpartitioned
+  val partitions = Partitions.unpartitioned
   val movies     = HiveTextSource[Movie, Nothing](new Path("data/movies"), partitions)
 
   val date = conf.getArgs.optional("date").map(d =>
@@ -1164,9 +1161,9 @@ object DirectorSourceConfig {
 case class DirectorFeaturesConfig(conf: Config) extends FeatureJobConfig[(Director, Movie, Rating)] {
 
   val movies:  DataSource[Movie, TypedPipe]  = HiveTextSource[Movie, Nothing](new Path("data/movies"),
-                                                 ScaldingDataSource.Partitions.unpartitioned)
+                                                 Partitions.unpartitioned)
   val ratings: DataSource[Rating, TypedPipe] = HiveTextSource[Rating, Nothing](new Path("data/ratings"),
-                                                 ScaldingDataSource.Partitions.unpartitioned, "\t")
+                                                 Partitions.unpartitioned, "\t")
 
   val source = DirectorFeatures.source
 

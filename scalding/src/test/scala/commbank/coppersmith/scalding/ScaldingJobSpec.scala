@@ -93,10 +93,8 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
 
     executesOk(job, Map("hdfs-root" -> List(s"$dir/user")))
 
-    val accountDataSource = HiveParquetSource[Account, Nothing](
-      path(s"$dir/user/account_db"),
-      ScaldingDataSource.Partitions.unpartitioned
-    )
+    val accountDataSource =
+      HiveParquetSource[Account, Nothing](path(s"$dir/user/account_db"), Partitions.unpartitioned)
 
     new FeatureJobConfig[Account] {
       val featureContext = ExplicitGenerationTime(jobTime)
@@ -107,7 +105,12 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
 
   val eavtReader  = delimitedThermometerRecordReader[Eavt]('|', "\\N", implicitly[Decode[Eavt]])
   val defaultArgs = Map("hdfs-root" -> List(s"$dir/user"))
-  val eavtConfig = EavtSink.Config("features_db", path(s"$dir/user/features_db"), "features")
+  val eavtConfig = EavtSink.Config(
+    "features_db",
+    path(s"$dir/user/features_db"),
+    "features",
+    EavtSink.defaultPartition
+  )
 
   // Use alphaStr to avoid problems with serialising new lines and eavt field delimiters
   implicit val arbCustAccts: Arbitrary[CustomerAccounts] = arbCustomerAccounts(alphaStr)
@@ -175,7 +178,8 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
     }}.set(minTestsOk = 5)
 
   private def successFlagsWritten(expectedValues: List[Eavt], dateTime: DateTime): Seq[Fact] = {
-    val expectedPartitions = expectedValues.map(EavtSink.partition.extract(_)).toSet.toSeq
+    val partition = eavtConfig.partition.underlying
+    val expectedPartitions = expectedValues.map(partition.extract(_)).toSet.toSeq
     expectedPartitions.map { case (year, month, day) =>
       path(s"${eavtConfig.hiveConfig.path}/year=$year/month=$month/day=$day/_SUCCESS") ==> exists
     }

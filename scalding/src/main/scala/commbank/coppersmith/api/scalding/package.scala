@@ -26,7 +26,8 @@ package object scalding {
   val FeatureSetExecutions = commbank.coppersmith.scalding.FeatureSetExecutions
   val FeatureSetExecution = commbank.coppersmith.scalding.FeatureSetExecution
 
-  val ScaldingDataSource = commbank.coppersmith.scalding.ScaldingDataSource
+  val Partitions = commbank.coppersmith.scalding.Partitions
+  val PathComponents = commbank.coppersmith.scalding.Partitions
   val HiveTextSource = commbank.coppersmith.scalding.HiveTextSource
   val TypedPipeSource = commbank.coppersmith.scalding.TypedPipeSource
   val EavtSink = commbank.coppersmith.scalding.EavtSink

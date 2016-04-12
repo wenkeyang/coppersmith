@@ -32,7 +32,6 @@ import au.com.cba.omnia.thermometer.core.ThermometerSpec
 
 import commbank.coppersmith.api._
 import commbank.coppersmith.{DataSource, BoundFeatureSource}
-import ScaldingDataSource.Partitions
 
 import commbank.coppersmith.test.thrift.{Customer, Account}
 import commbank.coppersmith.Arbitraries._

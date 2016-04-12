@@ -63,7 +63,7 @@ object FeatureJobGenerator {
           |import commbank.coppersmith.examples.thrift.$thriftImport
           |
           |case class ${name}Config(conf: Config) extends FeatureJobConfig[$typeParams] {
-          |  val partitions     = ScaldingDataSource.Partitions.unpartitioned
+          |  val partitions     = Partitions.unpartitioned
           |  $dataSources
           |
           |  val featureSource  = $name.source.bind($binding)
@@ -99,6 +99,4 @@ object FeatureJobGenerator {
       if !existing.contains(name)
     } yield new FeatureJobConstructor(name, typeParams)
   }
-
-
 }
