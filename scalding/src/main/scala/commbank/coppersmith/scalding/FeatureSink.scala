@@ -24,10 +24,12 @@ import org.apache.hadoop.fs.Path
 import org.joda.time.DateTime
 
 import scalaz.std.list.listInstance
+import scalaz.std.option.optionInstance
 import scalaz.syntax.bind.ToBindOps
 import scalaz.syntax.foldable.ToFoldableOps
 import scalaz.syntax.functor.ToFunctorOps
 import scalaz.syntax.std.option.ToOptionIdOps
+import scalaz.syntax.std.list.ToListOpsFromList
 import scalaz.syntax.traverse.ToTraverseOps
 
 import au.com.cba.omnia.maestro.api.Maestro._
@@ -101,12 +103,12 @@ case class EavtSink(conf: EavtSink.Config) extends FeatureSink {
     val eavtPipe = features.map { case (fv, t) => EavtSink.toEavt(fv, t) }
 
     for {
-      partitions <- HiveSupport.writeTextTable(hiveConfig, eavtPipe)
-      _          <- Execution.fromHdfs {
+      oPartitions <- HiveSupport.writeTextTable(hiveConfig, eavtPipe)
+      _           <- oPartitions.map(partitions => Execution.fromHdfs {
                       partitions.toPaths(hiveConfig.path).toList.traverse_[Hdfs](eachPath =>
                         Hdfs.create(s"${eachPath.toString}/_SUCCESS".toPath).map(_ => ())
                       )
-                    }
+                    }).sequence
     } yield ()
   }
 }
@@ -138,7 +140,7 @@ object HiveSupport {
   ](
     conf: HiveConfig[T, P],
     pipe: TypedPipe[T]
-  ): Execution[Partitions[P]] = {
+  ): Execution[Option[Partitions[P]]] = {
 
     import conf.partition
     val partitioned: TypedPipe[(P, String)] = pipe.map(v =>
@@ -157,11 +159,13 @@ object HiveSupport {
                          // Use append semantics for now as an interim fix to address #97
                          // Check if this is still relevant once #137 is addressed
           _           <- partitioned.writeExecution(sink).withSubConfig(createUniqueFilenames(_))
-          oPartitions <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
-          partitions   = Partitions(conf.partition, oPartitions.toSet.flatten.toList: _*)
-          _           <- moveToTarget(tempDir, conf.path, partitions)
+          oPValues    <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
+          oPartitions  = oPValues.map(_.toSet.toList).toList.flatten.toNel.map(pValues =>
+                           Partitions(conf.partition, pValues.head, pValues.tail: _*)
+                         )
+          _           <- oPartitions.map(moveToTarget(tempDir, conf.path, _)).sequence
           _           <- Execution.fromHive(ensureTextTableExists(conf))
-        } yield partitions
+        } yield oPartitions
       }.ensure(Execution.fromHdfs(Hdfs.delete(tempDir, recDelete = true)))
     })
   }
