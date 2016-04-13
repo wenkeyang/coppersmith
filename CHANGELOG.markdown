@@ -1,6 +1,19 @@
 Change log
 ==========
 
+## 0.8.0
+- Require at least one value when creating a `ScaldingDataSource.Partitions`
+ instance.
+
+ ### Upgrading
+ There shouldn't be any changes required to working code, as creating a
+ `Partitions` instance without any values would have resulted in a job
+ that does not read any data from the source instance. The only case
+ where this might not be true is for an unpartitioned data source. In
+ that case, the `ScaldingDataSource.Partitions.unpartitioned` instance
+ should be used. Any other build failure should just require at least
+ one partition value to be supplied.
+
 ## 0.7.0
 - Renamed `HydroSink` to `EavtSink`.
 
