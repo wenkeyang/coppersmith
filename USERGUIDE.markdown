@@ -188,8 +188,6 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-
 import commbank.coppersmith.api._, scalding._
 import commbank.coppersmith.examples.thrift.Movie
 
@@ -230,8 +228,6 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}, Maestro.{DerivedDecode, Fields}
-
 import commbank.coppersmith.api._, scalding._
 import commbank.coppersmith.examples.thrift.Movie
 
@@ -267,9 +263,7 @@ package commbank.coppersmith.examples.userguide
 
 import org.apache.hadoop.fs.Path
 
-import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}, Maestro.{DerivedDecode, Fields}
-
-import commbank.coppersmith.api.scalding._
+import commbank.coppersmith.api._, scalding._
 import commbank.coppersmith.examples.thrift.Movie
 
 object MultiPartitionSnippet {
@@ -551,9 +545,6 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-import au.com.cba.omnia.maestro.scalding.JobFinished
-
 import commbank.coppersmith.api._, scalding._
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
@@ -762,8 +753,6 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-
 import commbank.coppersmith.api._, scalding._
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
@@ -797,8 +786,6 @@ import org.apache.hadoop.fs.Path
 import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
-
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
 
 import commbank.coppersmith.api._, scalding._
 import commbank.coppersmith.examples.thrift.Movie
@@ -850,8 +837,6 @@ import org.apache.hadoop.fs.Path
 import com.twitter.scalding.{Config, TypedPipe}
 
 import org.joda.time.DateTime
-
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
 
 import commbank.coppersmith.api._, scalding._
 import commbank.coppersmith.examples.thrift.{Movie, Rating, User}
@@ -1033,8 +1018,6 @@ import com.twitter.scalding.Config
 
 import org.joda.time.{DateTime, format}, format.DateTimeFormat
 
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-
 import commbank.coppersmith.api._, scalding._
 import commbank.coppersmith.examples.thrift.Movie
 
@@ -1096,8 +1079,6 @@ import com.twitter.scalding.{Config, TextLine}
 import com.twitter.scalding.typed.TypedPipe
 
 import org.joda.time.DateTime
-
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
 
 import commbank.coppersmith.api._, scalding._
 import commbank.coppersmith.scalding.TypedPipeSource

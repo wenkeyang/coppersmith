@@ -14,15 +14,13 @@
 
 package commbank.coppersmith.examples.userguide
 
-import commbank.coppersmith.examples.thrift.{Rating, Movie}
 import org.apache.hadoop.fs.Path
-
-import au.com.cba.omnia.maestro.api.JobFinished
-import au.com.cba.omnia.maestro.api.Maestro.DerivedEncode
-import au.com.cba.omnia.maestro.core.codec.Encode
+import org.scalacheck.{Gen, Arbitrary}
 
 import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
-import org.scalacheck.{Gen, Arbitrary}
+
+import commbank.coppersmith.api._
+import commbank.coppersmith.examples.thrift.{Rating, Movie}
 
 object DirectorFeaturesSpec extends ThermometerHiveSpec {
   def is =

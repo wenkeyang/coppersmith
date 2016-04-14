@@ -15,11 +15,9 @@
 package commbank.coppersmith.examples
 
 import commbank.coppersmith.Feature._
-import commbank.coppersmith._
+import commbank.coppersmith.Patterns
+import commbank.coppersmith.api._
 import commbank.coppersmith.examples.thrift._
-
-import au.com.cba.omnia.maestro.scalding.JobStatus
-import au.com.cba.omnia.maestro.api._, Maestro._
 
 import com.twitter.scalding.{TypedPsv, Config, MultipleTextLineFiles, Execution}
 import commbank.coppersmith.Feature.Value.Decimal

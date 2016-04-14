@@ -6,8 +6,6 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-
 import commbank.coppersmith.api._
 import commbank.coppersmith.api.scalding._
 import commbank.coppersmith.examples.thrift.Movie
