@@ -19,7 +19,7 @@ import com.twitter.scalding.typed._
 import au.com.cba.omnia.thermometer.core.ThermometerSpec
 
 import commbank.coppersmith.Feature.Value.Integral
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.scalding.lift.scalding._
 import commbank.coppersmith.test.thrift._
 
