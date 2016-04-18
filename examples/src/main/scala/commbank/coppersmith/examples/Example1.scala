@@ -17,7 +17,7 @@ package commbank.coppersmith.examples
 import commbank.coppersmith.Feature._
 import commbank.coppersmith.{lift => _, _}
 import commbank.coppersmith.examples.thrift.Customer
-import commbank.coppersmith.api.{derivedDecode, JobStatus, JobFinished}
+import commbank.coppersmith.api.{Coppersmith, JobStatus, JobFinished}, Coppersmith.DerivedDecode
 
 import com.twitter.scalding._
 

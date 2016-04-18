@@ -1,6 +1,10 @@
 Change log
 ==========
 
+## 0.9.0
+- Move implicits into a separate object (`Coppersmith`) within the API
+  package object.
+
 ## 0.8.0
 - Require at least one value when creating a `ScaldingDataSource.Partitions`
  instance.

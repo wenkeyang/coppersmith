@@ -6,7 +6,7 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.api.scalding._
 import commbank.coppersmith.examples.thrift.Movie
 

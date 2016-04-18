@@ -20,7 +20,7 @@ import org.scalacheck.{Arbitrary, Gen}
 import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
 import commbank.coppersmith.examples.thrift.Rating
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 
 object RatingFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
   RatingFeaturesJob must return expected values  $test  ${tag("slow")}

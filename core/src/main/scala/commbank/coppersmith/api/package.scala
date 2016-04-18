@@ -26,21 +26,13 @@ import commbank.coppersmith.util.Conversion
 
 package object api {
 
-  implicit def fromFS[S](fs: FeatureSource[S, _]) =
-    commbank.coppersmith.FeatureBuilderSource.fromFS(fs)
+  object Coppersmith extends au.com.cba.omnia.maestro.macros.MacroSupport {
+    implicit def fromFS[S](fs: FeatureSource[S, _]) =
+      commbank.coppersmith.FeatureBuilderSource.fromFS(fs)
 
-  implicit def fromCFS[S, C: TypeTag](fs: ContextFeatureSource[S, C, _]) =
-    commbank.coppersmith.FeatureBuilderSource.fromCFS(fs)
-
-  // Mirroring https://github.com/CommBank/maestro/blob/master/maestro-macros/src/main/scala/au/com/cba/omnia/maestro/macros/Macros.scala
-  implicit def derivedEncode[A <: ThriftStruct]: au.com.cba.omnia.maestro.core.codec.Encode[A] =
-    macro au.com.cba.omnia.maestro.macros.EncodeMacro.impl[A]
-
-  implicit def derivedDecode[A <: ThriftStruct]: au.com.cba.omnia.maestro.core.codec.Decode[A] =
-    macro au.com.cba.omnia.maestro.macros.DecodeMacro.impl[A]
-
-  implicit def Fields[A <: ThriftStruct]: Fields[A] =
-    macro au.com.cba.omnia.maestro.macros.FieldsMacro.impl[A]
+    implicit def fromCFS[S, C: TypeTag](fs: ContextFeatureSource[S, C, _]) =
+      commbank.coppersmith.FeatureBuilderSource.fromCFS(fs)
+  }
 
   def from[S, P[_] : Lift](dataSource: DataSource[S, P]) =
     commbank.coppersmith.SourceBinder.from(dataSource)

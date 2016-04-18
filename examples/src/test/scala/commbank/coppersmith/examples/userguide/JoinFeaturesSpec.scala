@@ -20,7 +20,7 @@ import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
 import org.scalacheck.{Arbitrary, Gen}
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
 object JoinFeaturesSpec extends ThermometerHiveSpec { def is = s2"""

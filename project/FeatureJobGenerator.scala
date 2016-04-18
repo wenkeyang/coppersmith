@@ -59,7 +59,7 @@ object FeatureJobGenerator {
           |
           |import org.joda.time.DateTime
           |
-          |import commbank.coppersmith.api._, scalding._
+          |import commbank.coppersmith.api._, scalding._, Coppersmith._
           |import commbank.coppersmith.examples.thrift.$thriftImport
           |
           |case class ${name}Config(conf: Config) extends FeatureJobConfig[$typeParams] {

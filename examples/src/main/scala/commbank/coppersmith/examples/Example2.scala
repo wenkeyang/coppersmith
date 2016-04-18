@@ -16,7 +16,7 @@ package commbank.coppersmith.examples
 
 import commbank.coppersmith.Feature._
 import commbank.coppersmith.Patterns
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift._
 
 import com.twitter.scalding.{TypedPsv, Config, MultipleTextLineFiles, Execution}
