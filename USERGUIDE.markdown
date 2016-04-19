@@ -416,7 +416,7 @@ into the narrow EAVT format.
 
 The `PivotFeatureSet` provides the convenience method `pivot()`, which
 allows you to pivot single fields. Note the use of `Maestro.Fields` to 
-specify the field of the thrift.
+specify the field of the thrift struct.
 
 ```scala
 package commbank.coppersmith.examples.userguide
@@ -439,7 +439,7 @@ object MoviePivotFeatures extends PivotFeatureSet[Movie] {
   val action:      Feature[Movie, Integral] = pivot(Fields[Movie].Action,      "Movie is action",    Discrete)
 
   def features = List(title, imdbUrl, releaseDate, action)
-  }
+}
 ```
 
 The `pivotThrift` macro can be used to
