@@ -16,7 +16,6 @@ package commbank.coppersmith
 
 import scala.reflect.runtime.universe.TypeTag
 
-import com.twitter.scrooge.ThriftStruct
 import shapeless.ops.hlist._
 import shapeless.{HNil, ::, Generic, HList}
 
@@ -122,6 +121,7 @@ package object api {
   val PivotMacro = commbank.coppersmith.PivotMacro
   val MinMaxRange = Value.MinMaxRange
   val SetRange = Value.SetRange
+  val Patterns = commbank.coppersmith.Patterns
 
   //Maestro dependencies below
   val JobFinished =  au.com.cba.omnia.maestro.scalding.JobFinished
