@@ -24,8 +24,18 @@ generation can be described as simple functions and those functions should be
 able to be composed. The framework now called **coppersmith** grew out of our
 efforts to improve the lives of feature authors.
 
+Documentation
+-------------
+
 We have a richly detailed [user guide](USERGUIDE.markdown),
 which we consider a good introduction to **coppersmith**. PR's to the user
 guide as you become familiar with the library are especially encouraged!!!
 
 There is also a [troubleshooting guide](TROUBLESHOOTING.markdown) available.
+
+Versioning
+----------
+
+The [change log](CHANGELOG.markdown) lists all backwards-incompatible changes to
+the library (i.e. changes which might break existing client code).
+Any such changes require bumping the second number in the version.
