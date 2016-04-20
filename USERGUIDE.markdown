@@ -188,9 +188,7 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-
-import commbank.coppersmith.api._, scalding._
+import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 case class MovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
@@ -230,9 +228,7 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}, Maestro.{DerivedDecode, Fields}
-
-import commbank.coppersmith.api._, scalding._
+import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 case class PartitionedMovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
@@ -267,9 +263,7 @@ package commbank.coppersmith.examples.userguide
 
 import org.apache.hadoop.fs.Path
 
-import au.com.cba.omnia.maestro.api.{HivePartition, Maestro}, Maestro.{DerivedDecode, Fields}
-
-import commbank.coppersmith.api.scalding._
+import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 object MultiPartitionSnippet {
@@ -335,7 +329,7 @@ import java.util.Locale
 
 import org.joda.time.format.DateTimeFormat
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 object FluentMovieFeatures extends FeatureSetWithTime[Movie] {
@@ -460,7 +454,7 @@ Here is an example that finds the average rating per movie.
 ```scala
 package commbank.coppersmith.examples.userguide
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Rating
 
 object RatingFeatures extends AggregationFeatureSet[Rating] {
@@ -505,7 +499,7 @@ used the same source, only one `FeatureJobConfig` would be required.
 ```scala
 package commbank.coppersmith.examples.userguide
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Rating
 
 object AggregationFeatures extends AggregationFeatureSet[Rating] {
@@ -525,7 +519,7 @@ object AggregationFeatures extends AggregationFeatureSet[Rating] {
 ```scala
 package commbank.coppersmith.examples.userguide
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 object NonAggregationFeatures extends FeatureSetWithTime[Movie] {
@@ -551,10 +545,7 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-import au.com.cba.omnia.maestro.scalding.JobFinished
-
-import commbank.coppersmith.api._, scalding._
+import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
 case class AggregationFeaturesConfig(conf: Config) extends FeatureJobConfig[Rating] {
@@ -610,7 +601,7 @@ to improve readability when there are multiple conditions).
 ```scala
 package commbank.coppersmith.examples.userguide
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 import Implicits.RichMovie
@@ -644,7 +635,7 @@ repetition in the feature definitions.
 ```scala
 package commbank.coppersmith.examples.userguide
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 import Implicits.RichMovie
@@ -725,7 +716,7 @@ An example might be the average rating for comedy movies:
 ```scala
 package commbank.coppersmith.examples.userguide
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
 import Implicits.RichMovie
@@ -762,9 +753,7 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-
-import commbank.coppersmith.api._, scalding._
+import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
 case class JoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie, Rating)] {
@@ -798,9 +787,7 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-
-import commbank.coppersmith.api._, scalding._
+import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 object LeftJoinFeatures extends AggregationFeatureSet[(Director, Option[Movie])] {
@@ -851,9 +838,7 @@ import com.twitter.scalding.{Config, TypedPipe}
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-
-import commbank.coppersmith.api._, scalding._
+import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.{Movie, Rating, User}
 
 import Implicits.RichMovie
@@ -924,7 +909,7 @@ as it has already been extracted as part of matching against
 ```scala
 package commbank.coppersmith.examples.userguide
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 object SourceViewFeatures extends FeatureSetWithTime[Movie] {
@@ -959,7 +944,7 @@ package commbank.coppersmith.examples.userguide
 
 import com.twitter.algebird.AveragedValue
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
 import Implicits.RichMovie
@@ -999,7 +984,7 @@ package commbank.coppersmith.examples.userguide
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 import Implicits.RichMovie
@@ -1033,9 +1018,7 @@ import com.twitter.scalding.Config
 
 import org.joda.time.{DateTime, format}, format.DateTimeFormat
 
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-
-import commbank.coppersmith.api._, scalding._
+import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 case class ContextFeaturesConfig(conf: Config)
@@ -1097,9 +1080,7 @@ import com.twitter.scalding.typed.TypedPipe
 
 import org.joda.time.DateTime
 
-import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-
-import commbank.coppersmith.api._, scalding._
+import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.scalding.TypedPipeSource
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 

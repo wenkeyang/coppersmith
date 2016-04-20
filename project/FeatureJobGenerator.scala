@@ -59,9 +59,7 @@ object FeatureJobGenerator {
           |
           |import org.joda.time.DateTime
           |
-          |import au.com.cba.omnia.maestro.api.Maestro.DerivedDecode
-          |
-          |import commbank.coppersmith.api._, scalding._
+          |import commbank.coppersmith.api._, scalding._, Coppersmith._
           |import commbank.coppersmith.examples.thrift.$thriftImport
           |
           |case class ${name}Config(conf: Config) extends FeatureJobConfig[$typeParams] {

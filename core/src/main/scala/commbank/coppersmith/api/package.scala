@@ -14,20 +14,24 @@
 
 package commbank.coppersmith
 
+import scala.reflect.runtime.universe.TypeTag
+
+import shapeless.ops.hlist._
+import shapeless.{HNil, ::, Generic, HList}
+
 import commbank.coppersmith.Feature.Value
 import commbank.coppersmith.Join.CompleteJoinHlFeatureSource
 import commbank.coppersmith.util.Conversion
-import shapeless.ops.hlist._
-import shapeless.{HNil, ::, Generic, HList}
-import scala.reflect.runtime.universe.TypeTag
 
 package object api {
 
-  implicit def fromFS[S](fs: FeatureSource[S, _]) =
-    commbank.coppersmith.FeatureBuilderSource.fromFS(fs)
+  object Coppersmith extends au.com.cba.omnia.maestro.macros.MacroSupport {
+    implicit def fromFS[S](fs: FeatureSource[S, _]) =
+      commbank.coppersmith.FeatureBuilderSource.fromFS(fs)
 
-  implicit def fromCFS[S, C: TypeTag](fs: ContextFeatureSource[S, C, _]) =
-    commbank.coppersmith.FeatureBuilderSource.fromCFS(fs)
+    implicit def fromCFS[S, C: TypeTag](fs: ContextFeatureSource[S, C, _]) =
+      commbank.coppersmith.FeatureBuilderSource.fromCFS(fs)
+  }
 
   def from[S, P[_] : Lift](dataSource: DataSource[S, P]) =
     commbank.coppersmith.SourceBinder.from(dataSource)
@@ -99,6 +103,11 @@ package object api {
   type ContextFeatureSource[S, C, FS <: FeatureSource[S, FS]] = commbank.coppersmith.ContextFeatureSource[S, C, FS]
   type DataSource[S, P[_]] = commbank.coppersmith.DataSource[S, P]
 
+  // Maestro dependencies below
+  type JobStatus = au.com.cba.omnia.maestro.api.JobStatus
+  type Fields[A] = au.com.cba.omnia.maestro.macros.FieldsMacro.Fields[A]
+  type Encode[A] = au.com.cba.omnia.maestro.core.codec.Encode[A]
+
   val FeatureStub = commbank.coppersmith.FeatureStub
   val ExplicitGenerationTime = commbank.coppersmith.ExplicitGenerationTime
   val From = commbank.coppersmith.From
@@ -112,4 +121,10 @@ package object api {
   val PivotMacro = commbank.coppersmith.PivotMacro
   val MinMaxRange = Value.MinMaxRange
   val SetRange = Value.SetRange
+  val Patterns = commbank.coppersmith.Patterns
+
+  //Maestro dependencies below
+  val JobFinished =  au.com.cba.omnia.maestro.scalding.JobFinished
+  val HivePartition = au.com.cba.omnia.maestro.api.HivePartition
+  val Encode = au.com.cba.omnia.maestro.core.codec.Encode
 }

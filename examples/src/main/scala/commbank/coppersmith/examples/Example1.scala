@@ -17,16 +17,11 @@ package commbank.coppersmith.examples
 import commbank.coppersmith.Feature._
 import commbank.coppersmith.{lift => _, _}
 import commbank.coppersmith.examples.thrift.Customer
-import au.com.cba.omnia.maestro.core.codec.{DecodeError, DecodeOk, DecodeResult}
-
-
-import au.com.cba.omnia.maestro.scalding.JobStatus
-import au.com.cba.omnia.maestro.api._, Maestro._
+import commbank.coppersmith.api.{Coppersmith, JobStatus, JobFinished}, Coppersmith.DerivedDecode
 
 import com.twitter.scalding._
 
 import org.joda.time.DateTime
-
 
 import scalaz.{Value => _, _}, Scalaz._
 
