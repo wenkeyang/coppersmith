@@ -39,3 +39,15 @@ Versioning
 The [change log](CHANGELOG.markdown) lists all backwards-incompatible changes to
 the library (i.e. changes which might break existing client code).
 Any such changes require bumping the second number in the version.
+
+Contributors
+------------
+
+- Kristian Domagala [@dkristian](https://github.com/dkristian)
+- Todd Owen [@toddmowen](https://github.com/toddmowen)
+- Tin Pavlinic [@triggerNZ](https://github.com/triggerNZ)
+- Ewan Vaughan [@ewanv](https://github.com/ewanv)
+- Andrew Cowie [@afcowie](https://github.com/afcowie)
+- Konstantinos Servis [@knservis](https://github.com/knservis)
+- Afsal Thaj [@afsalthaj](https://github.com/afsalthaj)
+- TianYi Zhu [@Fantoccini](https://github.com/Fantoccini)
