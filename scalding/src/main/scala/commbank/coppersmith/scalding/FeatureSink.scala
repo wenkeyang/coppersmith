@@ -158,8 +158,8 @@ object HiveSupport {
         for {
                          // Use append semantics for now as an interim fix to address #97
                          // Check if this is still relevant once #137 is addressed
-          _           <- partitioned.writeExecution(sink).withSubConfig(createUniqueFilenames(_))
-          oPValues    <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
+          written     <- partitioned.writeThrough(sink).withSubConfig(createUniqueFilenames(_))
+          oPValues    <- written.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
           oPartitions  = oPValues.map(_.toSet.toList).toList.flatten.toNel.map(pValues =>
                            Partitions(conf.partition, pValues.head, pValues.tail: _*)
                          )
