@@ -117,7 +117,8 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val sumF:     CAF = select(sum(_.height))             .asFeature(Continuous,  "sum",   "Agg feature")
     val maxF:     CAF = select(max(_.age))                .asFeature(Continuous,  "max",   "Agg feature")
     val minF:     CAF = select(min(_.height))             .asFeature(Continuous,  "min",   "Agg feature")
-    val firstByF: CAF = select(firstBy(_.id)(_.height))   .asFeature(Continuous,  "first", "Agg feature")
+    val maxByF:   CAF = select(maxBy(_.id)(_.height))     .asFeature(Continuous,  "maxBy", "Agg feature")
+    val minByF:   CAF = select(minBy(_.id)(_.age))        .asFeature(Continuous,  "minBy", "Agg feature")
     val avgF:     CAF = select(avg(_.age.toDouble))       .asFeature(Continuous,  "avg",   "Agg feature")
     val ucbF:     CAF = select(uniqueCountBy(_.age % 10)) .asFeature(Continuous,  "ucb",   "Agg feature")
 
@@ -128,7 +129,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
         case (c, Some(credit)) => credit
       }.select(Aggregator.min[Double]).asFeature(Continuous, "collect", "Agg feature")
 
-    def aggregationFeatures = List(sizeF, countF, sumF, maxF, minF, firstByF, avgF, ucbF, collectF)
+    def aggregationFeatures = List(sizeF, countF, sumF, maxF, minF, maxByF, minByF, avgF, ucbF, collectF)
   }
 
   def generateMetadata = {
@@ -141,7 +142,8 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
       Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "sum",     "Agg feature",  Continuous),
       Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "max",     "Agg feature",  Continuous),
       Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "min",     "Agg feature",  Continuous),
-      Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "first",   "Agg feature",  Continuous),
+      Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "maxBy",   "Agg feature",  Continuous),
+      Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "minBy",   "Agg feature",  Continuous),
       Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "avg",     "Agg feature",  Continuous),
       Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "ucb",     "Agg feature",  Continuous),
       Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "collect", "Agg feature",  Continuous)
@@ -159,7 +161,8 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val groupedAges = cs.map(_.age).list.groupBy(_ % 10)
     val credit      = cs.map(_.credit).list.collect { case Some(c) => c }.toNel.map(_.list.min)
     val time        = dateTime.getMillis
-    val firstCById  = cs.list.minBy(_.id)
+    val maxCById    = cs.list.maxBy(_.id)
+    val minCById    = cs.list.minBy(_.id)
 
     eavtValues.toList must matchEavts(List(
                  Some((c.id, "size",    cs.size:                         Integral, time)),
@@ -167,7 +170,8 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
                  Some((c.id, "sum",     heights.sum:                     Decimal,  time)),
                  Some((c.id, "max",     ages.max:                        Integral, time)),
                  Some((c.id, "min",     heights.min:                     Decimal,  time)),
-                 Some((c.id, "first",   firstCById.height:               Decimal,  time)),
+                 Some((c.id, "maxBy",   maxCById.height:                 Decimal,  time)),
+                 Some((c.id, "minBy",   minCById.age:                    Integral, time)),
                  Some((c.id, "avg",     (ages.sum / ages.size.toDouble): Decimal,  time)),
                  Some((c.id, "ucb",     groupedAges.size:                Integral, time)),
       credit.map(d => (c.id, "collect", d:                               Decimal,  time))

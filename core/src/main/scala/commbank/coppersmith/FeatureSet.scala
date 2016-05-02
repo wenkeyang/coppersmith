@@ -114,25 +114,28 @@ trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
 
   // These allow aggregators to be created without specifying type args that
   // would otherwise be required if calling the delegated methods directly
-  def size: Aggregator[S, Long, Long]                                     = Aggregator.size
-  def count(where: S => Boolean = _ => true): Aggregator[S, Long, Long]   = Aggregator.count(where)
-  def avg[V](v: S => Double): Aggregator[S, AveragedValue, Double]        = AggregationFeature.avg[S](v)
-  def max[V : Ordering](v: S => V): Aggregator[S, V, V]                   = AggregationFeature.max[S, V](v)
-  def min[V : Ordering](v: S => V): Aggregator[S, V, V]                   = AggregationFeature.min[S, V](v)
-  def firstBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V] = AggregationFeature.firstBy[S, O, V](o)(v)
-  def sum[V : Monoid]  (v: S => V): Aggregator[S, V, V]                   = Aggregator.prepareMonoid(v)
-  def uniqueCountBy[T](f : S => T): Aggregator[S, Set[T], Int]            = AggregationFeature.uniqueCountBy(f)
+  def size: Aggregator[S, Long, Long]                                   = Aggregator.size
+  def count(where: S => Boolean = _ => true): Aggregator[S, Long, Long] = Aggregator.count(where)
+  def avg[V](v: S => Double): Aggregator[S, AveragedValue, Double]      = AggregationFeature.avg[S](v)
+  def max[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.max[S, V](v)
+  def min[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.min[S, V](v)
+  def maxBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V] = AggregationFeature.maxBy[S, O, V](o)(v)
+  def minBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V] = AggregationFeature.minBy[S, O, V](o)(v)
+  def sum[V : Monoid]  (v: S => V): Aggregator[S, V, V]                 = Aggregator.prepareMonoid(v)
+  def uniqueCountBy[T](f : S => T): Aggregator[S, Set[T], Int]          = AggregationFeature.uniqueCountBy(f)
 }
 
 object AggregationFeature {
-  def avg[T](t: T => Double): Aggregator[T, AveragedValue, Double]           =
+  def avg[T](t: T => Double): Aggregator[T, AveragedValue, Double]         =
     AveragedValue.aggregator.composePrepare[T](t)
-  def firstBy[T, O : Ordering, V](o: T => O)(v: T => V): Aggregator[T, T, V] =
+  def maxBy[T, O : Ordering, V](o: T => O)(v: T => V): Aggregator[T, T, V] =
+    Aggregator.maxBy[T, O](o).andThenPresent[V](v)
+  def minBy[T, O : Ordering, V](o: T => O)(v: T => V): Aggregator[T, T, V] =
     Aggregator.minBy[T, O](o).andThenPresent[V](v)
 
-  def max[T, V : Ordering](v: T => V): Aggregator[T, V, V]                   = Aggregator.max[V].composePrepare[T](v)
-  def min[T, V : Ordering](v: T => V): Aggregator[T, V, V]                   = Aggregator.min[V].composePrepare[T](v)
-  def uniqueCountBy[S, T](f : S => T): Aggregator[S, Set[T], Int]            = Aggregator.uniqueCount[T].composePrepare(f)
+  def max[T, V : Ordering](v: T => V): Aggregator[T, V, V]                 = Aggregator.max[V].composePrepare[T](v)
+  def min[T, V : Ordering](v: T => V): Aggregator[T, V, V]                 = Aggregator.min[V].composePrepare[T](v)
+  def uniqueCountBy[S, T](f : S => T): Aggregator[S, Set[T], Int]          = Aggregator.uniqueCount[T].composePrepare(f)
 
   // TODO: Would be surprised if this doesn't exist elsewhere
   implicit class AlgebirdSemigroup[T](s: Semigroup[T]) {
