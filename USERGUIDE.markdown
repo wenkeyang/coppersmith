@@ -217,7 +217,11 @@ pulled up to their own type for reuse. For an example of this, see the
 
 ### Partition selection
 
-The source data used so far is not partitioned. You can specify partitioned sources like so:
+The source data used so far is not partitioned. In the below example, the 
+hive text source is partitioned by year, based on `Movie.ReleaseDate`.
+
+The job will execute on all movies released in the year of the `generation-datetime`
+specified in the config.
 
 ```scala
 package commbank.coppersmith.examples.userguide
@@ -232,21 +236,21 @@ import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 case class PartitionedMovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
-  type Partition     = (String, String, String) // (Year, Month, Day)
+  val generationDateTimeStr = conf.getArgs("generation-datetime")
+  val generationDateTime    = DateTime.parse(generationDateTimeStr)
+ 
+  val partition             = HivePartition.byYear(Fields[Movie].ReleaseDate, "dd-MMM-yyyy")
+  val partitions            = ScaldingDataSource.Partitions(partition, generationDateTime.getYear.toString)
+  val movies                = HiveTextSource[Movie, String](new Path("data/movies"), partitions)
 
-  val partition      = HivePartition.byDay(Fields[Movie].ReleaseDate, "dd-MMM-yyyy")
-  val partitions     = ScaldingDataSource.Partitions(partition, ("2015", "01", "01"))
-  val movies         = HiveTextSource[Movie, Partition](new Path("data/movies"), partitions)
+  val featureSource         = From[Movie]().bind(from(movies))
 
-  val featureSource  = From[Movie]().bind(from(movies))
+  val featureContext        = ExplicitGenerationTime(generationDateTime)
 
-  val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
-
-  val dbPrefix       = conf.getArgs("db-prefix")
-  val dbRoot         = new Path(conf.getArgs("db-root"))
-  val tableName      = conf.getArgs("table-name")
-
-  val featureSink    = EavtSink.configure(dbPrefix, dbRoot, tableName)
+  val dbPrefix              = conf.getArgs("db-prefix")
+  val dbRoot                = new Path(conf.getArgs("db-root"))
+  val tableName             = conf.getArgs("table-name")
+  val featureSink           = EavtSink.configure(dbPrefix, dbRoot, tableName)
 }
 
 object PartitionedMovieFeaturesJob extends SimpleFeatureJob {
@@ -267,7 +271,7 @@ import commbank.coppersmith.api._, scalding._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
 object MultiPartitionSnippet {
-  type Partition = (String, String, String)
+  type Partition = (String, String, String) // Year, Month, Day
 
   // Last two days of July, and all of August
   val partition  = HivePartition.byDay(Fields[Movie].ReleaseDate, "dd-MMM-yyyy")
