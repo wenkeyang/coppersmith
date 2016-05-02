@@ -124,7 +124,7 @@ package object api {
   val Patterns = commbank.coppersmith.Patterns
 
   //Maestro dependencies below
-  val JobFinished =  au.com.cba.omnia.maestro.scalding.JobFinished
-  val HivePartition = au.com.cba.omnia.maestro.api.HivePartition
-  val Encode = au.com.cba.omnia.maestro.core.codec.Encode
+  lazy val JobFinished =  au.com.cba.omnia.maestro.scalding.JobFinished
+  lazy val HivePartition = au.com.cba.omnia.maestro.api.HivePartition
+  lazy val Encode = au.com.cba.omnia.maestro.core.codec.Encode
 }
