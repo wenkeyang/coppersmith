@@ -14,7 +14,7 @@
 
 package commbank.coppersmith.plugin.example
 
-import commbank.coppersmith.api._
+import commbank.coppersmith.api._, Coppersmith._
 
 import scala.util.Try
 import java.util.Locale

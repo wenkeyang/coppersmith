@@ -46,7 +46,7 @@ object CoppersmithPlugin extends AutoPlugin {
         if (res.length == 0) {
           error("Metadata empty. Are your feature definitions in a subproject?")
         } else {
-          val metadataFile = tgt / s"metadata-${v}.json"
+          val metadataFile = tgt / s"coppersmith-features-${v}.json"
           IO.write(metadataFile, res.getBytes)
           metadataFile
         }

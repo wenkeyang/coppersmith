@@ -12,6 +12,6 @@ addSbtPlugin("au.com.cba.omnia" %% "coppersmith-plugin" % "<coppersmith-version>
 
 where `coppersmith-version` is the version of coppersmith you want to use.
 
-From there, ```metadata:generate``` will generate a metadata JSON file, and the
+From there, ```metadata:export``` will generate a metadata JSON file, and the
 artifacts published by `publishLocal` and `publish` will include the metadata
 as an artifact.
