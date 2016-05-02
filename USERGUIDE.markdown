@@ -438,7 +438,7 @@ object PivotMacroExample {
 
 By subclassing `AggregationFeatureSet` and using `FeatureBuilder`,
 you gain access to a number of useful aggregate functions:
-`count`, `avg`, `max`, `min`, `sum`, and `uniqueCountBy`.
+`count`, `avg`, `max`, `min`, `firstBy`, `sum`, and `uniqueCountBy`.
 These are convenience methods for creating
 [Algebird `Aggregator`s](https://github.com/twitter/scalding/wiki/Aggregation-using-Algebird-Aggregators).
 Other aggregators can be defined by providing your own

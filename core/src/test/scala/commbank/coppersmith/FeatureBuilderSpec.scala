@@ -112,13 +112,14 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
 
     type CAF = AggregationFeature[Customer, Customer, _, Value]
 
-    val sizeF:  CAF = select(size)                      .asFeature(Discrete,    "size",  "Agg feature")
-    val countF: CAF = select(count(where = _.age >= 18)).asFeature(Continuous,  "count", "Agg feature")
-    val sumF:   CAF = select(sum(_.height))             .asFeature(Continuous,  "sum",   "Agg feature")
-    val maxF:   CAF = select(max(_.age))                .asFeature(Continuous,  "max",   "Agg feature")
-    val minF:   CAF = select(min(_.height))             .asFeature(Continuous,  "min",   "Agg feature")
-    val avgF:   CAF = select(avg(_.age.toDouble))       .asFeature(Continuous,  "avg",   "Agg feature")
-    val ucbF:   CAF = select(uniqueCountBy(_.age % 10)) .asFeature(Continuous,  "ucb",   "Agg feature")
+    val sizeF:    CAF = select(size)                      .asFeature(Discrete,    "size",  "Agg feature")
+    val countF:   CAF = select(count(where = _.age >= 18)).asFeature(Continuous,  "count", "Agg feature")
+    val sumF:     CAF = select(sum(_.height))             .asFeature(Continuous,  "sum",   "Agg feature")
+    val maxF:     CAF = select(max(_.age))                .asFeature(Continuous,  "max",   "Agg feature")
+    val minF:     CAF = select(min(_.height))             .asFeature(Continuous,  "min",   "Agg feature")
+    val firstByF: CAF = select(firstBy(_.id)(_.height))   .asFeature(Continuous,  "first", "Agg feature")
+    val avgF:     CAF = select(avg(_.age.toDouble))       .asFeature(Continuous,  "avg",   "Agg feature")
+    val ucbF:     CAF = select(uniqueCountBy(_.age % 10)) .asFeature(Continuous,  "ucb",   "Agg feature")
 
     import com.twitter.algebird.Aggregator
 
@@ -127,7 +128,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
         case (c, Some(credit)) => credit
       }.select(Aggregator.min[Double]).asFeature(Continuous, "collect", "Agg feature")
 
-    def aggregationFeatures = List(sizeF, countF, sumF, maxF, minF, avgF, ucbF, collectF)
+    def aggregationFeatures = List(sizeF, countF, sumF, maxF, minF, firstByF, avgF, ucbF, collectF)
   }
 
   def generateMetadata = {
@@ -140,6 +141,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
       Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "sum",     "Agg feature",  Continuous),
       Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "max",     "Agg feature",  Continuous),
       Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "min",     "Agg feature",  Continuous),
+      Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "first",   "Agg feature",  Continuous),
       Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "avg",     "Agg feature",  Continuous),
       Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "ucb",     "Agg feature",  Continuous),
       Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "collect", "Agg feature",  Continuous)
@@ -157,6 +159,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val groupedAges = cs.map(_.age).list.groupBy(_ % 10)
     val credit      = cs.map(_.credit).list.collect { case Some(c) => c }.toNel.map(_.list.min)
     val time        = dateTime.getMillis
+    val firstCById  = cs.list.minBy(_.id)
 
     eavtValues.toList must matchEavts(List(
                  Some((c.id, "size",    cs.size:                         Integral, time)),
@@ -164,6 +167,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
                  Some((c.id, "sum",     heights.sum:                     Decimal,  time)),
                  Some((c.id, "max",     ages.max:                        Integral, time)),
                  Some((c.id, "min",     heights.min:                     Decimal,  time)),
+                 Some((c.id, "first",   firstCById.height:               Decimal,  time)),
                  Some((c.id, "avg",     (ages.sum / ages.size.toDouble): Decimal,  time)),
                  Some((c.id, "ucb",     groupedAges.size:                Integral, time)),
       credit.map(d => (c.id, "collect", d:                               Decimal,  time))
