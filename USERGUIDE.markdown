@@ -21,10 +21,14 @@ Basics
 
 ### Getting started
 
-Add the `coppersmith-scalding` package to your SBT configuration.
-For example (please replace with the latest version number):
+Add the coppersmith plugin to your SBT configuration. That is, inside
+`project/plugins.sbt`,
 
-    libraryDependencies += "au.com.cba.omnia" %% "coppersmith-scalding" % "0.4.1-20151129224909-484f4ea"
+    addSbtPlugin("au.com.cba.omnia" %% "coppersmith-plugin" % "<coppersmith-version>")
+
+, where `<coppersmith-version>` is replaced with the version number of
+coppersmith you want to use. The plugin adds the appropriate coppersmith versions
+to your build and enables the publishing of feature metadata.
 
 
 ### The `Feature` class
@@ -413,7 +417,7 @@ because it transforms a wide input record
 into the narrow EAVT format.
 
 The `PivotFeatureSet` provides the convenience method `pivot()`, which
-allows you to pivot single fields. Note the use of `Maestro.Fields` to 
+allows you to pivot single fields. Note the use of `Maestro.Fields` to
 specify the field of the thrift struct.
 
 ```scala

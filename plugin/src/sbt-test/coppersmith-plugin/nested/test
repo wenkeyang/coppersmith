@@ -1,0 +1,5 @@
+> plugins
+-> metadata:export
+> sub/metadata:export
+-$ exists target/coppersmith-features-0.1-DEMO.json
+$ exists subproject/target/coppersmith-features-0.1-DEMO.json

@@ -131,6 +131,15 @@ object build extends Build {
         )
   ).dependsOn(core)
 
+  lazy val plugin = Project(
+    id = "plugin",
+    base = file("plugin"),
+    settings = uniform.project("coppersmith-plugin", "commbank.coppersmith.plugin") ++ Seq(
+      scalaVersion := "2.10.4",
+      sbtPlugin := true,
+      scalacOptions := Seq()
+    ))
+
   lazy val tools = Project(
     id = "tools"
     , base = file("tools")
