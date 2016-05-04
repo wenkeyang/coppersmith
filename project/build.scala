@@ -136,6 +136,7 @@ object build extends Build {
     base = file("plugin"),
     settings = uniform.project("coppersmith-plugin", "commbank.coppersmith.plugin") ++ Seq(
       scalaVersion := "2.10.4",
+      crossScalaVersions := Seq("2.10.4"),
       sbtPlugin := true,
       scalacOptions := Seq()
     ))
