@@ -13,7 +13,6 @@ install:
 script:
 - sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci '; test; package'
 - ci/sbt-deploy-to.sh ext-releases-local
-- sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci 'plugin/scripted'
 - ci/sbt-deploy-ivy.sh plugin
 
 after_script:
