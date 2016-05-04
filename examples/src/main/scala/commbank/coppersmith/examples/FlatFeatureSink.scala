@@ -14,15 +14,19 @@
 
 package commbank.coppersmith.examples.userguide
 
+import org.apache.hadoop.fs.Path
+
 import com.twitter.scalding.typed.TypedPipe
-import com.twitter.scalding.{Execution, TypedTsv}
+import com.twitter.scalding.TypedTsv
+
 import commbank.coppersmith.Feature.Time
 import commbank.coppersmith.Feature.Value.{Decimal, Integral, Str}
 import commbank.coppersmith.FeatureValue
-import commbank.coppersmith.scalding.FeatureSink
+import commbank.coppersmith.scalding.FeatureSink, FeatureSink.WriteResult
 
 case class FlatFeatureSink(output: String) extends FeatureSink {
-  override def write(features: TypedPipe[(FeatureValue[_], Time)]): Execution[Unit] = {
+  def path = new Path(output)
+  override def write(features: TypedPipe[(FeatureValue[_], Time)]): WriteResult = {
 
     val featurePipe = features.map { case (fv, t) =>
       val featureValue = (fv.value match {
@@ -32,6 +36,6 @@ case class FlatFeatureSink(output: String) extends FeatureSink {
       }).getOrElse("")
       s"${fv.entity}|${fv.name}|${featureValue}"
     }
-    featurePipe.writeExecution(TypedTsv[String](output)).unit
+    featurePipe.writeExecution(TypedTsv[String](output)).map(_ => Right(Set(path)))
   }
 }

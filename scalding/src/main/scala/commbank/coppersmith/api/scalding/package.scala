@@ -23,7 +23,11 @@ package object scalding {
   type FeatureJobConfig[S] = commbank.coppersmith.scalding.FeatureJobConfig[S]
   type SimpleFeatureJob = commbank.coppersmith.scalding.SimpleFeatureJob
 
-  val ScaldingDataSource = commbank.coppersmith.scalding.ScaldingDataSource
+  val FeatureSetExecutions = commbank.coppersmith.scalding.FeatureSetExecutions
+  val FeatureSetExecution = commbank.coppersmith.scalding.FeatureSetExecution
+
+  val Partitions = commbank.coppersmith.scalding.Partitions
+  val PathComponents = commbank.coppersmith.scalding.Partitions
   val HiveTextSource = commbank.coppersmith.scalding.HiveTextSource
   val TypedPipeSource = commbank.coppersmith.scalding.TypedPipeSource
   val EavtSink = commbank.coppersmith.scalding.EavtSink

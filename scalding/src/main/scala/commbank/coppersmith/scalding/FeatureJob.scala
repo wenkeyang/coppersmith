@@ -14,6 +14,8 @@
 
 package commbank.coppersmith.scalding
 
+import org.apache.hadoop.fs.Path
+
 import com.twitter.algebird.Aggregator
 
 import com.twitter.scalding.typed._
@@ -37,25 +39,115 @@ abstract class SimpleFeatureJob extends MaestroJob with SimpleFeatureJobOps {
 object SimpleFeatureJob extends SimpleFeatureJobOps
 
 trait SimpleFeatureJobOps {
+  val log = org.slf4j.LoggerFactory.getLogger(getClass())
+
   def generate[S](cfg:      Config => FeatureJobConfig[S],
                   features: FeatureSetWithTime[S]): Execution[JobStatus] =
-    generate[S](cfg, generateOneToMany(features)_)
+    generate(FeatureSetExecutions(FeatureSetExecution(cfg, features)))
 
   def generate[S](cfg:      Config => FeatureJobConfig[S],
                   features: AggregationFeatureSet[S]): Execution[JobStatus] =
-    generate[S](cfg, generateAggregate(features)_)
+    generate(FeatureSetExecutions(FeatureSetExecution(cfg, features)))
 
-  def generate[S](
+  def generate(featureSetExecutions: FeatureSetExecutions): Execution[JobStatus] = {
+    for {
+      cfg    <- Execution.getConfig
+      paths  <- generateFeatures(featureSetExecutions)
+      result <- FeatureSink.commit(paths)
+      status <- result.fold(writeErrorFailure(_), _ => Execution.from(JobFinished))
+    } yield status
+  }
+
+  // Run each outer group of executions in sequence, accumulating paths at each step
+  private def generateFeatures(featureSetExecutions: FeatureSetExecutions): Execution[Set[Path]] =
+    featureSetExecutions.allExecutions.foldLeft(Execution.from(Set[Path]()))(
+      (resultSoFar, executions) => resultSoFar.flatMap(paths =>
+        generateFeaturesPar(executions).map(_ ++ paths)
+      )
+    )
+
+  // Run executions in parallel (zip), combining the tupled sets of of paths at each step
+  private def generateFeaturesPar(executions: List[FeatureSetExecution]): Execution[Set[Path]] =
+    executions.foldLeft(Execution.from(Set[Path]()))(
+      (zippedSoFar, featureSetExecution) =>
+        zippedSoFar.zip(featureSetExecution.generate).map {
+          case (accPaths, paths) => accPaths ++ paths
+        }
+    )
+
+  import FeatureSink.{AlreadyCommitted, AttemptedWriteToCommitted, WriteError}
+  def writeErrorFailure[T](e: WriteError): Execution[T] = e match {
+    case AlreadyCommitted(path) => {
+      log.error(s"Tried to commit already committed path: '$path'")
+      MX.jobFailure(-2)
+    }
+    case AttemptedWriteToCommitted(path) => {
+      log.error(s"Tried to write to committed path: '$path'")
+      MX.jobFailure(-3)
+    }
+  }
+}
+
+/**
+  * Inner level of allExecutions are zipped to run in parallel. Groups of executions that
+  * form outer level are run sequentially
+  */
+case class FeatureSetExecutions(allExecutions: List[List[FeatureSetExecution]]) {
+  /** Add a new group of executions to run after all previous groups */
+  def andThen(executions: FeatureSetExecution*) =
+    FeatureSetExecutions(allExecutions :+ executions.toList)
+}
+
+object FeatureSetExecutions {
+  def apply(executions: FeatureSetExecution*): FeatureSetExecutions =
+    FeatureSetExecutions(List(executions.toList))
+}
+
+trait FeatureSetExecution {
+  type Source
+
+  def config: Config => FeatureJobConfig[Source]
+
+  def features: Either[FeatureSetWithTime[Source], AggregationFeatureSet[Source]]
+
+  import FeatureSetExecution.{generateFeatures, generateOneToMany, generateAggregate}
+  def generate(): Execution[Set[Path]] = features.fold(
+    regFeatures => generateFeatures[Source](config, generateOneToMany(regFeatures)_),
+    aggFeatures => generateFeatures[Source](config, generateAggregate(aggFeatures)_)
+  )
+}
+
+object FeatureSetExecution {
+  def apply[S](
+    cfg: Config => FeatureJobConfig[S],
+    fs:  FeatureSetWithTime[S]
+  ): FeatureSetExecution = new FeatureSetExecution {
+    type Source = S
+    def config = cfg
+    def features = Left(fs)
+  }
+  def apply[S](
+    cfg: Config => FeatureJobConfig[S],
+    fs:  AggregationFeatureSet[S]
+  ): FeatureSetExecution = new FeatureSetExecution {
+    type Source = S
+    def config = cfg
+    def features = Right(fs)
+  }
+
+  import SimpleFeatureJob.writeErrorFailure
+  private def generateFeatures[S](
     cfg:       Config => FeatureJobConfig[S],
     transform: (TypedPipe[S], FeatureContext) => TypedPipe[(FeatureValue[_], Time)]
-  ): Execution[JobStatus] = {
+  ): Execution[Set[Path]] = {
     for {
       conf   <- Execution.getConfig.map(cfg)
       source  = conf.featureSource
       input   = source.load
       values  = transform(input, conf.featureContext)
-      _      <- conf.featureSink.write(values)
-    } yield JobFinished
+      result <- conf.featureSink.write(values)
+      paths  <- result.fold(writeErrorFailure(_), Execution.from(_))
+    } yield paths
   }
 
   private def generateOneToMany[S](

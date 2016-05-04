@@ -18,8 +18,6 @@ import org.joda.time.DateTime
 
 import com.twitter.scalding.{Config, Execution, TypedPipe}
 
-import org.apache.hadoop.fs.Path
-
 import org.scalacheck.Arbitrary
 import org.scalacheck.Gen.alphaStr
 import org.scalacheck.Prop.forAll
@@ -30,7 +28,8 @@ import au.com.cba.omnia.maestro.api._, Maestro._
 import au.com.cba.omnia.maestro.test.Records
 
 import au.com.cba.omnia.thermometer.core.Thermometer._
-import au.com.cba.omnia.thermometer.fact.PathFactoids.records
+import au.com.cba.omnia.thermometer.fact.Fact
+import au.com.cba.omnia.thermometer.fact.PathFactoids.{exists, records}
 import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
 import commbank.coppersmith._, Feature._, FeatureBuilderSource.fromFS, Type._, Value._
@@ -47,6 +46,12 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
 
     Running an aggregation feature set job
       writes all aggregation feature values $aggregationFeaturesJob ${tag("slow")}
+
+    Running a multi feature set job
+      writes feature values for seq sets $multiFeatureSetJobSeq ${tag("slow")}
+
+    Running a multi feature set job
+      writes feature values for par sets $multiFeatureSetJobPar ${tag("slow")}
   """
 
   {
@@ -66,8 +71,8 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
   }
 
   def prepareData(
-    custAccts:   CustomerAccounts,
-    jobTime:     DateTime,
+    custAccts:  CustomerAccounts,
+    jobTime:    DateTime,
     eavtConfig: EavtSink.Config
   ): FeatureJobConfig[Account] = {
 
@@ -86,12 +91,10 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
       _     <- Execution.guard(count == accounts.size, s"$count != ${accounts.size}")
     } yield JobFinished
 
-    executesSuccessfully(job, Map("hdfs-root" -> List(s"$dir/user")))
+    executesOk(job, Map("hdfs-root" -> List(s"$dir/user")))
 
-    val accountDataSource = HiveParquetSource[Account, Nothing](
-      path(s"$dir/user/account_db"),
-      ScaldingDataSource.Partitions.unpartitioned
-    )
+    val accountDataSource =
+      HiveParquetSource[Account, Nothing](path(s"$dir/user/account_db"), Partitions.unpartitioned)
 
     new FeatureJobConfig[Account] {
       val featureContext = ExplicitGenerationTime(jobTime)
@@ -102,7 +105,12 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
 
   val eavtReader  = delimitedThermometerRecordReader[Eavt]('|', "\\N", implicitly[Decode[Eavt]])
   val defaultArgs = Map("hdfs-root" -> List(s"$dir/user"))
-  val eavtConfig = EavtSink.Config("features_db", path(s"$dir/user/features_db"), "features")
+  val eavtConfig = EavtSink.Config(
+    "features_db",
+    path(s"$dir/user/features_db"),
+    "features",
+    EavtSink.defaultPartition
+  )
 
   // Use alphaStr to avoid problems with serialising new lines and eavt field delimiters
   implicit val arbCustAccts: Arbitrary[CustomerAccounts] = arbCustomerAccounts(alphaStr)
@@ -113,10 +121,9 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
       val expected = RegularFeatures.expectedFeatureValues(custAccts, jobTime)
 
       withEnvironment(path(getClass.getResource("/").toString)) {
-        executesSuccessfully(SimpleFeatureJob.generate((_: Config) => cfg, RegularFeatures), defaultArgs)
-        facts(
-          path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected)
-        )
+        executesOk(SimpleFeatureJob.generate((_: Config) => cfg, RegularFeatures), defaultArgs)
+        facts(successFlagsWritten(expected, jobTime): _*)
+        facts(path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected))
       }
     }}.set(minTestsOk = 5)
 
@@ -125,13 +132,58 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
       val cfg = prepareData(custAccts, jobTime, eavtConfig)
       val expected = AggregationFeatures.expectedFeatureValues(custAccts, jobTime)
 
+
       withEnvironment(path(getClass.getResource("/").toString)) {
-        executesSuccessfully(SimpleFeatureJob.generate((_: Config) => cfg, AggregationFeatures), defaultArgs)
-        facts(
-          path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected)
-        )
+        executesOk(SimpleFeatureJob.generate((_: Config) => cfg, AggregationFeatures), defaultArgs)
+        facts(successFlagsWritten(expected, jobTime): _*)
+        facts(path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected))
       }
     }}.set(minTestsOk = 5)
+
+  def multiFeatureSetJobPar =
+    forAll { (custAccts: CustomerAccounts, jobTime: DateTime) => {
+      val cfg = prepareData(custAccts, jobTime, eavtConfig)
+      val expected =
+        RegularFeatures.expectedFeatureValues(custAccts, jobTime) ++
+          AggregationFeatures.expectedFeatureValues(custAccts, jobTime)
+
+      withEnvironment(path(getClass.getResource("/").toString)) {
+        val job = FeatureSetExecutions(
+          FeatureSetExecution((_: Config) => cfg, RegularFeatures),
+          FeatureSetExecution((_: Config) => cfg, AggregationFeatures)
+        )
+        executesOk(SimpleFeatureJob.generate(job), defaultArgs)
+        facts(successFlagsWritten(expected, jobTime): _*)
+        facts(path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected))
+      }
+    }}.set(minTestsOk = 5)
+
+  def multiFeatureSetJobSeq =
+    forAll { (custAccts: CustomerAccounts, jobTime: DateTime) => {
+      val cfg = prepareData(custAccts, jobTime, eavtConfig)
+      val expected =
+        RegularFeatures.expectedFeatureValues(custAccts, jobTime) ++
+          AggregationFeatures.expectedFeatureValues(custAccts, jobTime)
+
+      withEnvironment(path(getClass.getResource("/").toString)) {
+        val job = FeatureSetExecutions(
+          FeatureSetExecution((_: Config) => cfg, RegularFeatures)
+        ).andThen(
+          FeatureSetExecution((_: Config) => cfg, AggregationFeatures)
+        )
+        executesOk(SimpleFeatureJob.generate(job), defaultArgs)
+        facts(successFlagsWritten(expected, jobTime): _*)
+        facts(path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected))
+      }
+    }}.set(minTestsOk = 5)
+
+  private def successFlagsWritten(expectedValues: List[Eavt], dateTime: DateTime): Seq[Fact] = {
+    val partition = eavtConfig.partition.underlying
+    val expectedPartitions = expectedValues.map(partition.extract(_)).toSet.toSeq
+    expectedPartitions.map { case (year, month, day) =>
+      path(s"${eavtConfig.hiveConfig.path}/year=$year/month=$month/day=$day/_SUCCESS") ==> exists
+    }
+  }
 }
 
 object ScaldingJobSpec {

@@ -14,39 +14,93 @@
 
 package commbank.coppersmith.scalding
 
-import com.twitter.algebird.Aggregator
-import com.twitter.scalding.typed.{PartitionedTextLine, TypedPipe}
-import com.twitter.scalding.{Config, Execution, TupleConverter, TupleSetter}
-
-import com.twitter.scrooge.ThriftStruct
+import com.twitter.scalding.typed.TypedPipe
+import com.twitter.scalding.{Execution, TupleSetter}
 
 import org.apache.hadoop.fs.Path
 import org.joda.time.DateTime
 
+import scalaz.NonEmptyList
 import scalaz.std.list.listInstance
-import scalaz.std.option.optionInstance
-import scalaz.syntax.bind.ToBindOps
-import scalaz.syntax.foldable.ToFoldableOps
-import scalaz.syntax.functor.ToFunctorOps
-import scalaz.syntax.std.option.ToOptionIdOps
 import scalaz.syntax.std.list.ToListOpsFromList
 import scalaz.syntax.traverse.ToTraverseOps
 
-import au.com.cba.omnia.maestro.api.Maestro._
-import au.com.cba.omnia.maestro.api._
-import au.com.cba.omnia.maestro.scalding.ConfHelper.createUniqueFilenames
+import au.com.cba.omnia.maestro.api._, Maestro._
 
-import commbank.coppersmith.Feature.Value._
-import commbank.coppersmith.Feature._
-
+import commbank.coppersmith.Feature._, Value._
 import commbank.coppersmith.FeatureValue
-import commbank.coppersmith.scalding.ScaldingDataSource.{Partitions, PathComponents}
+
 import commbank.coppersmith.thrift.Eavt
 
+import Partitions.PathComponents
 import HiveSupport.{DelimiterConflictStrategy, FailJob}
 
+import FeatureSink.WriteResult
+
 trait FeatureSink {
-  def write(features: TypedPipe[(FeatureValue[_], Time)]): Execution[Unit]
+  /**
+    * Persist feature values, returning the list of paths written (for committing at the
+    * end of the job) or an error if trying to write to a path that is already committed
+    */
+  def write(features: TypedPipe[(FeatureValue[_], Time)]): WriteResult
+}
+
+object FeatureSink {
+  sealed trait WriteError
+  case class AlreadyCommitted(paths: NonEmptyList[Path]) extends WriteError
+  case class AttemptedWriteToCommitted(path: Path) extends WriteError
+
+  type WriteResult = Execution[Either[WriteError, Set[Path]]]
+
+  def commitFlag(path: Path) = new Path(path, "_SUCCESS")
+  def isCommitted(path: Path): Execution[Boolean] = Execution.fromHdfs(Hdfs.exists(commitFlag(path)))
+
+  type CommitResult = Execution[Either[WriteError, Unit]]
+  // Note: Check for committed flags and subsequent writing thereof is not atomic
+  def commit(paths: Set[Path]): CommitResult = {
+
+    // Check all paths for committed state first. Avoids committing earlier paths
+    // if a latter path is already committed and would fail the job overall.
+    val pathCommits: Execution[List[(Path, Boolean)]] =
+      paths.toList.map(p => isCommitted(p).map((p, _))).sequence
+
+    pathCommits.flatMap(pathCommitStates => {
+      val committedPaths = pathCommitStates.collect { case (path, true) => path }
+      committedPaths.toNel.map(committed =>
+        Execution.from(Left(AlreadyCommitted(committed)))
+      ).getOrElse(
+        paths.toList.map(path =>
+          Execution.fromHdfs(Hdfs.create(commitFlag(path)))
+        ).sequence.unit.map(Right(_))
+      )
+    })
+  }
+}
+
+sealed trait SinkPartition[T] {
+  type P
+  def pathComponents: PathComponents[P]
+  def tupleSetter: TupleSetter[P]
+  def underlying: Partition[T, P]
+}
+
+final case class FixedSinkPartition[T, PP : PathComponents : TupleSetter](
+  fieldNames: List[String],
+  pathPattern: String,
+  partitionValue: PP
+) extends SinkPartition[T] {
+  type P = PP
+  def pathComponents = implicitly
+  def tupleSetter = implicitly
+  def underlying = Partition(fieldNames, _ => partitionValue, pathPattern)
+}
+
+final case class DerivedSinkPartition[T, PP : PathComponents : TupleSetter](
+  underlying: Partition[T, PP]
+) extends SinkPartition[T] {
+  type P = PP
+  def pathComponents = implicitly
+  def tupleSetter = implicitly
 }
 
 object EavtSink {
@@ -58,11 +112,14 @@ object EavtSink {
 
   import HiveSupport.HiveConfig
 
-  val partition = HivePartition.byDay(Fields[Eavt].Time, "yyyy-MM-dd")
+  val defaultPartition = DerivedSinkPartition[Eavt, (String, String, String)](
+    HivePartition.byDay(Fields[Eavt].Time, "yyyy-MM-dd")
+  )
 
   def configure(dbPrefix:  String,
                 dbRoot:    Path,
                 tableName: TableName,
+                partition: SinkPartition[Eavt] = defaultPartition,
                 group:     Option[String] = None,
                 dcs:       DelimiterConflictStrategy[Eavt] = FailJob[Eavt]()): EavtSink =
     EavtSink(
@@ -70,6 +127,7 @@ object EavtSink {
         s"${dbPrefix}_features",
         new Path(dbRoot, s"view/warehouse/features/${group.map(_ + "/").getOrElse("")}$tableName"),
         tableName,
+        partition,
         dcs
       )
     )
@@ -78,10 +136,18 @@ object EavtSink {
     dbName:    DatabaseName,
     tablePath: Path,
     tableName: TableName,
+    partition: SinkPartition[Eavt],
     dcs:       DelimiterConflictStrategy[Eavt] = FailJob[Eavt]()
   ) {
     def hiveConfig =
-      HiveConfig[Eavt, (String, String, String)](partition, dbName, tablePath, tableName, Delimiter, dcs)
+      HiveSupport.HiveConfig[Eavt, partition.P](
+        partition.underlying,
+        dbName,
+        tablePath,
+        tableName,
+        EavtSink.Delimiter,
+        dcs
+      )
   }
 
   def toEavt(fv: FeatureValue[_], time: Time) = {
@@ -99,134 +165,12 @@ object EavtSink {
 
 case class EavtSink(conf: EavtSink.Config) extends FeatureSink {
   def write(features: TypedPipe[(FeatureValue[_], Time)]) = {
-    val hiveConfig = conf.hiveConfig
     val eavtPipe = features.map { case (fv, t) => EavtSink.toEavt(fv, t) }
 
-    for {
-      oPartitions <- HiveSupport.writeTextTable(hiveConfig, eavtPipe)
-      _           <- oPartitions.map(partitions => Execution.fromHdfs {
-                      partitions.toPaths(hiveConfig.path).toList.traverse_[Hdfs](eachPath =>
-                        Hdfs.create(s"${eachPath.toString}/_SUCCESS".toPath).map(_ => ())
-                      )
-                    }).sequence
-    } yield ()
-  }
-}
-
-// Maestro's HiveTable currently assumes the underlying format to be Parquet. This code generalises
-// code from different feature gen projects, which supports storing the final EAVT records as text.
-object HiveSupport {
-  trait DelimiterConflictStrategy[T] {
-    def handle(row: T, result: String, sep: String): Option[String]
-  }
-  // Use if field values are assumed to never contain the separator character
-  case class FailJob[T]() extends DelimiterConflictStrategy[T] {
-    def handle(row: T, result: String, sep: String) =
-      sys.error(s"field '$result' in '$row' contains the specified delimiter '$sep'")
-  }
-
-  case class HiveConfig[T <: ThriftStruct : Manifest, P](
-    partition: Partition[T, P],
-    database:  String,
-    path:      Path,
-    tablename: String,
-    delimiter: String,
-    dcs:       DelimiterConflictStrategy[T]
-  )
-
-  def writeTextTable[
-    T <: ThriftStruct with Product : Manifest,
-    P : TupleSetter : TupleConverter : PathComponents
-  ](
-    conf: HiveConfig[T, P],
-    pipe: TypedPipe[T]
-  ): Execution[Option[Partitions[P]]] = {
-
-    import conf.partition
-    val partitioned: TypedPipe[(P, String)] = pipe.map(v =>
-      partition.extract(v) -> serialise[T](v, conf.delimiter, "\\N")(conf.dcs)
-    )
-
-    // Use an intermediate temporary directory to write pipe in order to avoid race condition that
-    // occurs when two parallel executions are writing to the same sink in two different Cascading
-    // Flow instances. Race condition occurs when shared _temporary directory is deleted via
-    // cascading.tap.hadoop.util.Hadoop18TapUtil.cleanupJob when Hadoop18TapUtil.isInflow returns
-    // false and before the other execution has copied its results.
-    Execution.fromHdfs(Hdfs.createTempDir()).flatMap(tempDir => {
-      val sink = PartitionedTextLine(tempDir.toString, partition.pattern);
-      {
-        for {
-                         // Use append semantics for now as an interim fix to address #97
-                         // Check if this is still relevant once #137 is addressed
-          written     <- partitioned.writeThrough(sink).withSubConfig(createUniqueFilenames(_))
-          oPValues    <- written.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
-          oPartitions  = oPValues.map(_.toSet.toList).toList.flatten.toNel.map(pValues =>
-                           Partitions(conf.partition, pValues.head, pValues.tail: _*)
-                         )
-          _           <- oPartitions.map(moveToTarget(tempDir, conf.path, _)).sequence
-          _           <- Execution.fromHive(ensureTextTableExists(conf))
-        } yield oPartitions
-      }.ensure(Execution.fromHdfs(Hdfs.delete(tempDir, recDelete = true)))
-    })
-  }
-
-  private def moveToTarget(
-    sourceDir:  Path,
-    targetDir:  Path,
-    partitions: Partitions[_]
-  ): Execution[Unit] = {
-    val partitionRelPaths = partitions.relativePaths
-    partitionRelPaths.map(partitionRelPath => {
-      val sourcePartition = new Path(sourceDir, partitionRelPath)
-      val targetPartition = new Path(targetDir, partitionRelPath)
-      Execution.fromHdfs(
-        for {
-          parts <- Hdfs.glob(sourcePartition, "*")
-          _     <- Hdfs.mkdirs(targetPartition)
-          _     <- parts.map(part => Hdfs.move(part, new Path(targetPartition, part.getName))).sequence
-        } yield ()
-      )
-    }).sequence.unit
-  }
-
-  def ensureTextTableExists[T <: ThriftStruct : Manifest](conf: HiveConfig[T, _]): Hive[Unit] =
-    for {
-           // Hive.createTextTable is idempotent - it will no-op if the table already exists,
-           // assuming the schema matches exactly
-      _ <- Hive.createTextTable[T](
-             database         = conf.database,
-             table            = conf.tablename,
-             partitionColumns = conf.partition.fieldNames.map(_ -> "string"),
-             location         = Option(conf.path),
-             delimiter        = conf.delimiter
-           )
-      _ <- Hive.queries(List(s"use `${conf.database}`", s"msck repair table `${conf.tablename}`"))
-    } yield ()
-
-  // Adapted from ParseUtils in util.etl project
-  private def serialise[T <: Product](row: T, sep: String, none: String)
-                                     (implicit dcs: DelimiterConflictStrategy[T]): String = {
-
-    def delimiterConflict(s: String) = s.contains(sep)
-
-    row.productIterator.flatMap(value => {
-      val result = value match {
-        case Some(x) => x
-        case None    => none
-        case any     => any
-      }
-      if (delimiterConflict(result.toString)) {
-        dcs.handle(row, value.toString, sep).map(r =>
-          if (delimiterConflict(r)) {
-            sys.error(("Delimiter conflict not handled adequately: " +
-                       s"result '$r' from '$row' still contains the specified delimiter '$sep'"))
-          } else {
-            r
-          }
-        )
-      } else {
-        Option(result)
-      }
-    }).mkString(sep)
+    implicit val pathComponents: PathComponents[conf.partition.P] = conf.partition.pathComponents
+    // Note: This needs to be explicitly specified so that the TupleSetter.singleSetter
+    // instance isn't used (causing a failure at runtime).
+    implicit val tupleSetter: TupleSetter[conf.partition.P] = conf.partition.tupleSetter
+    HiveSupport.writeTextTable(conf.hiveConfig, eavtPipe)
   }
 }

@@ -1,6 +1,29 @@
 Change log
 ==========
 
+## 0.10.0
+Better support for running jobs with multiple feature sets. Also
+checks for absense of `_SUCCESS` file prior to writing features to sink,
+writing the file at the end of the job once all data is written.
+
+- Changed return type of `FeatureSink.write`. Implementations must now
+ return the set `Path`s written to so they can be committed (`_SUCCESS`
+ file written) at the end of the job. While not enforced, implementations
+ should also check that paths are not already committed when writing new
+ data.
+- Moved `Partitions` instance from `ScaldingDataSource` into top-level
+ `commbank.coppersmith.scalding` package and made directly available
+ via api import.
+
+ ### Upgrading
+ Custom sink implementations need to return the set of `Path`s written
+ to from the `write` method. If writing to a single, fixed partition, the
+ new FixedPartition case class could be used as sink's partition, making
+ it straight forward to retrieve the path written to.
+
+ References to `commbank.coppersmith.scalding.ScaldingDataSource.Partitions`
+ should be replaced with `commbank.coppersmith.scalding.Partitions`.
+
 ## 0.9.0
 - Move implicits into a separate object (`Coppersmith`) within the API
   package object.

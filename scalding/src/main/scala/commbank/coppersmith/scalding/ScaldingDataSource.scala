@@ -29,38 +29,6 @@ import au.com.cba.omnia.maestro.core.codec.{DecodeOk, DecodeError, ParseError, N
 
 import commbank.coppersmith.DataSource
 
-object ScaldingDataSource {
-  object Partitions {
-    def apply[P : PathComponents](underlying: Partition[_, P], first: P, rest: P*): Partitions[P] =
-      Partitions(underlying.pattern, first, rest: _*)
-
-    def apply[P : PathComponents](pattern: String, first: P, rest: P*): Partitions[P] =
-      Partitions(pattern, (first +: rest).toList)
-
-    def unpartitioned = Partitions[Nothing]("", List())
-  }
-  case class Partitions[P : PathComponents] private(pattern: String, values: List[P]) {
-    def toPaths(basePath: Path): List[Path] =
-      oPaths.map(_.map(new Path(basePath, _))).getOrElse(List(new Path(basePath, "*")))
-
-    def relativePaths: List[Path] = oPaths.getOrElse(List(new Path(".")))
-
-    def oPaths: Option[List[Path]] = values.toNel.map(_.list.map(value =>
-     new Path(pattern.format(implicitly[PathComponents[P]].toComponents((value)): _*))
-    ))
-  }
-
-  case class PathComponents[P](toComponents: P => List[String])
-  import shapeless.syntax.std.tuple.productTupleOps
-  implicit val EmptyToPath        = PathComponents[Nothing](List())
-  implicit val StringToPath       = PathComponents[String](List(_))
-  implicit val StringTuple2ToPath = PathComponents[(String, String)](_.toList)
-  implicit val StringTuple3ToPath = PathComponents[(String, String, String)](_.toList)
-  implicit val StringTuple4ToPath = PathComponents[(String, String, String, String)](_.toList)
-}
-
-import ScaldingDataSource.Partitions
-
 case class HiveTextSource[S <: ThriftStruct : Decode](
   paths: List[Path],
   delimiter:  String

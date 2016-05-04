@@ -27,7 +27,7 @@ import au.com.cba.omnia.maestro.api._, Maestro._
 import au.com.cba.omnia.maestro.test.Records
 
 import au.com.cba.omnia.thermometer.core.Thermometer._
-import au.com.cba.omnia.thermometer.fact.PathFactoids.{exists, records}
+import au.com.cba.omnia.thermometer.fact.PathFactoids.{exists, missing, records}
 import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
 import commbank.coppersmith._, Arbitraries._, Feature.Value
@@ -35,19 +35,23 @@ import ScaldingArbitraries._
 import thrift.Eavt
 
 class EavtSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
-    Writing features to a EavtSink
-      writes all feature values          $featureValuesOnDiskMatch        ${tag("slow")}
-      writes multiple results            $multipleValueSetsOnDiskMatch    ${tag("slow")}
-      exposes features through hive      $featureValuesInHiveMatch        ${tag("slow")}
-      writes all partitions with SUCCESS $expectedPartitionsMarkedSuccess ${tag("slow")}
+    Writing features to an EavtSink
+      writes all feature values            $featureValuesOnDiskMatch        ${tag("slow")}
+      writes multiple results              $multipleValueSetsOnDiskMatch    ${tag("slow")}
+      exposes features through hive        $featureValuesInHiveMatch        ${tag("slow")}
+      commits all partitions with SUCCESS  $expectedPartitionsMarkedSuccess ${tag("slow")}
+      fails if sink is committed           $writeFailsIfSinkCommitted       ${tag("slow")}
+      fails to commit if sink is committed $commitFailsIfSinkCommitted      ${tag("slow")}
   """
 
   implicit val arbConfig: Arbitrary[EavtSink.Config] =
-    Arbitrary(for {
-                dbName <- arbNonEmptyAlphaStr
-                dbPath <- arbitrary[Path]
-                tableName <- arbNonEmptyAlphaStr
-              } yield EavtSink.Config(dbName.value, new Path(dir, dbPath), tableName.value))
+    Arbitrary(
+      for {
+        dbName <- arbNonEmptyAlphaStr.map(_.value)
+        dbPath <- arbitrary[Path]
+        tableName <- arbNonEmptyAlphaStr.map(_.value)
+      } yield EavtSink.Config(dbName, new Path(dir, dbPath), tableName, EavtSink.defaultPartition)
+    )
 
   // Current EAVT sink implementation lacks support for encoding control characters.
 
@@ -112,7 +116,7 @@ class EavtSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
       def hiveNull(s: String) = if (s == EavtSink.NullValue) "NULL" else s
       val expected = vs.map(value => {
         val eavt = EavtSink.toEavt(value, dateTime.getMillis)
-        val (year, month, day) = EavtSink.partition.extract(eavt)
+        val (year, month, day) = eavtConfig.partition.underlying.extract(eavt)
         List(eavt.entity, eavt.attribute, hiveNull(eavt.value), eavt.time, year, month, day).mkString("\t")
       }).list.toSet
 
@@ -130,15 +134,75 @@ class EavtSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
   def expectedPartitionsMarkedSuccess =
     forAll { (vs: NonEmptyList[FeatureValue[Value]], eavtConfig: EavtSink.Config, dateTime: DateTime) =>  {
       val expectedPartitions = vs.map(v =>
-        EavtSink.partition.extract(EavtSink.toEavt(v, dateTime.getMillis))
+        eavtConfig.partition.underlying.extract(EavtSink.toEavt(v, dateTime.getMillis))
       ).list.toSet.toSeq
       withEnvironment(path(getClass.getResource("/").toString)) {
         val sink = EavtSink(eavtConfig)
-        executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
+        val writeResult = executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
+
+        // Not yet committed; _SUCCESS should be missing
         facts(
           expectedPartitions.map { case (year, month, day) =>
-            path(s"${eavtConfig.hiveConfig.path}/year=$year/month=$month/day=$day/_SUCCESS") ==> exists
+            path(s"${eavtConfig.hiveConfig.path}/year=$year/month=$month/day=$day/_SUCCESS") ==> missing
           }: _*
+        )
+
+        writeResult.fold(
+          e => failure("Unexpected write failure: " + e),
+          paths => {
+            val commitResult = executesSuccessfully(FeatureSink.commit(paths))
+            facts(
+              expectedPartitions.map { case (year, month, day) =>
+                path(s"${eavtConfig.hiveConfig.path}/year=$year/month=$month/day=$day/_SUCCESS") ==> exists
+              }: _*
+            )
+            commitResult must beRight
+          }
+        )
+      }
+    }}.set(minTestsOk = 5)
+
+  def writeFailsIfSinkCommitted =
+    forAll { (vs: NonEmptyList[FeatureValue[Value]], eavtConfig: EavtSink.Config, dateTime: DateTime) =>  {
+      val expected = vs.map(EavtSink.toEavt(_, dateTime.getMillis)).list
+      withEnvironment(path(getClass.getResource("/").toString)) {
+        val sink = EavtSink(eavtConfig)
+        val writeResult = executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
+
+        writeResult.fold(
+          e => failure("Unexpected write failure: " + e),
+          paths => {
+            executesSuccessfully(FeatureSink.commit(paths))
+
+            val secondWriteResult = executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
+
+            // Make sure no duplicate records writen
+            facts(
+              path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected)
+            )
+            secondWriteResult must beLeft.like {
+              case FeatureSink.AttemptedWriteToCommitted(_) => true
+            }
+          }
+        )
+      }
+    }}.set(minTestsOk = 5)
+
+  def commitFailsIfSinkCommitted =
+    forAll { (vs: NonEmptyList[FeatureValue[Value]], eavtConfig: EavtSink.Config, dateTime: DateTime) =>  {
+      val expected = vs.map(EavtSink.toEavt(_, dateTime.getMillis)).list
+      withEnvironment(path(getClass.getResource("/").toString)) {
+        val sink = EavtSink(eavtConfig)
+        val writeResult = executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
+
+        writeResult.fold(
+          e => failure("Unexpected write failure: " + e),
+          paths => {
+            executesSuccessfully(FeatureSink.commit(paths))
+            val secondCommitResult = executesSuccessfully(FeatureSink.commit(paths))
+
+            secondCommitResult must beLeft.like { case FeatureSink.AlreadyCommitted(_) => true }
+          }
         )
       }
     }}.set(minTestsOk = 5)
