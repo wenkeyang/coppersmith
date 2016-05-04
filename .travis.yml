@@ -13,6 +13,9 @@ install:
 script:
 - sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci '; test; package'
 - ci/sbt-deploy-to.sh ext-releases-local
+- sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci 'plugin/scripted'
+- ci/sbt-deploy-to.sh ext-releases-local plugin
+
 after_script:
 - rm -rf ci
 env:
