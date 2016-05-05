@@ -22,6 +22,8 @@ import scalaz.syntax.std.list.ToListOpsFromList
 
 import org.apache.hadoop.fs.Path
 
+import org.slf4j.LoggerFactory
+
 import au.com.cba.omnia.ebenezer.scrooge.ParquetScroogeSource
 
 import au.com.cba.omnia.maestro.api._
@@ -30,10 +32,13 @@ import au.com.cba.omnia.maestro.core.codec.{DecodeOk, DecodeError, ParseError, N
 import commbank.coppersmith.DataSource
 
 case class HiveTextSource[S <: ThriftStruct : Decode](
-  paths: List[Path],
-  delimiter:  String
+  paths:     List[Path],
+  delimiter: String
 ) extends DataSource[S, TypedPipe] {
+  val log = LoggerFactory.getLogger(getClass())
+
   def load = {
+    log.info("Loading from " + paths.mkString(","))
     val decoder = implicitly[Decode[S]]
     val input: TextLineScheme = MultipleTextLineFiles(paths.map(_.toString): _*)
     input.map { raw =>
@@ -65,7 +70,10 @@ object HiveTextSource {
 case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter](
   paths: List[Path]
 ) extends DataSource[S, TypedPipe] {
+  val log = LoggerFactory.getLogger(getClass())
+
   def load = {
+    log.info("Loading from " + paths.mkString(","))
     ParquetScroogeSource[S](paths.map(_.toString): _*)
   }
 }
