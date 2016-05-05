@@ -193,3 +193,31 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
     typecheck("feature.as(Continuous)") must not succeed
   }
 }
+
+object TypeInfoSpec extends Specification {
+  def is = s2"""
+    lists and strings don't have packages prepended $listsAndStrings
+    def tuple2                                      $tuple2
+    custom types have packages prepended            $custom
+  """
+
+  case class Internal[A]()
+
+  import Metadata.TypeInfo
+
+  def listsAndStrings = {
+    TypeInfo[List[String]] === TypeInfo("List", List(TypeInfo("String", List())))
+  }
+
+  def custom = {
+    TypeInfo[Internal[Int]] ===
+      TypeInfo("commbank.coppersmith.TypeInfoSpec.Internal",
+        List(TypeInfo("Int", List())))
+  }
+
+  def tuple2 = {
+    TypeInfo[(String, Long)] ===
+       TypeInfo("Tuple2",
+         List(TypeInfo("String", List()), TypeInfo("Long", List())))
+  }
+}

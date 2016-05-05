@@ -16,7 +16,7 @@ package commbank.coppersmith
 
 import scala.annotation.implicitNotFound
 import scala.collection.immutable.ListSet
-import scala.reflect.runtime.universe.{TypeTag, Type => ScalaType, typeOf}
+import scala.reflect.runtime.universe.{TypeTag, Type => ScalaType, typeOf, Symbol => ReflectSymbol}
 
 import scalaz.{Name => _, Value => _, _}, Scalaz._, Order.orderBy
 
@@ -143,7 +143,21 @@ object Feature {
     }
     object TypeInfo {
       def apply[T : TypeTag]: TypeInfo = TypeInfo(implicitly[TypeTag[T]].tpe)
-      def apply(t: ScalaType): TypeInfo = TypeInfo(t.typeSymbol.fullName, t.typeArgs.map(TypeInfo(_)))
+      def apply(t: ScalaType): TypeInfo = {
+        def typeName(s: ReflectSymbol) = {
+          val name = s.fullName
+          if (name == "java.lang.String")
+            "String"
+          else if (name.startsWith("scala.collection.immutable."))
+            name.substring(27)
+          else if (name.startsWith("scala."))
+            name.substring(6)
+          else
+            name
+        }
+
+        TypeInfo(typeName(t.typeSymbol), t.typeArgs.map(TypeInfo(_)))
+      }
     }
 
     def apply[S : TypeTag, V <: Value : TypeTag](
