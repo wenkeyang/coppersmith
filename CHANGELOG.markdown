@@ -1,6 +1,17 @@
 Change log
 ==========
 
+## 0.11.0
+Allow arbitrary feature value serialisation.
+
+- Changed `EavtSink` to `EavtTextSink`.
+- Created a `TextSink` that takes a `Thrift` struct (describing the sink format),
+ and an implicit `FeatureValueEnc[T]` (that defines how to transform a
+ `FeatureValue` into the `Thrift` struct via `encode((FeatureValue, Time) => T)`).
+
+ ### Upgrading
+ References to `EavtSink` should be changed to `EavtTextSink`.
+
 ## 0.10.0
 Better support for running jobs with multiple feature sets. Also
 checks for absense of `_SUCCESS` file prior to writing features to sink,

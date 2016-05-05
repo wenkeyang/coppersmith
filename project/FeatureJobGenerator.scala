@@ -70,7 +70,7 @@ object FeatureJobGenerator {
           |
           |  val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
           |
-          |  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "$tableName")
+          |  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "$tableName")
           |}
           |
           |object ${name}Job extends SimpleFeatureJob {

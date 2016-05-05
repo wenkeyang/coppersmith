@@ -177,8 +177,8 @@ Coppersmith currently supports the following source types:
 
 and one sink type:
 
-- `EavtSink`: a file in the format required for ingestion into the feature store (
-  text-encoded EAVT format)
+- `EavtTextSink`: writes EAVT records to a Hive-partitioned directory
+structure using delimited text encoding
 
 Here is an example of a job which materialises the feature set
 which we defined in the previous section:
@@ -207,7 +207,7 @@ case class MovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
   val dbRoot         = new Path(conf.getArgs("db-root"))
   val tableName      = conf.getArgs("table-name")
 
-  val featureSink    = EavtSink.configure(dbPrefix, dbRoot, tableName)
+  val featureSink    = EavtTextSink.configure(dbPrefix, dbRoot, tableName)
 }
 
 object MovieFeaturesJob extends SimpleFeatureJob {
@@ -254,7 +254,7 @@ case class PartitionedMovieFeaturesConfig(conf: Config) extends FeatureJobConfig
   val dbPrefix              = conf.getArgs("db-prefix")
   val dbRoot                = new Path(conf.getArgs("db-root"))
   val tableName             = conf.getArgs("table-name")
-  val featureSink           = EavtSink.configure(dbPrefix, dbRoot, tableName)
+  val featureSink           = EavtTextSink.configure(dbPrefix, dbRoot, tableName)
 }
 
 object PartitionedMovieFeaturesJob extends SimpleFeatureJob {
@@ -285,6 +285,65 @@ object MultiPartitionSnippet {
   val movies     = HiveTextSource[Movie, Partition](new Path("data/movies"), partitions)
 }
 ```
+
+### Alternate sinks
+
+If an output format different to `EavtTextSink` is required, then `TextSink`
+should be used. A `Thrift` struct defining the sink format is needed, as well as
+an implicit implementation of `FeatureValueEnc` for the `Thrift` struct.
+For example, this is a simple implementation where only the column names
+are different.
+
+```scala
+package commbank.coppersmith.examples.userguide
+
+import org.apache.hadoop.fs.Path
+
+import com.twitter.scalding.Config
+
+import org.joda.time.DateTime
+
+import commbank.coppersmith.api._, scalding._, Coppersmith._
+import commbank.coppersmith.examples.thrift.{FeatureEavt, Movie}
+
+case class AlternativeSinkMovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
+  implicit object FeatureEavtEnc extends FeatureValueEnc[FeatureEavt] {
+    def encode(fvt: (FeatureValue[_], Time)): FeatureEavt = fvt match {
+      case (fv, time) =>
+        val featureValue = (fv.value match {
+          case Integral(v) => v.map(_.toString)
+          case Decimal(v) => v.map(_.toString)
+          case Str(v) => v
+        }).getOrElse(TextSink.NullValue)
+
+        val featureTime = new DateTime(time).toString("yyyy-MM-dd")
+        FeatureEavt(fv.entity, fv.name, featureValue, featureTime)
+    }
+  }
+
+  val partitions     = Partitions.unpartitioned
+  val movies         = HiveTextSource[Movie, Nothing](new Path("data/movies"), partitions)
+
+  val featureSource  = From[Movie]().bind(from(movies))
+
+  val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
+
+  val dbPrefix       = conf.getArgs("db-prefix")
+  val dbRoot         = new Path(conf.getArgs("db-root"))
+  val tableName      = conf.getArgs("table-name")
+
+  val sinkPartition  = DerivedSinkPartition[FeatureEavt, (String, String, String)](
+                         HivePartition.byDay(Fields[FeatureEavt].FeatureTime, "yyyy-MM-dd")
+                       )
+  val featureSink    = TextSink.configure(dbPrefix, dbRoot, tableName, sinkPartition)
+}
+
+object AlternativeSinkMovieFeaturesJob extends SimpleFeatureJob {
+  def job = generate(AlternativeSinkMovieFeaturesConfig(_), MovieFeatures)
+}
+```
+
+Note: When using `TextSink`, a `SinkPartition` is required.
 
 Intermediate
 ------------
@@ -589,7 +648,7 @@ trait CommonConfig {
   def conf: Config
 
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
-  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "movies")
+  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "movies")
 }
 
 case class AggregationFeaturesConfig(conf: Config)
@@ -797,7 +856,7 @@ case class JoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie, Rat
   val ratings = HiveTextSource[Rating, Nothing](new Path("data/ratings"), Partitions.unpartitioned, "\t")
 
   val featureSource  = JoinFeatures.source.bind(join(movies, ratings))
-  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "ratings")
+  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "ratings")
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 }
 
@@ -847,7 +906,7 @@ case class LeftJoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Direct
   val directors = DirectorSourceConfig.dataSource
 
   val featureSource  = LeftJoinFeatures.source.bind(leftJoin(directors, movies))
-  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "directors")
+  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "directors")
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 }
 
@@ -908,7 +967,7 @@ case class MultiJoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie
                                                   Partitions.unpartitioned)
 
   val featureSource  = MultiJoinFeatures.source.bind(joinMulti((movies, ratings, users), MultiJoinFeatures.source))
-  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "ratings")
+  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "ratings")
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 }
 
@@ -1067,7 +1126,7 @@ case class ContextFeaturesConfig(conf: Config)
   // Note: Current date passed through as context param
   val featureSource  = ContextFeatures.source.bindWithContext(from(movies), date)
 
-  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "movies")
+  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "movies")
 
   val featureContext = ExplicitGenerationTime(date)
 }
@@ -1171,7 +1230,7 @@ case class DirectorFeaturesConfig(conf: Config) extends FeatureJobConfig[(Direct
 
   val featureSource  = source.bind(joinMulti((directorsSource, movies, ratings), source))
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
-  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "directors")
+  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "directors")
 }
 
 object DirectorFeaturesJob extends SimpleFeatureJob {
