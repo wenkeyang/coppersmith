@@ -177,8 +177,8 @@ Coppersmith currently supports the following source types:
 
 and one sink type:
 
-- `EavtTextSink`: a file in the format required for ingestion into the feature store (
-  text-encoded EAVT format)
+- `EavtTextSink`: writes EAVT records to a Hive-partitioned directory
+structure using delimited text encoding
 
 Here is an example of a job which materialises the feature set
 which we defined in the previous section:
@@ -289,8 +289,8 @@ object MultiPartitionSnippet {
 ### Alternate sinks
 
 If an output format different to `EavtTextSink` is required, then `TextSink`
-should be used. A `Thrift` defining the sink format is needed, as well as
-an implicit implementation of `FeatureValueEnc` for the `Thrift`.
+should be used. A `Thrift` struct defining the sink format is needed, as well as
+an implicit implementation of `FeatureValueEnc` for the `Thrift` struct.
 For example, this is a simple implementation where only the column names
 are different.
 
@@ -316,7 +316,6 @@ case class AlternativeSinkMovieFeaturesConfig(conf: Config) extends FeatureJobCo
           case Str(v) => v
         }).getOrElse(TextSink.NullValue)
 
-        // TODO: Does time format need to be configurable?
         val featureTime = new DateTime(time).toString("yyyy-MM-dd")
         FeatureEavt(fv.entity, fv.name, featureValue, featureTime)
     }

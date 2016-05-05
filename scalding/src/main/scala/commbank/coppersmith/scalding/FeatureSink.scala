@@ -16,6 +16,7 @@ package commbank.coppersmith.scalding
 
 import com.twitter.scalding.typed.TypedPipe
 import com.twitter.scalding.{Execution, TupleSetter}
+import com.twitter.util.Encoder
 
 import org.apache.hadoop.fs.Path
 
@@ -101,10 +102,7 @@ final case class DerivedSinkPartition[T, PP : PathComponents : TupleSetter](
   def tupleSetter = implicitly
 }
 
-trait Encode[D, E] {
-  def encode(d: D): E
-}
-trait FeatureValueEnc[T] extends Encode[(FeatureValue[_], Time), T] {
+trait FeatureValueEnc[T] extends Encoder[(FeatureValue[_], Time), T] {
   def encode(fvt: (FeatureValue[_], Time)): T
 }
 

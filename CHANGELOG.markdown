@@ -2,12 +2,12 @@ Change log
 ==========
 
 ## 0.11.0
-Allow custom sinks.
+Allow arbitrary feature value serialisation.
 
 - Changed `EavtSink` to `EavtTextSink`.
-- Created a `TextSink` that takes a `Thrift` (describing the sink format),
+- Created a `TextSink` that takes a `Thrift` struct (describing the sink format),
  and an implicit `FeatureValueEnc[T]` (that defines how to transform a
- `FeatureValue` into the `Thrift` via `encode(FeatureValue => T)`).
+ `FeatureValue` into the `Thrift` struct via `encode((FeatureValue, Time) => T)`).
 
  ### Upgrading
  References to `EavtSink` should be changed to `EavtTextSink`.

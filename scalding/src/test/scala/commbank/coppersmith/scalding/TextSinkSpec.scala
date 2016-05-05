@@ -30,7 +30,7 @@ import au.com.cba.omnia.thermometer.core.Thermometer._
 import au.com.cba.omnia.thermometer.fact.PathFactoids.{exists, missing, records}
 import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
-import commbank.coppersmith._, Arbitraries._, commbank.coppersmith.Feature.Value
+import commbank.coppersmith._, Arbitraries._, Feature.Value
 import TestEavtTextSink.EavtEnc
 import ScaldingArbitraries._
 import thrift.Eavt
