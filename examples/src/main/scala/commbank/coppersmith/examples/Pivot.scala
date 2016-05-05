@@ -14,7 +14,7 @@ case class PivotFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
   val partitions     = Partitions.unpartitioned
   val movies         = HiveTextSource[Movie, Nothing](new Path("data/movies"), partitions)
 
-  val featureSink    = EavtSink.configure("userguide", new Path("dev"), "movies")
+  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "movies")
 
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 

@@ -37,6 +37,7 @@ import Arbitraries._
 
 import commbank.coppersmith.thrift.Eavt
 import commbank.coppersmith.test.thrift.{Account, Customer}
+import TestEavtTextSink.EavtEnc
 
 import ScaldingJobSpec.{RegularFeatures, AggregationFeatures}
 
@@ -73,7 +74,7 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
   def prepareData(
     custAccts:  CustomerAccounts,
     jobTime:    DateTime,
-    eavtConfig: EavtSink.Config
+    eavtConfig: TextSink.Config[Eavt]
   ): FeatureJobConfig[Account] = {
 
     val accounts = custAccts.cas.flatMap(_.as)
@@ -99,17 +100,17 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
     new FeatureJobConfig[Account] {
       val featureContext = ExplicitGenerationTime(jobTime)
       val featureSource  = From[Account].bind(SourceBinder.from(accountDataSource))
-      val featureSink    = EavtSink(eavtConfig)
+      val featureSink    = TextSink(eavtConfig)
     }
   }
 
   val eavtReader  = delimitedThermometerRecordReader[Eavt]('|', "\\N", implicitly[Decode[Eavt]])
   val defaultArgs = Map("hdfs-root" -> List(s"$dir/user"))
-  val eavtConfig = EavtSink.Config(
+  val eavtConfig = TextSink.Config[Eavt](
     "features_db",
     path(s"$dir/user/features_db"),
     "features",
-    EavtSink.defaultPartition
+    TestEavtTextSink.defaultPartition
   )
 
   // Use alphaStr to avoid problems with serialising new lines and eavt field delimiters
@@ -210,7 +211,7 @@ object ScaldingJobSpec {
                   List(FeatureValue[Decimal] (acct.id, "balance", acct.balance)),
           acct.age.map(FeatureValue[Integral](acct.id, "age",     _)).toList
         ).flatten
-        values.map(EavtSink.toEavt(_, time.getMillis))
+        values.map(v => EavtEnc.encode((v, time.getMillis)))
       })).toList
     }
   }
@@ -255,7 +256,7 @@ object ScaldingJobSpec {
                  List(FeatureValue[Decimal] (cag.c.id, "min",     min)),
           collect.map(FeatureValue[Integral](cag.c.id, "collect", _)).toList
         ).flatten
-        values.map(EavtSink.toEavt(_, time.getMillis))
+        values.map(v => EavtEnc.encode((v, time.getMillis)))
       }).toList
     }
   }

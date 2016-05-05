@@ -18,7 +18,6 @@ import com.twitter.scalding.typed.TypedPipe
 import com.twitter.scalding.{Execution, TupleSetter}
 
 import org.apache.hadoop.fs.Path
-import org.joda.time.DateTime
 
 import scalaz.NonEmptyList
 import scalaz.std.list.listInstance
@@ -27,10 +26,9 @@ import scalaz.syntax.traverse.ToTraverseOps
 
 import au.com.cba.omnia.maestro.api._, Maestro._
 
-import commbank.coppersmith.Feature._, Value._
+import commbank.coppersmith.Feature._
 import commbank.coppersmith.FeatureValue
 
-import commbank.coppersmith.thrift.Eavt
 
 import Partitions.PathComponents
 import HiveSupport.{DelimiterConflictStrategy, FailJob}
@@ -103,26 +101,29 @@ final case class DerivedSinkPartition[T, PP : PathComponents : TupleSetter](
   def tupleSetter = implicitly
 }
 
-object EavtSink {
+trait Encode[D, E] {
+  def encode(d: D): E
+}
+trait FeatureValueEnc[T] extends Encode[(FeatureValue[_], Time), T] {
+  def encode(fvt: (FeatureValue[_], Time)): T
+}
+
+object TextSink {
   type DatabaseName = String
   type TableName    = String
 
   val NullValue = "\\N"
   val Delimiter = "|"
 
-  import HiveSupport.HiveConfig
-
-  val defaultPartition = DerivedSinkPartition[Eavt, (String, String, String)](
-    HivePartition.byDay(Fields[Eavt].Time, "yyyy-MM-dd")
-  )
-
-  def configure(dbPrefix:  String,
-                dbRoot:    Path,
-                tableName: TableName,
-                partition: SinkPartition[Eavt] = defaultPartition,
-                group:     Option[String] = None,
-                dcs:       DelimiterConflictStrategy[Eavt] = FailJob[Eavt]()): EavtSink =
-    EavtSink(
+  def configure[T <: ThriftStruct with Product : FeatureValueEnc : Manifest](
+    dbPrefix: String,
+    dbRoot: Path,
+    tableName: TableName,
+    partition: SinkPartition[T],
+    group: Option[String] = None,
+    dcs: DelimiterConflictStrategy[T] = FailJob[T]()
+  ): TextSink[T] =
+    TextSink(
       Config(
         s"${dbPrefix}_features",
         new Path(dbRoot, s"view/warehouse/features/${group.map(_ + "/").getOrElse("")}$tableName"),
@@ -132,45 +133,36 @@ object EavtSink {
       )
     )
 
-  case class Config(
+  case class Config[T <: ThriftStruct with Product : FeatureValueEnc : Manifest](
     dbName:    DatabaseName,
     tablePath: Path,
     tableName: TableName,
-    partition: SinkPartition[Eavt],
-    dcs:       DelimiterConflictStrategy[Eavt] = FailJob[Eavt]()
+    partition: SinkPartition[T],
+    dcs:       DelimiterConflictStrategy[T] = FailJob[T]()
   ) {
     def hiveConfig =
-      HiveSupport.HiveConfig[Eavt, partition.P](
+      HiveSupport.HiveConfig[T, partition.P](
         partition.underlying,
         dbName,
         tablePath,
         tableName,
-        EavtSink.Delimiter,
+        TextSink.Delimiter,
         dcs
       )
   }
 
-  def toEavt(fv: FeatureValue[_], time: Time) = {
-    val featureValue = (fv.value match {
-      case Integral(v) => v.map(_.toString)
-      case Decimal(v)  => v.map(_.toString)
-      case Str(v)      => v
-    }).getOrElse(NullValue)
-
-    // TODO: Does time format need to be configurable?
-    val featureTime = new DateTime(time).toString("yyyy-MM-dd")
-    Eavt(fv.entity, fv.name, featureValue, featureTime)
-  }
 }
 
-case class EavtSink(conf: EavtSink.Config) extends FeatureSink {
+case class TextSink[
+  T <: ThriftStruct with Product : FeatureValueEnc : Manifest
+](conf: TextSink.Config[T]) extends FeatureSink {
   def write(features: TypedPipe[(FeatureValue[_], Time)]) = {
-    val eavtPipe = features.map { case (fv, t) => EavtSink.toEavt(fv, t) }
+    val textPipe = features.map(implicitly[FeatureValueEnc[T]].encode)
 
     implicit val pathComponents: PathComponents[conf.partition.P] = conf.partition.pathComponents
     // Note: This needs to be explicitly specified so that the TupleSetter.singleSetter
     // instance isn't used (causing a failure at runtime).
     implicit val tupleSetter: TupleSetter[conf.partition.P] = conf.partition.tupleSetter
-    HiveSupport.writeTextTable(conf.hiveConfig, eavtPipe)
+    HiveSupport.writeTextTable(conf.hiveConfig, textPipe)
   }
 }

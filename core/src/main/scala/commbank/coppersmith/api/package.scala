@@ -102,12 +102,17 @@ package object api {
   type PivotFeatureSet[S] = commbank.coppersmith.PivotFeatureSet[S]
   type ContextFeatureSource[S, C, FS <: FeatureSource[S, FS]] = commbank.coppersmith.ContextFeatureSource[S, C, FS]
   type DataSource[S, P[_]] = commbank.coppersmith.DataSource[S, P]
+  type FeatureValue[+V <: Value] = commbank.coppersmith.FeatureValue[V]
+  type Time = commbank.coppersmith.Feature.Time
 
   // Maestro dependencies below
   type JobStatus = au.com.cba.omnia.maestro.api.JobStatus
   type Fields[A] = au.com.cba.omnia.maestro.macros.FieldsMacro.Fields[A]
   type Encode[A] = au.com.cba.omnia.maestro.core.codec.Encode[A]
 
+  val Integral = commbank.coppersmith.Feature.Value.Integral
+  val Str = commbank.coppersmith.Feature.Value.Str
+  val Decimal = commbank.coppersmith.Feature.Value.Decimal
   val FeatureStub = commbank.coppersmith.FeatureStub
   val ExplicitGenerationTime = commbank.coppersmith.ExplicitGenerationTime
   val From = commbank.coppersmith.From

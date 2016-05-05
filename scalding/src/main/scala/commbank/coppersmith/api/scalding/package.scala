@@ -17,11 +17,11 @@ package commbank.coppersmith.api
 import com.twitter.scalding._
 import commbank.coppersmith.Lift
 
-
 package object scalding {
 
   type FeatureJobConfig[S] = commbank.coppersmith.scalding.FeatureJobConfig[S]
   type SimpleFeatureJob = commbank.coppersmith.scalding.SimpleFeatureJob
+  type FeatureValueEnc[T] = commbank.coppersmith.scalding.FeatureValueEnc[T]
 
   val FeatureSetExecutions = commbank.coppersmith.scalding.FeatureSetExecutions
   val FeatureSetExecution = commbank.coppersmith.scalding.FeatureSetExecution
@@ -31,7 +31,10 @@ package object scalding {
   val HiveTextSource = commbank.coppersmith.scalding.HiveTextSource
   val HiveParquetSource = commbank.coppersmith.scalding.HiveParquetSource
   val TypedPipeSource = commbank.coppersmith.scalding.TypedPipeSource
-  val EavtSink = commbank.coppersmith.scalding.EavtSink
+  val FixedSinkPartition = commbank.coppersmith.scalding.FixedSinkPartition
+  val DerivedSinkPartition = commbank.coppersmith.scalding.DerivedSinkPartition
+  val TextSink = commbank.coppersmith.scalding.TextSink
+  val EavtTextSink = commbank.coppersmith.scalding.EavtTextSink
 
   implicit val framework: Lift[TypedPipe] = commbank.coppersmith.scalding.lift.scalding
 }
