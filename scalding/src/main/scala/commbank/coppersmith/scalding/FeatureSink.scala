@@ -112,55 +112,35 @@ object TextSink {
 
   val NullValue = "\\N"
   val Delimiter = "|"
+}
 
-  def configure[T <: ThriftStruct with Product : FeatureValueEnc : Manifest](
-    dbPrefix: String,
-    dbRoot: Path,
-    tableName: TableName,
-    partition: SinkPartition[T],
-    group: Option[String] = None,
-    dcs: DelimiterConflictStrategy[T] = FailJob[T]()
-  ): TextSink[T] =
-    TextSink(
-      Config(
-        s"${dbPrefix}_features",
-        new Path(dbRoot, s"view/warehouse/features/${group.map(_ + "/").getOrElse("")}$tableName"),
-        tableName,
-        partition,
-        dcs
-      )
-    )
+case class TextSink[
+  T <: ThriftStruct with Product : FeatureValueEnc : Manifest
+](
+  dbName:    TextSink.DatabaseName,
+  tablePath: Path,
+  tableName: TextSink.TableName,
+  partition: SinkPartition[T],
+  delimiter: String = TextSink.Delimiter,
+  dcs:       DelimiterConflictStrategy[T] = FailJob[T]()
+) extends FeatureSink {
+  def write(features: TypedPipe[(FeatureValue[_], Time)]) = {
+    val textPipe = features.map(implicitly[FeatureValueEnc[T]].encode)
 
-  case class Config[T <: ThriftStruct with Product : FeatureValueEnc : Manifest](
-    dbName:    DatabaseName,
-    tablePath: Path,
-    tableName: TableName,
-    partition: SinkPartition[T],
-    dcs:       DelimiterConflictStrategy[T] = FailJob[T]()
-  ) {
-    def hiveConfig =
+    val hiveConfig =
       HiveSupport.HiveConfig[T, partition.P](
         partition.underlying,
         dbName,
         tablePath,
         tableName,
-        TextSink.Delimiter,
+        delimiter,
         dcs
       )
-  }
 
-}
-
-case class TextSink[
-  T <: ThriftStruct with Product : FeatureValueEnc : Manifest
-](conf: TextSink.Config[T]) extends FeatureSink {
-  def write(features: TypedPipe[(FeatureValue[_], Time)]) = {
-    val textPipe = features.map(implicitly[FeatureValueEnc[T]].encode)
-
-    implicit val pathComponents: PathComponents[conf.partition.P] = conf.partition.pathComponents
+    implicit val pathComponents: PathComponents[partition.P] = partition.pathComponents
     // Note: This needs to be explicitly specified so that the TupleSetter.singleSetter
     // instance isn't used (causing a failure at runtime).
-    implicit val tupleSetter: TupleSetter[conf.partition.P] = conf.partition.tupleSetter
-    HiveSupport.writeTextTable(conf.hiveConfig, textPipe)
+    implicit val tupleSetter: TupleSetter[partition.P] = partition.tupleSetter
+    HiveSupport.writeTextTable(hiveConfig, textPipe)
   }
 }

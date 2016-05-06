@@ -175,10 +175,15 @@ Coppersmith currently supports the following source types:
   files under a Hive-partitioned directory structure
 - `TypedPipeSource`: see [Generating features from custom scalding code](#generating-features-from-custom-scalding-code)
 
-and one sink type:
+one sink type:
 
-- `EavtTextSink`: writes EAVT records to a Hive-partitioned directory
+- `TextSink`: writes records to a Hive-partitioned directory
 structure using delimited text encoding
+
+and one sink thrift implementation:
+
+- `EavtText`: contains an implicit encoder (`EavtEnc`) and a
+ default partition (`eavtByDay`)
 
 Here is an example of a job which materialises the feature set
 which we defined in the previous section:
@@ -192,7 +197,8 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.api._, scalding._, Coppersmith._
+import commbank.coppersmith.api._, scalding._, Coppersmith._, EavtText.{EavtEnc, eavtByDay}
+import commbank.coppersmith.thrift.Eavt
 import commbank.coppersmith.examples.thrift.Movie
 
 case class MovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
@@ -207,7 +213,7 @@ case class MovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
   val dbRoot         = new Path(conf.getArgs("db-root"))
   val tableName      = conf.getArgs("table-name")
 
-  val featureSink    = EavtTextSink.configure(dbPrefix, dbRoot, tableName)
+  val featureSink    = TextSink[Eavt](dbPrefix, dbRoot, tableName, eavtByDay)
 }
 
 object MovieFeaturesJob extends SimpleFeatureJob {
@@ -236,7 +242,8 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.api._, scalding._, Coppersmith._
+import commbank.coppersmith.api._, scalding._, Coppersmith._, EavtText.{EavtEnc, eavtByDay}
+import commbank.coppersmith.thrift.Eavt
 import commbank.coppersmith.examples.thrift.Movie
 
 case class PartitionedMovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
@@ -254,7 +261,7 @@ case class PartitionedMovieFeaturesConfig(conf: Config) extends FeatureJobConfig
   val dbPrefix              = conf.getArgs("db-prefix")
   val dbRoot                = new Path(conf.getArgs("db-root"))
   val tableName             = conf.getArgs("table-name")
-  val featureSink           = EavtTextSink.configure(dbPrefix, dbRoot, tableName)
+  val featureSink           = TextSink[Eavt](dbPrefix, dbRoot, tableName, eavtByDay)
 }
 
 object PartitionedMovieFeaturesJob extends SimpleFeatureJob {
@@ -288,8 +295,8 @@ object MultiPartitionSnippet {
 
 ### Alternate sinks
 
-If an output format different to `EavtTextSink` is required, then `TextSink`
-should be used. A `Thrift` struct defining the sink format is needed, as well as
+If an output format different to `Eavt` is required, then a `Thrift`
+struct defining the sink format is needed, as well as
 an implicit implementation of `FeatureValueEnc` for the `Thrift` struct.
 For example, this is a simple implementation where only the column names
 are different.
@@ -335,7 +342,7 @@ case class AlternativeSinkMovieFeaturesConfig(conf: Config) extends FeatureJobCo
   val sinkPartition  = DerivedSinkPartition[FeatureEavt, (String, String, String)](
                          HivePartition.byDay(Fields[FeatureEavt].FeatureTime, "yyyy-MM-dd")
                        )
-  val featureSink    = TextSink.configure(dbPrefix, dbRoot, tableName, sinkPartition)
+  val featureSink    = TextSink[FeatureEavt](dbPrefix, dbRoot, tableName, sinkPartition)
 }
 
 object AlternativeSinkMovieFeaturesJob extends SimpleFeatureJob {
@@ -622,14 +629,15 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.api._, scalding._, Coppersmith._
+import commbank.coppersmith.api._, scalding._, Coppersmith._, EavtText.{EavtEnc, eavtByDay}
+import commbank.coppersmith.thrift.Eavt
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
 trait CommonConfig {
   def conf: Config
 
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
-  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "movies")
+  val featureSink    = TextSink[Eavt]("userguide", new Path("dev/movies"), "movies", eavtByDay)
 }
 
 case class AggregationFeaturesConfig(conf: Config)
@@ -857,7 +865,8 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.api._, scalding._, Coppersmith._
+import commbank.coppersmith.api._, scalding._, Coppersmith._, EavtText.{EavtEnc, eavtByDay}
+import commbank.coppersmith.thrift.Eavt
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
 case class JoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie, Rating)] {
@@ -865,7 +874,7 @@ case class JoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie, Rat
   val ratings = HiveTextSource[Rating, Nothing](new Path("data/ratings"), Partitions.unpartitioned, "\t")
 
   val featureSource  = JoinFeatures.source.bind(join(movies, ratings))
-  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "ratings")
+  val featureSink    = TextSink[Eavt]("userguide", new Path("dev/ratings"), "ratings", eavtByDay)
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 }
 
@@ -889,7 +898,8 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.api._, scalding._, Coppersmith._
+import commbank.coppersmith.api._, scalding._, Coppersmith._, EavtText.{EavtEnc, eavtByDay}
+import commbank.coppersmith.thrift.Eavt
 import commbank.coppersmith.examples.thrift.Movie
 
 object LeftJoinFeatures extends AggregationFeatureSet[(Director, Option[Movie])] {
@@ -915,7 +925,7 @@ case class LeftJoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Direct
   val directors = DirectorSourceConfig.dataSource
 
   val featureSource  = LeftJoinFeatures.source.bind(leftJoin(directors, movies))
-  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "directors")
+  val featureSink    = TextSink[Eavt]("userguide", new Path("dev/directors"), "directors", eavtByDay)
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 }
 
@@ -939,7 +949,8 @@ import com.twitter.scalding.{Config, TypedPipe}
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.api._, scalding._, Coppersmith._
+import commbank.coppersmith.api._, scalding._, Coppersmith._, EavtText.{EavtEnc, eavtByDay}
+import commbank.coppersmith.thrift.Eavt
 import commbank.coppersmith.examples.thrift.{Movie, Rating, User}
 
 import Implicits.RichMovie
@@ -976,7 +987,7 @@ case class MultiJoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie
                                                   Partitions.unpartitioned)
 
   val featureSource  = MultiJoinFeatures.source.bind(joinMulti((movies, ratings, users), MultiJoinFeatures.source))
-  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "ratings")
+  val featureSink    = TextSink[Eavt]("userguide", new Path("dev/ratings"), "ratings", eavtByDay)
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 }
 
@@ -1224,7 +1235,8 @@ import com.twitter.scalding.Config
 
 import org.joda.time.{DateTime, format}, format.DateTimeFormat
 
-import commbank.coppersmith.api._, scalding._, Coppersmith._
+import commbank.coppersmith.api._, scalding._, Coppersmith._, EavtText.{EavtEnc, eavtByDay}
+import commbank.coppersmith.thrift.Eavt
 import commbank.coppersmith.examples.thrift.Movie
 
 case class ContextFeaturesConfig(conf: Config)
@@ -1240,7 +1252,7 @@ case class ContextFeaturesConfig(conf: Config)
   // Note: Current date passed through as context param
   val featureSource  = ContextFeatures.source.bindWithContext(from(movies), date)
 
-  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "movies")
+  val featureSink    = TextSink[Eavt]("userguide", new Path("dev/movies"), "movies", eavtByDay)
 
   val featureContext = ExplicitGenerationTime(date)
 }
@@ -1286,7 +1298,8 @@ import com.twitter.scalding.typed.TypedPipe
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.api._, scalding._, Coppersmith._
+import commbank.coppersmith.api._, scalding._, Coppersmith._, EavtText.{EavtEnc, eavtByDay}
+import commbank.coppersmith.thrift.Eavt
 import commbank.coppersmith.scalding.TypedPipeSource
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
@@ -1344,7 +1357,7 @@ case class DirectorFeaturesConfig(conf: Config) extends FeatureJobConfig[(Direct
 
   val featureSource  = source.bind(joinMulti((directorsSource, movies, ratings), source))
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
-  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "directors")
+  val featureSink    = TextSink[Eavt]("userguide", new Path("dev/directors"), "directors", eavtByDay)
 }
 
 object DirectorFeaturesJob extends SimpleFeatureJob {

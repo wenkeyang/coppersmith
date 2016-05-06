@@ -59,7 +59,8 @@ object FeatureJobGenerator {
           |
           |import org.joda.time.DateTime
           |
-          |import commbank.coppersmith.api._, scalding._, Coppersmith._
+          |import commbank.coppersmith.api._, scalding._, Coppersmith._, EavtText._
+          |import commbank.coppersmith.thrift.Eavt
           |import commbank.coppersmith.examples.thrift.$thriftImport
           |
           |case class ${name}Config(conf: Config) extends FeatureJobConfig[$typeParams] {
@@ -70,7 +71,7 @@ object FeatureJobGenerator {
           |
           |  val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
           |
-          |  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "$tableName")
+          |  val featureSink    = TextSink[Eavt]("userguide", new Path("dev/$tableName"), "$tableName", eavtByDay)
           |}
           |
           |object ${name}Job extends SimpleFeatureJob {

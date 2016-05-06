@@ -1,12 +1,40 @@
 Change log
 ==========
 
-## 0.12.0
+## 0.13.0
+Remove `TextSink.Configure`. This removes the hardcoded path
+(`/$dbRoot/view/warehouse/features/$groups/$tableName`), and the hardcoded
+database name (`"$dbPrefix_features"`).
 
+- Removed `TextSink.Config`, `TextSink.configure`, `EavtTextSink.Config` and `EavtTextSink.configure`
+- Renamed `EavtTextSink` to `EavtText`
+- Changed `TextSink[T](conf: TextSink.Config)` to
+ `TextSink[T](
+   dbName:    TextSink.DatabaseName,
+   tablePath: Path,
+   tableName: TextSink.TableName,
+   partition: SinkPartition[T],
+   delimiter: String = TextSink.Delimiter,
+   dcs:       DelimiterConflictStrategy[T] = FailJob[T]()
+ )`
+
+ ### Upgrading
+ 
+ - References to `TextSink(Config)` must be changed to the new signature.
+ - References to `TextSink.configure(...)` should be changed to `TextSink(...)`
+ - References to `EavtTextSink.configure(...)` should be changed to
+  `TextSink[Eavt](...)`, with `EavtText.eavtByDay` passed as the partition arg,
+  and `EavtText.EavtEnc` in scope
+ - References to `EavtTextSink.defaultPartition` must be changed to
+  `EavtText.eavtByDay`
+ - Ensure that the path and database name passed to `TextSink` are correct
+  (including `.../view/warehouse/features/...` and `"..._features"`)
+ - Refer to [USERGUIDE](USERGUIDE.markdown) examples for details
+
+## 0.12.0
 Allow post-aggregation filters (`HAVING` clauses).
 
 - Added `having` method on `AggregationFeature`
-
 
 ## 0.11.0
 Allow arbitrary feature value serialisation.
