@@ -13,6 +13,9 @@ install:
 script:
 - sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci '; test; package'
 - ci/sbt-deploy-to.sh ext-releases-local
+- ci/ci-nonrelease.bsh sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci core/publishLocal scalding/publishLocal tools/publishLocal
+- sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci 'plugin/scripted'
+- ci/sbt-deploy-ivy-to.sh ext-releases-local plugin
 after_script:
 - rm -rf ci
 env:
