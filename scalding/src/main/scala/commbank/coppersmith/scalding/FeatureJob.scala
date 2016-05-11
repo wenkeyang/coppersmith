@@ -194,7 +194,7 @@ object FeatureSetExecution {
     new MonoidAggregator[S, Option[B], Option[Value]] {
       def prepare(s: S) = view.lift(s).map(aggregator.prepare(_))
       def monoid = new com.twitter.algebird.OptionMonoid[B]()(aggregator.semigroup)
-      def present(bOpt: Option[B]) = bOpt.flatMap(b => aggregator.present(b))
+      def present(bOpt: Option[B]) = bOpt.flatMap(aggregator.present(_))
     }
   }
 

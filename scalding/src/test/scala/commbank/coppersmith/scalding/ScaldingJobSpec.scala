@@ -227,9 +227,9 @@ object ScaldingJobSpec {
 
     type AAF = AggregationFeature[Account, Account, _, Value]
 
-    val sizeF:  AAF = select(size)             .asFeature(Continuous, "size", "test")
+    val sizeF:  AAF = select(size)             .asFeature(Continuous, "size",   "test")
     val sizeBF: AAF = select(size).having(_> 2).asFeature(Continuous, "sizeBig", "test")
-    val minF:   AAF = select(min(_.balance))   .asFeature(Continuous, "min",  "test")
+    val minF:   AAF = select(min(_.balance))   .asFeature(Continuous, "min",     "test")
 
     import com.twitter.algebird.Aggregator
 
