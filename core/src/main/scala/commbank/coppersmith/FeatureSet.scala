@@ -96,9 +96,8 @@ case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
       val (entity, source) = s
       val sourceView = source.toList.collect(view).toNel
       sourceView.flatMap(nonEmptySource => {
-        val prepresented: U = nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
-          val valueOpt: Option[V] = aggregator.present(prepresented)
-          valueOpt.map {value => FeatureValue(entity, name, value) }
+        val aggregated: U = nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
+        aggregator.present(aggregated).map(FeatureValue(entity, name, _))
       })
     }
   }

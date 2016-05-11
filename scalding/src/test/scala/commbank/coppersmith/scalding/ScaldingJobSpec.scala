@@ -256,10 +256,10 @@ object ScaldingJobSpec {
         val ages    = cag.as.map(_.age).collect { case Some(age) => age }
         val collect = ages.toNel.map(_.list.sum)
         val values  = List(
-                        Some(FeatureValue[Integral](cag.c.id, "size",    size)),
+          Some(FeatureValue[Integral](cag.c.id, "size",    size)),
           sizesOver2.option((FeatureValue[Integral](cag.c.id, "sizeBig",  size))),
-                        Some(FeatureValue[Decimal] (cag.c.id, "min",     min)),
-                 collect.map(FeatureValue[Integral](cag.c.id, "collect", _))
+          Some(FeatureValue[Decimal] (cag.c.id, "min",     min)),
+          collect.map(FeatureValue[Integral](cag.c.id, "collect", _))
         ).flatten
         values.map(v => EavtEnc.encode((v, time.getMillis)))
       }).toList
