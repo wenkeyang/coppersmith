@@ -86,7 +86,7 @@ object HiveParquetSource {
     HiveParquetSource[S](partitions.toPaths(basePath))
 }
 
-/** Akin to an SQL view, allow features to be derived from an arbitrary [[TypedPipe]] */
+/** Akin to an SQL view, allow features to be derived from an arbitrary `TypedPipe`. */
 case class TypedPipeSource[T](pipe: TypedPipe[T]) extends DataSource[T, TypedPipe] {
   def load = pipe
 }

@@ -52,6 +52,32 @@ problem (`ScaldingJobSpec.AggregationFeatures` in the above example).
 In the case of a nested class that is implicitly carrying a reference to
 its outer instance, it is usually sufficient to make the nested class a
 top level class instead. In the case of classes that have
-non-serialisable fields, making them transient if possible or marking
+non-serialisable fields, making them lazy if possible or marking
 them as transient can also fix the problem. More information can be
-found in this [scalding FAQ](https://github.com/twitter/scalding/wiki/Frequently-asked-questions#q-im-getting-a-notserializableexception-on-hadoop-job-submission).
+found in [this scalding FAQ](https://github.com/twitter/scalding/wiki/Frequently-asked-questions#q-im-getting-a-notserializableexception-on-hadoop-job-submission).
+
+
+### Empty source data
+
+If the expected features from a job are not being generated, it can be
+helpful to confirm that the `FeatureSource` bindings are configured
+correctly. Both the `HiveTextSource` and `HiveParquetSource`
+implementations will log the absolute path from which data is loaded.
+Enabling logging and searching for the following text in the output
+will reveal where data is being read from:
+> `INFO  commbank.coppersmith.scalding.HiveParquetSource  - Loading from /` ...
+
+(or `HiveTextSource` for data in text format).
+
+The following is a simple logging configuration that will enable logging:
+
+```properties
+log4j.rootLogger=ERROR,stdout
+
+log4j.logger.commbank.coppersmith.scalding.HiveTextSource=INFO
+log4j.logger.commbank.coppersmith.scalding.HiveParquetSource=INFO
+
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%-5p %c %x - %m%n
+```
