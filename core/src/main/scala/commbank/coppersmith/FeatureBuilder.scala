@@ -64,7 +64,7 @@ case class FeatureSetBuilder[S, SV](
 
   def apply[T, FV <% V, V <: Value](
       aggregator: Aggregator[SV, T, FV]): AggregationFeatureBuilder[S, SV, T, FV, V] =
-    AggregationFeatureBuilder(this, aggregator, view)
+    AggregationFeatureBuilder(this, aggregator, view, _ => true)
 
   // For fluent-API, eg, collect{...}.select(...) as opposed to collect{...}(...) or
   // collect{...}.apply(...)
@@ -117,15 +117,16 @@ case class FeatureBuilder[S, SV, FV <% V, V <: Value](
 case class AggregationFeatureBuilder[S, SV, T, FV <% V, V <: Value](
   fsBuilder:  FeatureSetBuilder[S, SV],
   aggregator: Aggregator[SV, T, FV],
-  view:       PartialFunction[S, SV]
+  view:       PartialFunction[S, SV],
+  having:     T => Boolean
 ) {
   def andWhere(condition: SV => Boolean) = where(condition)
   def where(condition: SV => Boolean) = copy(view = view.andThenPartial { case s if condition(s) => s })
-
+  def having(condition: T => Boolean) = copy(having = condition)
   def asFeature[FT <: Type](
     featureType: FT,
     name: Name,
     desc: Description
   )(implicit ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]) =
-    AggregationFeature(name, desc, aggregator.andThenPresent(fv => fv: V), view, featureType)
+    AggregationFeature(name, desc, aggregator.andThenPresent(fv => fv: V), view, having, featureType)
 }

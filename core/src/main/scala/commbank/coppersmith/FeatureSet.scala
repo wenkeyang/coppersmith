@@ -84,6 +84,7 @@ case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
   description: Description,
   aggregator:  Aggregator[SV, U, V],
   view:        PartialFunction[S, SV],
+  havingClause: U => Boolean,
   featureType: Type
 ) {
   import AggregationFeature.AlgebirdSemigroup
@@ -95,11 +96,14 @@ case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
     def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
       val (entity, source) = s
       val sourceView = source.toList.collect(view).toNel
-      sourceView.map(nonEmptySource => {
-        val value = aggregator.present(
-          nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
-        )
-        FeatureValue(entity, name, value)
+      sourceView.flatMap(nonEmptySource => {
+        val prepresented: U = nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
+        if (havingClause(prepresented)) {
+          val value: V = aggregator.present(prepresented)
+          Some(FeatureValue(entity, name, value))
+        } else {
+          None
+        }
       })
     }
   }
