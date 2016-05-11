@@ -68,7 +68,7 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
     }
     val expectedTypesConform = oConforms.isDefined
 
-    val jsonOutput = MetadataOutput.JsonObject.fn(metadata, oConforms)
+    val jsonOutput = MetadataOutput.JsonObject.fn(metadata, oConforms).nospaces
     Seq(
       jsonOutput must /("name" -> metadata.name),
       jsonOutput must /("namespace" -> metadata.namespace),
