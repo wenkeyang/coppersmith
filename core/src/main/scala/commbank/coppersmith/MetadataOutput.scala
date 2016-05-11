@@ -60,7 +60,7 @@ object MetadataOutput {
       "valueType" -> jString(genericValueTypeToString(md.valueType)),
       "typesConform" -> jBool(oConforms.isDefined)
     ).nospaces
-  }, lst => s"[${lst.mkString(",")}}]")
+  }, lst => s"[${lst.mkString(",")}]")
 
 
   trait HasMetadata[S] {

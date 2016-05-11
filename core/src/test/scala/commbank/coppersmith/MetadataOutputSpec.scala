@@ -28,6 +28,7 @@ import Arbitraries._
 object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatchers { def is = s2"""
   Psv creates expected metadata $psv
   Json creates expected metadata $json
+  List produces valid json $listProducesValidJson
 """
 
   def psv = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, value: Value) => {
@@ -78,4 +79,15 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       jsonOutput must /("typesConform" -> expectedTypesConform)
     )
   }}
+
+  def listProducesValidJson = {
+    import MetadataOutput._
+    val metadataList = List(
+      Metadata[Customer, Integral]("ns", "feature1", "feature1", Discrete),
+      Metadata[Customer, Str]("ns", "feature2", "feature2", Discrete)
+    )
+
+    val generatedJson = JsonObject.combiner(metadataList.map(md => JsonObject.fn(md, None)))
+    argonaut.Parse.parse(generatedJson).isRight === true
+  }
 }
