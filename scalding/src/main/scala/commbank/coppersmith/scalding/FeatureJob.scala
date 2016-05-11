@@ -191,7 +191,6 @@ object FeatureSetExecution {
     view: PartialFunction[S, SV]
   ): Aggregator[S, Option[B], Option[Value]] = {
     import com.twitter.algebird.MonoidAggregator
-//    val lifted: Aggregator[SV, Option[B], Option[V]] = aggregator.lift
     new MonoidAggregator[S, Option[B], Option[Value]] {
       def prepare(s: S) = view.lift(s).map(v => aggregator.prepare(v))
       def monoid = new com.twitter.algebird.OptionMonoid[B]()(aggregator.semigroup)
