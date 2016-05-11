@@ -165,23 +165,20 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val time        = dateTime.getMillis
     val maxCById    = cs.list.maxBy(_.id)
     val minCById    = cs.list.minBy(_.id)
+    val expectBig   = cs.size > 5
 
     val expected = List(
-                 Some((c.id, "size",    cs.size:                         Integral, time)),
-                 if (cs.size <= 5) {
-                   None
-                 } else {
-                   Some((c.id, "sizeB", cs.size: Integral, time))
-                 },
-                 Some((c.id, "count",   ages.filter(_ >= 18).size:       Integral, time)),
-                 Some((c.id, "sum",     heights.sum:                     Decimal,  time)),
-                 Some((c.id, "max",     ages.max:                        Integral, time)),
-                 Some((c.id, "min",     heights.min:                     Decimal,  time)),
-                 Some((c.id, "maxBy",   maxCById.height:                 Decimal,  time)),
-                 Some((c.id, "minBy",   minCById.age:                    Integral, time)),
-                 Some((c.id, "avg",     (ages.sum / ages.size.toDouble): Decimal,  time)),
-                 Some((c.id, "ucb",     groupedAges.size:                Integral, time)),
-      credit.map(d => (c.id, "collect", d:                               Decimal,  time))
+                  Some((c.id, "size",    cs.size:                         Integral, time)),
+      expectBig.option((c.id, "sizeB",   cs.size:                         Integral, time)),
+                  Some((c.id, "count",   ages.filter(_ >= 18).size:       Integral, time)),
+                  Some((c.id, "sum",     heights.sum:                     Decimal,  time)),
+                  Some((c.id, "max",     ages.max:                        Integral, time)),
+                  Some((c.id, "min",     heights.min:                     Decimal,  time)),
+                  Some((c.id, "maxBy",   maxCById.height:                 Decimal,  time)),
+                  Some((c.id, "minBy",   minCById.age:                    Integral, time)),
+                  Some((c.id, "avg",     (ages.sum / ages.size.toDouble): Decimal,  time)),
+                  Some((c.id, "ucb",     groupedAges.size:                Integral, time)),
+      credit.map(d =>  (c.id, "collect", d:                               Decimal,  time))
     ).flatten
 
     eavtValues.toList must matchEavts(expected)

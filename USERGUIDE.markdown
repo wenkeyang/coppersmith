@@ -713,8 +713,6 @@ object PopularRatingCountFeatures extends AggregationFeatureSet[Rating] {
 ```
 
 
-
-
 ### Filtering (aka `WHERE`)
 
 Features need not be defined for every input value.
