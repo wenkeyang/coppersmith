@@ -63,8 +63,15 @@ case class FeatureSetBuilder[S, SV](
     FeatureBuilder(this, value, view)
 
   def apply[T, FV <% V, V <: Value](
-      aggregator: Aggregator[SV, T, FV]): AggregationFeatureBuilder[S, SV, T, FV, V] =
-    AggregationFeatureBuilder(this, aggregator, view, _ => true)
+      aggregator: Aggregator[SV, T, FV]): AggregationFeatureBuilder[S, SV, T, FV, V] = {
+      val agg = new Aggregator[SV, T, Option[FV]] {
+        def prepare(s: SV) = aggregator.prepare(s)
+        def semigroup = aggregator.semigroup
+        // Lift `T` into `Option` - essentially `.having(_ => true)`
+        def present(t: T) = aggregator.present(t).some
+      }
+     AggregationFeatureBuilder(this, agg, view)
+  }
 
   // For fluent-API, eg, collect{...}.select(...) as opposed to collect{...}(...) or
   // collect{...}.apply(...)
@@ -116,17 +123,24 @@ case class FeatureBuilder[S, SV, FV <% V, V <: Value](
   */
 case class AggregationFeatureBuilder[S, SV, T, FV <% V, V <: Value](
   fsBuilder:  FeatureSetBuilder[S, SV],
-  aggregator: Aggregator[SV, T, FV],
-  view:       PartialFunction[S, SV],
-  having:     T => Boolean
+  aggregator: Aggregator[SV, T, Option[FV]],
+  view:       PartialFunction[S, SV]
 ) {
   def andWhere(condition: SV => Boolean) = where(condition)
   def where(condition: SV => Boolean) = copy(view = view.andThenPartial { case s if condition(s) => s })
-  def having(condition: T => Boolean) = copy(having = condition)
+  def having(condition: T => Boolean) =
+    copy(aggregator =
+      new Aggregator[SV, T, Option[FV]] {
+        def prepare(s: SV) = aggregator.prepare(s)
+        def semigroup = aggregator.semigroup
+        def present(t: T) = condition(t).option(aggregator.present(t)).flatten
+      }
+    )
+
   def asFeature[FT <: Type](
     featureType: FT,
     name: Name,
     desc: Description
   )(implicit ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]) =
-    AggregationFeature(name, desc, aggregator.andThenPresent(fv => fv: V), view, having, featureType)
+    AggregationFeature(name, desc, aggregator.andThenPresent(fvOpt => fvOpt.map(fv => fv: V)), view, featureType)
 }

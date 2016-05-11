@@ -82,9 +82,8 @@ import com.twitter.algebird.{Aggregator, AveragedValue, Monoid, Semigroup}
 case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
   name:        Name,
   description: Description,
-  aggregator:  Aggregator[SV, U, V],
+  aggregator:  Aggregator[SV, U, Option[V]],
   view:        PartialFunction[S, SV],
-  havingClause: U => Boolean,
   featureType: Type
 ) {
   import AggregationFeature.AlgebirdSemigroup
@@ -98,12 +97,8 @@ case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
       val sourceView = source.toList.collect(view).toNel
       sourceView.flatMap(nonEmptySource => {
         val prepresented: U = nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
-        if (havingClause(prepresented)) {
-          val value: V = aggregator.present(prepresented)
-          Some(FeatureValue(entity, name, value))
-        } else {
-          None
-        }
+          val valueOpt: Option[V] = aggregator.present(prepresented)
+          valueOpt.map {value => FeatureValue(entity, name, value) }
       })
     }
   }
