@@ -36,6 +36,29 @@ import commbank.coppersmith.{DataSource, BoundFeatureSource}
 import commbank.coppersmith.test.thrift.{Customer, Account}
 import commbank.coppersmith.Arbitraries._
 
+class ScaldingDataSourceSpec extends ThermometerSpec { def is = s2"""
+  ScaldingDataSource
+    should filter on `where` conditions  $where
+"""
+  val where = forAll { xsList: List[(Int, Boolean)] =>
+    // When ScalaCheck dependency (from uniform) is upgraded, this can be rewritten
+    // to take an arbitrary Map[Int, Boolean] directly. ScalaCheck 1.11.4 contains a
+    // bug that makes this infeasible (it fails due to discarding too many values).
+    val xs: Map[Int, Boolean]       = xsList.toMap
+    val condition: Int => Boolean   = xs.apply
+    val baseRecs: Iterable[Int]     = xs.keys
+    val filteredRecs: Iterable[Int] = xs.filter(_._2).keys
+
+    object baseDataSource extends ScaldingDataSource[Int] {
+      def load = TypedPipe.from(baseRecs)
+    }
+
+    val filteredDataSource = baseDataSource.where(condition)
+
+    runsSuccessfully(filteredDataSource.load) must containTheSameElementsAs(filteredRecs.toSeq)
+  }
+}
+
 class HiveTextSourceSpec extends ThermometerSpec { def is = s2"""
   HiveTextSource
     should read multiple listed partitions   $multiplePartitions
