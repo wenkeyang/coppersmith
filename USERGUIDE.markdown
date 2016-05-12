@@ -503,25 +503,6 @@ object MoviePivotFeatures extends PivotFeatureSet[Movie] {
 }
 ```
 
-The `pivotThrift` macro can be used to
-easily create a feature set containing all the input fields
-as separate features.
-
-```scala
-package commbank.coppersmith.examples.userguide
-
-import commbank.coppersmith.api._
-
-import commbank.coppersmith.examples.thrift.Movie
-
-import Implicits.RichMovie
-
-object PivotMacroExample {
-  val moviePivotFeatures: PivotFeatureSet[Movie] =
-    PivotMacro.pivotThrift[Movie]("userguide.examples", _.id)
-}
-```
-
 
 ### Aggregation (aka `GROUP BY`)
 
