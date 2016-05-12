@@ -18,10 +18,12 @@ import commbank.coppersmith.Feature.Value
 import Feature._
 import Metadata._
 
+import argonaut._, Argonaut._
+
 object MetadataOutput {
-  case class MetadataPrinter (
-    fn: (Metadata[_, Feature.Value], Option[Conforms[_, _]]) => String,
-    combiner: List[String] => String = defaultCombiner)
+  case class MetadataPrinter[O] (
+    fn: (Metadata[_, Feature.Value], Option[Conforms[_, _]]) => O,
+    combiner: List[O] => String)
 
   val defaultCombiner = (list: List[String]) => list.mkString("\n")
 
@@ -40,17 +42,14 @@ object MetadataOutput {
 
   private def genericValueTypeToString(v: ValueType) = v.toString.replace("Type", "").toLowerCase
 
-  val Psv: MetadataPrinter = MetadataPrinter((m, _) => {
+  val Psv: MetadataPrinter[String] = MetadataPrinter[String]((m, _) => {
       val valueType = psvValueTypeToString(m.valueType)
       val featureType = psvFeatureTypeToString(m.featureType)
       List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
-  })
+  }, defaultCombiner)
 
 
-  val JsonObject: MetadataPrinter = MetadataPrinter((md, oConforms) => {
-
-    import argonaut._, Argonaut._
-
+  val JsonObject: MetadataPrinter[Json] = MetadataPrinter((md, oConforms) => {
     Json(
       "name" -> jString(md.name),
       "namespace" -> jString(md.namespace),
@@ -59,8 +58,8 @@ object MetadataOutput {
       "featureType" -> jString(genericFeatureTypeToString(md.featureType)),
       "valueType" -> jString(genericValueTypeToString(md.valueType)),
       "typesConform" -> jBool(oConforms.isDefined)
-    ).nospaces
-  }, lst => s"[${lst.mkString(",")}}]")
+    )
+  }, lst => jArrayElements(lst: _*).nospaces)
 
 
   trait HasMetadata[S] {
@@ -75,9 +74,9 @@ object MetadataOutput {
     def metadata = mds.metadata
   }
 
-  def metadataString[S](
+  def metadataString[S, O](
     metadata: List[(Metadata[S, Feature.Value], Option[Conforms[_, _]])],
-    printer: MetadataPrinter
+    printer: MetadataPrinter[O]
   ): String = {
     printer.combiner(metadata.map(printer.fn.tupled))
   }
