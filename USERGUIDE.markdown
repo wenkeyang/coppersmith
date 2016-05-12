@@ -684,6 +684,34 @@ object CombinedFeaturesJob extends SimpleFeatureJob {
 }
 ```
 
+### Post-aggregation filters (aka `HAVING`)
+
+Sometimes we want to filter the aggregation value (equivalent to an SQL `HAVING`
+clause. This is accomplished using the `having` method on the aggregator. The 
+following example outputs the rating count where the count is greater that 10:
+
+
+```scala
+package commbank.coppersmith.examples.userguide
+
+import commbank.coppersmith.api._, Coppersmith._
+import commbank.coppersmith.examples.thrift.Rating
+
+object PopularRatingCountFeatures extends AggregationFeatureSet[Rating] {
+  val namespace              = "userguide.examples"
+  def entity(rating: Rating) = rating.movieId
+
+  val source = From[Rating]()
+  val select = source.featureSetBuilder(namespace, entity)
+
+  val popularRatingCount = select(count(_.rating > 3)).having(_ > 10)
+    .asFeature(Continuous, "MOVIE_POPULAR_RATING_COUNT",
+               "High rating count for movies that have more than 10 high ratings")
+
+  val aggregationFeatures = List(popularRatingCount)
+}
+```
+
 
 ### Filtering (aka `WHERE`)
 

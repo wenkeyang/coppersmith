@@ -23,6 +23,7 @@ import org.scalacheck.Gen.alphaStr
 import org.scalacheck.Prop.forAll
 
 import scalaz.syntax.std.list.ToListOpsFromList
+import scalaz.syntax.std.boolean.ToBooleanOpsFromBoolean
 
 import au.com.cba.omnia.maestro.api._, Maestro._
 import au.com.cba.omnia.maestro.test.Records
@@ -226,8 +227,9 @@ object ScaldingJobSpec {
 
     type AAF = AggregationFeature[Account, Account, _, Value]
 
-    val sizeF: AAF = select(size)          .asFeature(Continuous, "size", "test")
-    val minF:  AAF = select(min(_.balance)).asFeature(Continuous, "min",  "test")
+    val sizeF:  AAF = select(size)             .asFeature(Continuous, "size",   "test")
+    val sizeBF: AAF = select(size).having(_> 2).asFeature(Continuous, "sizeBig", "test")
+    val minF:   AAF = select(min(_.balance))   .asFeature(Continuous, "min",     "test")
 
     import com.twitter.algebird.Aggregator
 
@@ -243,18 +245,21 @@ object ScaldingJobSpec {
         case Some(age) if false => age
       }.select(Aggregator.fromMonoid[Int]).asFeature(Continuous, "knownEmpty", "test")
 
-    def aggregationFeatures = List(sizeF, minF, knownEmptyF, collectF)
+    def aggregationFeatures = List(sizeF, sizeBF, minF, knownEmptyF, collectF)
 
     def expectedFeatureValues(custAccts: CustomerAccounts, time: DateTime) = {
+
       custAccts.cas.flatMap(cag => {
         val size    = cag.as.size
+        val sizesOver2 = cag.as.size > 2
         val min     = cag.as.map(_.balance).min
         val ages    = cag.as.map(_.age).collect { case Some(age) => age }
         val collect = ages.toNel.map(_.list.sum)
         val values  = List(
-                 List(FeatureValue[Integral](cag.c.id, "size",    size)),
-                 List(FeatureValue[Decimal] (cag.c.id, "min",     min)),
-          collect.map(FeatureValue[Integral](cag.c.id, "collect", _)).toList
+          Some(FeatureValue[Integral](cag.c.id, "size",    size)),
+          sizesOver2.option((FeatureValue[Integral](cag.c.id, "sizeBig",  size))),
+          Some(FeatureValue[Decimal] (cag.c.id, "min",     min)),
+          collect.map(FeatureValue[Integral](cag.c.id, "collect", _))
         ).flatten
         values.map(v => EavtEnc.encode((v, time.getMillis)))
       }).toList

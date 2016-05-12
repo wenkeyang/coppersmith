@@ -187,15 +187,14 @@ object FeatureSetExecution {
   )
 
   def composeView[S, SV, B, V <: Value](
-    aggregator: Aggregator[SV, B, V],
+    aggregator: Aggregator[SV, B, Option[V]],
     view: PartialFunction[S, SV]
   ): Aggregator[S, Option[B], Option[Value]] = {
     import com.twitter.algebird.MonoidAggregator
-    val lifted: MonoidAggregator[SV, Option[B], Option[V]] = aggregator.lift
     new MonoidAggregator[S, Option[B], Option[Value]] {
-      def prepare(s: S) = if (view.isDefinedAt(s)) lifted.prepare(view(s)) else None
-      def monoid = lifted.monoid
-      def present(b: Option[B]) = lifted.present(b)
+      def prepare(s: S) = view.lift(s).map(aggregator.prepare(_))
+      def monoid = new com.twitter.algebird.OptionMonoid[B]()(aggregator.semigroup)
+      def present(bOpt: Option[B]) = bOpt.flatMap(aggregator.present(_))
     }
   }
 

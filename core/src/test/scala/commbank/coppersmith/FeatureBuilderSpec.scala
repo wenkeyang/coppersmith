@@ -113,6 +113,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     type CAF = AggregationFeature[Customer, Customer, _, Value]
 
     val sizeF:    CAF = select(size)                      .asFeature(Discrete,    "size",  "Agg feature")
+    val bigSizeF: CAF = select(size).having(_ > 5)        .asFeature(Discrete,    "sizeB", "Agg feature")
     val countF:   CAF = select(count(where = _.age >= 18)).asFeature(Continuous,  "count", "Agg feature")
     val sumF:     CAF = select(sum(_.height))             .asFeature(Continuous,  "sum",   "Agg feature")
     val maxF:     CAF = select(max(_.age))                .asFeature(Continuous,  "max",   "Agg feature")
@@ -129,7 +130,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
         case (c, Some(credit)) => credit
       }.select(Aggregator.min[Double]).asFeature(Continuous, "collect", "Agg feature")
 
-    def aggregationFeatures = List(sizeF, countF, sumF, maxF, minF, maxByF, minByF, avgF, ucbF, collectF)
+    def aggregationFeatures = List(sizeF, bigSizeF, countF, sumF, maxF, minF, maxByF, minByF, avgF, ucbF, collectF)
   }
 
   def generateMetadata = {
@@ -138,6 +139,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
 
     metadata must_== List(
       Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "size",    "Agg feature",  Discrete),
+      Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "sizeB",   "Agg feature",  Discrete),
       Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "count",   "Agg feature",  Continuous),
       Metadata[(EntityId, Iterable[Customer]), Decimal] (namespace, "sum",     "Agg feature",  Continuous),
       Metadata[(EntityId, Iterable[Customer]), Integral](namespace, "max",     "Agg feature",  Continuous),
@@ -163,19 +165,23 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val time        = dateTime.getMillis
     val maxCById    = cs.list.maxBy(_.id)
     val minCById    = cs.list.minBy(_.id)
+    val expectBig   = cs.size > 5
 
-    eavtValues.toList must matchEavts(List(
-                 Some((c.id, "size",    cs.size:                         Integral, time)),
-                 Some((c.id, "count",   ages.filter(_ >= 18).size:       Integral, time)),
-                 Some((c.id, "sum",     heights.sum:                     Decimal,  time)),
-                 Some((c.id, "max",     ages.max:                        Integral, time)),
-                 Some((c.id, "min",     heights.min:                     Decimal,  time)),
-                 Some((c.id, "maxBy",   maxCById.height:                 Decimal,  time)),
-                 Some((c.id, "minBy",   minCById.age:                    Integral, time)),
-                 Some((c.id, "avg",     (ages.sum / ages.size.toDouble): Decimal,  time)),
-                 Some((c.id, "ucb",     groupedAges.size:                Integral, time)),
-      credit.map(d => (c.id, "collect", d:                               Decimal,  time))
-    ).flatten)
+    val expected = List(
+                  Some((c.id, "size",    cs.size:                         Integral, time)),
+      expectBig.option((c.id, "sizeB",   cs.size:                         Integral, time)),
+                  Some((c.id, "count",   ages.filter(_ >= 18).size:       Integral, time)),
+                  Some((c.id, "sum",     heights.sum:                     Decimal,  time)),
+                  Some((c.id, "max",     ages.max:                        Integral, time)),
+                  Some((c.id, "min",     heights.min:                     Decimal,  time)),
+                  Some((c.id, "maxBy",   maxCById.height:                 Decimal,  time)),
+                  Some((c.id, "minBy",   minCById.age:                    Integral, time)),
+                  Some((c.id, "avg",     (ages.sum / ages.size.toDouble): Decimal,  time)),
+                  Some((c.id, "ucb",     groupedAges.size:                Integral, time)),
+      credit.map(d =>  (c.id, "collect", d:                               Decimal,  time))
+    ).flatten
+
+    eavtValues.toList must matchEavts(expected)
   }}
 
   def matchEavts(expected: List[(EntityId, Name, Value, Time)])

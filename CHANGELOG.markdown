@@ -1,6 +1,13 @@
 Change log
 ==========
 
+## 0.12.0
+
+Allow post-aggregation filters (`HAVING` clauses).
+
+- Added `having` method on `AggregationFeature`
+
+
 ## 0.11.0
 Allow arbitrary feature value serialisation.
 
