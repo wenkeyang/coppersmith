@@ -106,7 +106,7 @@ trait FeatureValueEnc[T] extends Encoder[(FeatureValue[_], Time), T] {
   def encode(fvt: (FeatureValue[_], Time)): T
 }
 
-object TextSink {
+object HiveTextSink {
   type DatabaseName = String
   type TableName    = String
 
@@ -114,14 +114,14 @@ object TextSink {
   val Delimiter = "|"
 }
 
-case class TextSink[
+case class HiveTextSink[
   T <: ThriftStruct with Product : FeatureValueEnc : Manifest
 ](
-  dbName:    TextSink.DatabaseName,
+  dbName:    HiveTextSink.DatabaseName,
   tablePath: Path,
-  tableName: TextSink.TableName,
+  tableName: HiveTextSink.TableName,
   partition: SinkPartition[T],
-  delimiter: String = TextSink.Delimiter,
+  delimiter: String = HiveTextSink.Delimiter,
   dcs:       DelimiterConflictStrategy[T] = FailJob[T]()
 ) extends FeatureSink {
   def write(features: TypedPipe[(FeatureValue[_], Time)]) = {

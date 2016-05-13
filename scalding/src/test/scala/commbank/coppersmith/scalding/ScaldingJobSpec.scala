@@ -75,7 +75,7 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
   def prepareData(
     custAccts:  CustomerAccounts,
     jobTime:    DateTime,
-    sink: TextSink[Eavt]
+    sink: HiveTextSink[Eavt]
   ): FeatureJobConfig[Account] = {
 
     val accounts = custAccts.cas.flatMap(_.as)
@@ -107,7 +107,7 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
 
   val eavtReader  = delimitedThermometerRecordReader[Eavt]('|', "\\N", implicitly[Decode[Eavt]])
   val defaultArgs = Map("hdfs-root" -> List(s"$dir/user"))
-  val sink = TextSink[Eavt](
+  val sink = HiveTextSink[Eavt](
     "features_db",
     path(s"$dir/user/features_db"),
     "features",

@@ -9,7 +9,7 @@ database name (`"$dbPrefix_features"`).
 - Removed `TextSink.Config`, `TextSink.configure`, `EavtTextSink.Config` and `EavtTextSink.configure`
 - Renamed `EavtTextSink` to `EavtText`
 - Changed `TextSink[T](conf: TextSink.Config)` to
- `TextSink[T](
+ `HiveTextSink[T](
    dbName:    TextSink.DatabaseName,
    tablePath: Path,
    tableName: TextSink.TableName,
@@ -19,15 +19,15 @@ database name (`"$dbPrefix_features"`).
  )`
 
  ### Upgrading
- 
+
  - References to `TextSink(Config)` must be changed to the new signature.
- - References to `TextSink.configure(...)` should be changed to `TextSink(...)`
+ - References to `TextSink.configure(...)` should be changed to `HiveTextSink(...)`
  - References to `EavtTextSink.configure(...)` should be changed to
-  `TextSink[Eavt](...)`, with `EavtText.eavtByDay` passed as the partition arg,
+  `HiveTextSink[Eavt](...)`, with `EavtText.eavtByDay` passed as the partition arg,
   and `EavtText.EavtEnc` in scope
  - References to `EavtTextSink.defaultPartition` must be changed to
   `EavtText.eavtByDay`
- - Ensure that the path and database name passed to `TextSink` are correct
+ - Ensure that the path and database name passed to `HiveTextSink` are correct
   (including `.../view/warehouse/features/...` and `"..._features"`)
  - Refer to [USERGUIDE](USERGUIDE.markdown) examples for details
 

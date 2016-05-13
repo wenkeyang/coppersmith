@@ -35,7 +35,7 @@ import commbank.coppersmith.api.scalding.EavtText._
 import ScaldingArbitraries._
 import thrift.Eavt
 
-class TextSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
+class HiveTextSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     Writing features to an EavtSink
       writes all feature values            $featureValuesOnDiskMatch        ${tag("slow")}
       writes multiple results              $multipleValueSetsOnDiskMatch    ${tag("slow")}
@@ -45,13 +45,13 @@ class TextSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
       fails to commit if sink is committed $commitFailsIfSinkCommitted      ${tag("slow")}
   """
 
-  implicit val arbConfig: Arbitrary[TextSink[Eavt]] =
+  implicit val arbConfig: Arbitrary[HiveTextSink[Eavt]] =
     Arbitrary(
       for {
         dbName <- arbNonEmptyAlphaStr.map(_.value)
         dbPath <- arbitrary[Path]
         tableName <- arbNonEmptyAlphaStr.map(_.value)
-      } yield TextSink[Eavt](dbName, new Path(dir, dbPath), tableName, eavtByDay)
+      } yield HiveTextSink[Eavt](dbName, new Path(dir, dbPath), tableName, eavtByDay)
     )
 
   // Current EAVT sink implementation lacks support for encoding control characters.
@@ -63,7 +63,7 @@ class TextSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
       NonEmptyListArbitrary[FeatureValue[Value]].arbitrary.map(nel =>
         nel.map {
           case v@FeatureValue(_, _, Str(s)) =>
-            v.copy(value = Str(s.map(_.filterNot(_ < 32).replace(TextSink.Delimiter, ""))))
+            v.copy(value = Str(s.map(_.filterNot(_ < 32).replace(HiveTextSink.Delimiter, ""))))
           case v => v
         }
       )
@@ -75,7 +75,7 @@ class TextSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     TypedPipe.from(vs.list.map(v => v -> dateTime.getMillis))
 
   def featureValuesOnDiskMatch =
-    forAll { (vs: NonEmptyList[FeatureValue[Value]], sink: TextSink[Eavt], dateTime: DateTime) => {
+    forAll { (vs: NonEmptyList[FeatureValue[Value]], sink: HiveTextSink[Eavt], dateTime: DateTime) => {
       val expected = vs.map(v => EavtEnc.encode((v, dateTime.getMillis))).list
 
       withEnvironment(path(getClass.getResource("/").toString)) {
@@ -89,7 +89,7 @@ class TextSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
   def multipleValueSetsOnDiskMatch =
     forAll { (vs1: NonEmptyList[FeatureValue[Value]],
               vs2: NonEmptyList[FeatureValue[Value]],
-              sink: TextSink[Eavt],
+              sink: HiveTextSink[Eavt],
               dateTime: DateTime) => {
       val expected = (vs1.list ++ vs2.list).map(v => EavtEnc.encode((v, dateTime.getMillis)))
 
@@ -111,8 +111,8 @@ class TextSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     }}.set(minTestsOk = 5)
 
   def featureValuesInHiveMatch =
-    forAll { (vs: NonEmptyList[FeatureValue[Value]], sink: TextSink[Eavt], dateTime: DateTime) => {
-      def hiveNull(s: String) = if (s == TextSink.NullValue) "NULL" else s
+    forAll { (vs: NonEmptyList[FeatureValue[Value]], sink: HiveTextSink[Eavt], dateTime: DateTime) => {
+      def hiveNull(s: String) = if (s == HiveTextSink.NullValue) "NULL" else s
       val expected = vs.map(value => {
         val eavt = EavtEnc.encode((value, dateTime.getMillis))
         val (year, month, day) = sink.partition.underlying.extract(eavt)
@@ -129,7 +129,7 @@ class TextSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     }}.set(minTestsOk = 5)
 
   def expectedPartitionsMarkedSuccess =
-    forAll { (vs: NonEmptyList[FeatureValue[Value]], sink: TextSink[Eavt], dateTime: DateTime) =>  {
+    forAll { (vs: NonEmptyList[FeatureValue[Value]], sink: HiveTextSink[Eavt], dateTime: DateTime) =>  {
       val expectedPartitions = vs.map(v =>
         sink.partition.underlying.extract(EavtEnc.encode((v, dateTime.getMillis)))
       ).list.toSet.toSeq
@@ -159,7 +159,7 @@ class TextSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     }}.set(minTestsOk = 5)
 
   def writeFailsIfSinkCommitted =
-    forAll { (vs: NonEmptyList[FeatureValue[Value]], sink: TextSink[Eavt], dateTime: DateTime) =>  {
+    forAll { (vs: NonEmptyList[FeatureValue[Value]], sink: HiveTextSink[Eavt], dateTime: DateTime) =>  {
       val expected = vs.map(v => EavtEnc.encode((v, dateTime.getMillis))).list
       withEnvironment(path(getClass.getResource("/").toString)) {
         val writeResult = executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
@@ -184,7 +184,7 @@ class TextSinkSpec extends ThermometerHiveSpec with Records { def is = s2"""
     }}.set(minTestsOk = 5)
 
   def commitFailsIfSinkCommitted =
-    forAll { (vs: NonEmptyList[FeatureValue[Value]], sink: TextSink[Eavt], dateTime: DateTime) =>  {
+    forAll { (vs: NonEmptyList[FeatureValue[Value]], sink: HiveTextSink[Eavt], dateTime: DateTime) =>  {
       val expected = vs.map(v => EavtEnc.encode((v, dateTime.getMillis))).list
       withEnvironment(path(getClass.getResource("/").toString)) {
         val writeResult = executesSuccessfully(sink.write(valuePipe(vs, dateTime)))

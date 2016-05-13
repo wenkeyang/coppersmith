@@ -71,7 +71,7 @@ object FeatureJobGenerator {
           |
           |  val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
           |
-          |  val featureSink    = TextSink[Eavt]("userguide", new Path("dev/$tableName"), "$tableName", eavtByDay)
+          |  val featureSink    = HiveTextSink[Eavt]("userguide", new Path("dev/$tableName"), "$tableName", eavtByDay)
           |}
           |
           |object ${name}Job extends SimpleFeatureJob {

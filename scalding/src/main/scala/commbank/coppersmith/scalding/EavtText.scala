@@ -33,9 +33,8 @@ object EavtText {
           case Integral(v) => v.map(_.toString)
           case Decimal(v) => v.map(_.toString)
           case Str(v) => v
-        }).getOrElse(TextSink.NullValue)
+        }).getOrElse(HiveTextSink.NullValue)
 
-        // TODO: Does time format need to be configurable?
         val featureTime = new DateTime(time).toString("yyyy-MM-dd")
         Eavt(fv.entity, fv.name, featureValue, featureTime)
     }
