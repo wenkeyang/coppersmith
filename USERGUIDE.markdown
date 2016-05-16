@@ -1071,6 +1071,78 @@ object SourceViewAggregationFeatures extends AggregationFeatureSet[(Movie, Ratin
 ```
 
 
+### Pre-join Filters (experimental)
+
+When using joined tables,
+filters expressed using `.where` in the feature definition
+are applied to the full joined tuple.
+But it is sometimes desirable to filter the records before joining them,
+mainly for performance reasons.
+
+Currently, coppersmith offers pre-join filters for scalding datasources only.
+This necessarily means that they must be specified in the the `Config`,
+rather than the `FeatureSet`. Simply call `.where` on the datasource,
+before binding it.
+
+For example, consider the COMEDY_MOVIE_AVG_RATING from an earlier example.
+This contains a one-to-many join,
+which will return the rating for _every_ movie,
+only to then discard everything except comedies.
+Of course, if we expanded this FeatureSet with similar features for all genres,
+then this approach would be quite efficient.
+But suppose we really only care about comedies.
+Then it might be more efficient to apply the filter before the join, as follows:
+
+```scala
+package commbank.coppersmith.examples.userguide
+
+import commbank.coppersmith.api._, Coppersmith._
+import commbank.coppersmith.examples.thrift.{Movie, Rating}
+
+import Implicits.RichMovie
+
+object ComedyJoinFeatures extends AggregationFeatureSet[(Movie, Rating)] {
+  val namespace                  = "userguide.examples"
+  def entity(s: (Movie, Rating)) = s._1.id
+
+  val source = Join[Movie].to[Rating].on(
+    movie   => movie.id,
+    rating  => rating.movieId
+  )
+  val select = source.featureSetBuilder(namespace, entity)
+
+  // Here we no longer need: .where(_._1.isComedy)
+  val averageRatingForComedyMovies = select(avg(_._2.rating))
+    .asFeature(Continuous, "COMEDY_MOVIE_AVG_RATING_V2",
+               "Average rating for comedy movies")
+
+  val aggregationFeatures = List(averageRatingForComedyMovies)
+}
+
+import org.apache.hadoop.fs.Path
+
+import com.twitter.scalding.Config
+
+import org.joda.time.DateTime
+
+import commbank.coppersmith.api.scalding._
+
+case class ComedyJoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie, Rating)] {
+  val comedyMovies   = HiveTextSource[Movie, Nothing](new Path("data/movies"), Partitions.unpartitioned)
+                       .where(_.isComedy)
+  val ratings        = HiveTextSource[Rating, Nothing](new Path("data/ratings"), Partitions.unpartitioned, "\t")
+
+  val featureSource  = ComedyJoinFeatures.source.bind(join(comedyMovies, ratings))
+  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "ratings")
+  val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
+}
+
+object ComedyJoinFeaturesJob extends SimpleFeatureJob {
+  def job = generate(ComedyJoinFeaturesConfig(_), ComedyJoinFeatures)
+}
+```
+
+
 ### Generating values from job context
 
 Sometimes it is necessary to use job specific data for generating feature

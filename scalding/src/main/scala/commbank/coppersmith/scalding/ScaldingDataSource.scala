@@ -31,10 +31,24 @@ import au.com.cba.omnia.maestro.core.codec.{DecodeOk, DecodeError, ParseError, N
 
 import commbank.coppersmith.DataSource
 
+/** Scalding data sources should extend this (rather than `DataSource` directly).
+  * It provides some high level utility methods, such as filtering.
+  */
+trait ScaldingDataSource[S] extends DataSource[S, TypedPipe] {
+  /** Apply a filter to the raw data source.
+    * Prefer [[commbank.coppersmith.FeatureBuilder.where]], since that allows the filter
+    * to be expressed in the feature definition, rather than the config.
+    * This method, however, may result in better performance in some cases,
+    * especially when the data source will be joined to another,
+    * since the filter will be applied before rather than after the join.
+    */
+  def where(condition: S => Boolean) = TypedPipeSource(load.filter(condition))
+}
+
 case class HiveTextSource[S <: ThriftStruct : Decode](
   paths:     List[Path],
   delimiter: String
-) extends DataSource[S, TypedPipe] {
+) extends ScaldingDataSource[S] {
   val log = LoggerFactory.getLogger(getClass())
 
   def load = {
@@ -69,7 +83,7 @@ object HiveTextSource {
 
 case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter](
   paths: List[Path]
-) extends DataSource[S, TypedPipe] {
+) extends ScaldingDataSource[S] {
   val log = LoggerFactory.getLogger(getClass())
 
   def load = {
@@ -87,6 +101,6 @@ object HiveParquetSource {
 }
 
 /** Akin to an SQL view, allow features to be derived from an arbitrary `TypedPipe`. */
-case class TypedPipeSource[T](pipe: TypedPipe[T]) extends DataSource[T, TypedPipe] {
+case class TypedPipeSource[S](pipe: TypedPipe[S]) extends ScaldingDataSource[S] {
   def load = pipe
 }
