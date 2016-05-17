@@ -38,7 +38,9 @@ import commbank.coppersmith.Arbitraries._
 
 class ScaldingDataSourceSpec extends ThermometerSpec { def is = s2"""
   ScaldingDataSource
-    should filter on `where` conditions  $where
+    should filter on `where` conditions      $where
+    should distinct by row on `distinct`     $distinct
+    should distinct by field on `distinctBy` $distinctBy
 """
   val where = forAll { xsList: List[(Int, Boolean)] =>
     // When ScalaCheck dependency (from uniform) is upgraded, this can be rewritten
@@ -56,6 +58,31 @@ class ScaldingDataSourceSpec extends ThermometerSpec { def is = s2"""
     val filteredDataSource = baseDataSource.where(condition)
 
     runsSuccessfully(filteredDataSource.load) must containTheSameElementsAs(filteredRecs.toSeq)
+  }
+
+  val distinct= forAll { xs: List[(Int, Boolean)] =>
+    val distinctRecs: Iterable[(Int, Boolean)] = xs.groupBy(x => x).mapValues(_.head).values
+
+    object baseDataSource extends ScaldingDataSource[(Int, Boolean)] {
+      def load = TypedPipe.from(xs)
+    }
+
+    val filteredDataSource = baseDataSource.distinct
+
+    runsSuccessfully(filteredDataSource.load) must containTheSameElementsAs(distinctRecs.toSeq)
+  }
+
+  val distinctBy = forAll { xs: List[(Int, Boolean)] =>
+    val by: ((Int, Boolean)) => Boolean = _._2
+    val distinctLength: Int             = xs.groupBy(_._2).keys.size
+
+    object baseDataSource extends ScaldingDataSource[(Int, Boolean)] {
+      def load = TypedPipe.from(xs)
+    }
+
+    val filteredDataSource = baseDataSource.distinctBy(by)
+
+    runsSuccessfully(filteredDataSource.load).toList.length must beEqualTo(distinctLength)
   }
 }
 

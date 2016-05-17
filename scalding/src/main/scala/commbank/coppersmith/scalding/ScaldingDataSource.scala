@@ -43,6 +43,12 @@ trait ScaldingDataSource[S] extends DataSource[S, TypedPipe] {
     * since the filter will be applied before rather than after the join.
     */
   def where(condition: S => Boolean) = TypedPipeSource(load.filter(condition))
+
+  @annotation.implicitNotFound(msg = "For distinct method to work, the type in ScaldingDataSource must have an Ordering.")
+  def distinct(implicit ord: Ordering[_ >: S]) = TypedPipeSource(load.distinct)
+
+  @annotation.implicitNotFound(msg = "For distinctBy method to work, the type to distinct on in the ScaldingDataSource must have an Ordering.")
+  def distinctBy[O : Ordering](fn: S => O) = TypedPipeSource(load.distinctBy(fn))
 }
 
 case class HiveTextSource[S <: ThriftStruct : Decode](
