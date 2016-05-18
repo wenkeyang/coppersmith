@@ -38,7 +38,7 @@ import Arbitraries._
 
 import commbank.coppersmith.thrift.Eavt
 import commbank.coppersmith.test.thrift.{Account, Customer}
-import TestEavtTextSink.EavtEnc
+import commbank.coppersmith.api.scalding.EavtText.{EavtEnc, eavtByDay}
 
 import ScaldingJobSpec.{RegularFeatures, AggregationFeatures}
 
@@ -75,7 +75,7 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
   def prepareData(
     custAccts:  CustomerAccounts,
     jobTime:    DateTime,
-    eavtConfig: TextSink.Config[Eavt]
+    sink: HiveTextSink[Eavt]
   ): FeatureJobConfig[Account] = {
 
     val accounts = custAccts.cas.flatMap(_.as)
@@ -101,17 +101,17 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
     new FeatureJobConfig[Account] {
       val featureContext = ExplicitGenerationTime(jobTime)
       val featureSource  = From[Account].bind(SourceBinder.from(accountDataSource))
-      val featureSink    = TextSink(eavtConfig)
+      val featureSink    = sink
     }
   }
 
   val eavtReader  = delimitedThermometerRecordReader[Eavt]('|', "\\N", implicitly[Decode[Eavt]])
   val defaultArgs = Map("hdfs-root" -> List(s"$dir/user"))
-  val eavtConfig = TextSink.Config[Eavt](
+  val sink = HiveTextSink[Eavt](
     "features_db",
     path(s"$dir/user/features_db"),
     "features",
-    TestEavtTextSink.defaultPartition
+    eavtByDay
   )
 
   // Use alphaStr to avoid problems with serialising new lines and eavt field delimiters
@@ -119,32 +119,32 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
 
   def regularFeaturesJob =
     forAll { (custAccts: CustomerAccounts, jobTime: DateTime) => {
-      val cfg = prepareData(custAccts, jobTime, eavtConfig)
+      val cfg = prepareData(custAccts, jobTime, sink)
       val expected = RegularFeatures.expectedFeatureValues(custAccts, jobTime)
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         executesOk(SimpleFeatureJob.generate((_: Config) => cfg, RegularFeatures), defaultArgs)
         facts(successFlagsWritten(expected, jobTime): _*)
-        facts(path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected))
+        facts(path(s"${sink.tablePath}/*/*/*/*") ==> records(eavtReader, expected))
       }
     }}.set(minTestsOk = 5)
 
   def aggregationFeaturesJob =
     forAll { (custAccts: CustomerAccounts, jobTime: DateTime) => {
-      val cfg = prepareData(custAccts, jobTime, eavtConfig)
+      val cfg = prepareData(custAccts, jobTime, sink)
       val expected = AggregationFeatures.expectedFeatureValues(custAccts, jobTime)
 
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         executesOk(SimpleFeatureJob.generate((_: Config) => cfg, AggregationFeatures), defaultArgs)
         facts(successFlagsWritten(expected, jobTime): _*)
-        facts(path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected))
+        facts(path(s"${sink.tablePath}/*/*/*/*") ==> records(eavtReader, expected))
       }
     }}.set(minTestsOk = 5)
 
   def multiFeatureSetJobPar =
     forAll { (custAccts: CustomerAccounts, jobTime: DateTime) => {
-      val cfg = prepareData(custAccts, jobTime, eavtConfig)
+      val cfg = prepareData(custAccts, jobTime, sink)
       val expected =
         RegularFeatures.expectedFeatureValues(custAccts, jobTime) ++
           AggregationFeatures.expectedFeatureValues(custAccts, jobTime)
@@ -156,13 +156,13 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
         )
         executesOk(SimpleFeatureJob.generate(job), defaultArgs)
         facts(successFlagsWritten(expected, jobTime): _*)
-        facts(path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected))
+        facts(path(s"${sink.tablePath}/*/*/*/*") ==> records(eavtReader, expected))
       }
     }}.set(minTestsOk = 5)
 
   def multiFeatureSetJobSeq =
     forAll { (custAccts: CustomerAccounts, jobTime: DateTime) => {
-      val cfg = prepareData(custAccts, jobTime, eavtConfig)
+      val cfg = prepareData(custAccts, jobTime, sink)
       val expected =
         RegularFeatures.expectedFeatureValues(custAccts, jobTime) ++
           AggregationFeatures.expectedFeatureValues(custAccts, jobTime)
@@ -175,15 +175,15 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
         )
         executesOk(SimpleFeatureJob.generate(job), defaultArgs)
         facts(successFlagsWritten(expected, jobTime): _*)
-        facts(path(s"${eavtConfig.hiveConfig.path}/*/*/*/*") ==> records(eavtReader, expected))
+        facts(path(s"${sink.tablePath}/*/*/*/*") ==> records(eavtReader, expected))
       }
     }}.set(minTestsOk = 5)
 
   private def successFlagsWritten(expectedValues: List[Eavt], dateTime: DateTime): Seq[Fact] = {
-    val partition = eavtConfig.partition.underlying
+    val partition = sink.partition.underlying
     val expectedPartitions = expectedValues.map(partition.extract(_)).toSet.toSeq
     expectedPartitions.map { case (year, month, day) =>
-      path(s"${eavtConfig.hiveConfig.path}/year=$year/month=$month/day=$day/_SUCCESS") ==> exists
+      path(s"${sink.tablePath}/year=$year/month=$month/day=$day/_SUCCESS") ==> exists
     }
   }
 }
