@@ -1107,7 +1107,8 @@ Then it might be more efficient to apply the filter before the join, as follows:
 ```scala
 package commbank.coppersmith.examples.userguide
 
-import commbank.coppersmith.api._, Coppersmith._
+import commbank.coppersmith.api._, scalding._, Coppersmith._, EavtText.{EavtEnc, eavtByDay}
+import commbank.coppersmith.thrift.Eavt
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
 import Implicits.RichMovie
@@ -1144,7 +1145,7 @@ case class ComedyJoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movi
   val ratings        = HiveTextSource[Rating, Nothing](new Path("data/ratings"), Partitions.unpartitioned, "\t")
 
   val featureSource  = ComedyJoinFeatures.source.bind(join(comedyMovies, ratings))
-  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "ratings")
+  val featureSink    = HiveTextSink[Eavt]("userguide", new Path("dev/ratings"), "ratings", eavtByDay)
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 }
 
@@ -1170,7 +1171,8 @@ import com.twitter.scalding.Config
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.api._, scalding._, Coppersmith._
+import commbank.coppersmith.api._, scalding._, Coppersmith._, EavtText.{EavtEnc, eavtByDay}
+import commbank.coppersmith.thrift.Eavt
 import commbank.coppersmith.examples.thrift.Movie
 
 case class DistinctMovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
@@ -1178,7 +1180,7 @@ case class DistinctMovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Mo
                        .distinctBy(_.id)
 
   val featureSource  = From[Movie]().bind(from(movies))
-  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "ratings")
+  val featureSink    = HiveTextSink[Eavt]("userguide", new Path("dev/ratings"), "ratings", eavtByDay)
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 }
 
