@@ -1142,6 +1142,39 @@ object ComedyJoinFeaturesJob extends SimpleFeatureJob {
 }
 ```
 
+If, rather than filtering, a distinct operation is required,
+`ScaldingDataSource` also provides `.distinct` and `.distinctBy`.
+
+Note: An implicit `Ordering` must be provided, either for the source type
+when using `.distinct`; or for the type to distinct on when using `.distinctBy`.
+
+For example:
+
+```scala
+package commbank.coppersmith.examples.userguide
+
+import org.apache.hadoop.fs.Path
+
+import com.twitter.scalding.Config
+
+import org.joda.time.DateTime
+
+import commbank.coppersmith.api._, scalding._, Coppersmith._
+import commbank.coppersmith.examples.thrift.Movie
+
+case class DistinctMovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
+  val movies         = HiveTextSource[Movie, Nothing](new Path("data/movies"), Partitions.unpartitioned)
+                       .distinctBy(_.id)
+
+  val featureSource  = From[Movie]().bind(from(movies))
+  val featureSink    = EavtTextSink.configure("userguide", new Path("dev"), "ratings")
+  val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
+}
+
+object DistinctMovieFeaturesJob extends SimpleFeatureJob {
+  def job = generate(DistinctMovieFeaturesConfig(_), MovieFeatures)
+}
+```
 
 ### Generating values from job context
 
