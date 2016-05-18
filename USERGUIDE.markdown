@@ -14,6 +14,33 @@ some Coppersmith examples yourself using publicly available data.
 In addition to this document, there is also a
 [troubleshooting guide](TROUBLESHOOTING.markdown) available.
 
+* [Basics](#basics)
+    * [Getting started](#getting-started)
+    * [The Feature class](#the-feature-class)
+    * [The FeatureSet class](#the-featureset-class)
+    * [Execution: the SimpleFeatureJob class](#execution-the-simplefeaturejob-class)
+    * [Partition selection](#partition-selection)
+    * [Alternate sinks](#alternate-sinks)
+* [Intermediate](#intermediate)
+    * [Shaping input data: the FeatureSource](#shaping-input-data-the-featuresource)
+    * [A fluent API: featureBuilder](#a-fluent-api-featurebuilder)
+* [Advanced](#advanced)
+    * [Tip: Extension methods for thrift structs](#tip-extension-methods-for-thrift-structs)
+    * [Pivoting](#pivoting)
+    * [Aggregation (aka GROUP BY)](#aggregation-aka-group-by)
+    * [Post-aggregation filters (aka HAVING)](#post-aggregation-filters-aka-having)
+    * [Filtering (aka WHERE)](#filtering-aka-where)
+    * [Joins](#joins)
+    * [Left join](#left-join)
+    * [Multiway joins](#multiway-joins)
+    * [Source views](#source-views)
+    * [Generating values from job context](#generating-values-from-job-context)
+    * [Generating features from custom scalding code](#generating-features-from-custom-scalding-code)
+    * [Testing](#testing)
+* [Try it yourself](#try-it-yourself)
+    * [Setup](#setup)
+    * [Running the example](#running-the-example)
+
 
 Basics
 ------
@@ -37,14 +64,15 @@ An individual feature is represented by the `Feature[S, V]` type.
 The two type parameters, `S` and `V`, are the *source* (or input)
 type and the *value* (or output) type respectively.
 You can think of it as a function from `S` to `V`:
-- The source type is typically a thrift struct,
+- The source type is typically a [thrift](https://thrift.apache.org/) struct,
   describing the schema of a source table.
 - The value type is one of `Integral`, `Decimal`, or `Str`.
 
 A feature must also define some metadata, including:
 - a feature *namespace*,
-- a feature *name*, and
-- a feature *type* (`Continuous`, `Discrete`, `Ordinal` or `Nominal`).
+- a feature *name*,
+- a feature *description* and
+- a feature *featureType* (`Continuous`, `Discrete`, `Ordinal` or `Nominal`).
 
 Below is an example of a feature defined by extending the `Feature` class.
 If this looks complicated, don't worry!
@@ -575,7 +603,7 @@ Also note that non-aggregation features cannot be defined in an `AggregationFeat
 In order to keep similar features organised, two `FeatureSet` objects
 should be created, and called using one `FeatureJob`.
 
-In the below example, because there are two feature sets that have different
+In the example below, because there are two feature sets that have different
 sources (`Movie` and `Rating`), it's necessary to create two `FeatureJobConfig`
 objects. If the two `FeatureSet` objects used the same source and wrote to the
 same sink, only one `FeatureJobConfig` would be required.
@@ -676,7 +704,7 @@ object CombinedFeaturesJob extends SimpleFeatureJob {
 ### Post-aggregation filters (aka `HAVING`)
 
 Sometimes we want to filter the aggregation value (equivalent to an SQL `HAVING`
-clause. This is accomplished using the `having` method on the aggregator. The 
+clause. This is accomplished using the `having` method on the aggregator. The
 following example outputs the rating count where the count is greater that 10:
 
 
