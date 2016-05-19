@@ -14,13 +14,18 @@
 
 package commbank.coppersmith.examples.userguide
 
+import com.twitter.scalding.Execution
+
 import org.apache.hadoop.fs.Path
 
+import org.scalacheck.Prop.forAll
+
 import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
+import au.com.cba.omnia.thermometer.core.Thermometer.path
+import au.com.cba.omnia.maestro.api._, Maestro._
 
-import org.scalacheck.Arbitrary.arbitrary
-
-import commbank.coppersmith.api._, Coppersmith._
+import commbank.coppersmith.api.JobFinished
+import commbank.coppersmith.api._
 import commbank.coppersmith.examples.thrift.Movie
 
 import UserGuideArbitraries.arbMovie
@@ -28,23 +33,23 @@ import UserGuideArbitraries.arbMovie
 object DistinctFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
   DistinctFeaturesJob must return expected values  $test  ${tag("slow")}
 """
-  def test = {
-    def movie(movieId: String, releaseDate: String) =
-      arbitrary[Movie].sample.get.copy(id = movieId, releaseDate = releaseDate, comedy=0)
+  def test = forAll { (movies: Seq[Movie]) => {
+    writeRecords[Movie](s"$dir/user/data/movies/data.txt", movies, "|")
+    val expectedLength = movies.groupBy(_.id).keys.size
 
-    writeRecords[Movie](s"$dir/user/data/movies/data.txt", Seq(
-      movie("1", "01-Jan-1991"),
-      movie("2", "01-Jan-1993"),
-      movie("2", "01-Jan-1994")
-    ), "|")
+    val job = for {
+      // Clear previous test data
+      _      <- Execution.fromHdfs(Hdfs.delete(path(s"$dir/user/dev/ratings"), true))
+      result <- DistinctMovieFeaturesJob.job
+    } yield result
 
-    executesSuccessfully(DistinctMovieFeaturesJob.job) must_== JobFinished
+    executesSuccessfully(job) must_== JobFinished
 
     val outPath = s"$dir/user/dev/ratings/year=2015/month=01/day=01/*"
     expectations { context =>
-      context.lines(new Path(outPath)).toSet.size must_== 2
+      context.lines(new Path(outPath)).toSet.size must_== expectedLength
     }
-  }
+  }}.set(minTestsOk = 5)
 
   def writeRecords[T : Encode](path: String, records: Seq[T], delim: String): Unit = {
     val lines = records.map(t => Encode.encode("", t).mkString(delim))
