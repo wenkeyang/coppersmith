@@ -25,6 +25,8 @@ import scalaz.std.list.listInstance
 import scalaz.syntax.std.list.ToListOpsFromList
 import scalaz.syntax.traverse.ToTraverseOps
 
+import org.joda.time.DateTime
+
 import au.com.cba.omnia.maestro.api._, Maestro._
 
 import commbank.coppersmith.Feature._
@@ -92,6 +94,15 @@ final case class FixedSinkPartition[T, PP : PathComponents : TupleSetter](
   def pathComponents = implicitly
   def tupleSetter = implicitly
   def underlying = Partition(fieldNames, _ => partitionValue, pathPattern)
+}
+
+object FixedSinkPartition {
+  def byDay[T](dt: DateTime) =
+    FixedSinkPartition[T, (String, String, String)](
+      List("year", "month", "day"),
+      "year=%s/month=%s/day=%s",
+      (dt.getYear.toString, f"${dt.getMonthOfYear}%02d", f"${dt.getDayOfMonth}%02d")
+    )
 }
 
 final case class DerivedSinkPartition[T, PP : PathComponents : TupleSetter](

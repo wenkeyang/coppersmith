@@ -203,10 +203,12 @@ Coppersmith currently supports the following source types:
   files under a Hive-partitioned directory structure
 - `TypedPipeSource`: see [Generating features from custom scalding code](#generating-features-from-custom-scalding-code)
 
-one sink type:
+two sink types:
 
 - `HiveTextSink`: writes records to a Hive-partitioned directory
 structure using delimited text encoding
+- `HiveParquetSink`: writes records to a Hive-partitioned directory
+structure using Parquet encoding
 
 and one sink thrift implementation:
 

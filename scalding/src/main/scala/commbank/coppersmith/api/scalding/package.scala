@@ -34,6 +34,7 @@ package object scalding {
   val FixedSinkPartition = commbank.coppersmith.scalding.FixedSinkPartition
   val DerivedSinkPartition = commbank.coppersmith.scalding.DerivedSinkPartition
   val HiveTextSink = commbank.coppersmith.scalding.HiveTextSink
+  val HiveParquetSink = commbank.coppersmith.scalding.HiveParquetSink
   val EavtText = commbank.coppersmith.scalding.EavtText
 
   implicit val framework: Lift[TypedPipe] = commbank.coppersmith.scalding.lift.scalding
