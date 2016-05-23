@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Coppersmith : Feature Engineering as Composable Functions">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Coppersmith</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/CommBank/coppersmith">View on GitHub</a>
+
+          <h1 id="project_title">Coppersmith</h1>
+          <h2 id="project_tagline">Feature Engineering as Composable Functions</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/CommBank/coppersmith/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/CommBank/coppersmith/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p><strong>Coppersmith</strong> is a library to enable the joining, aggregation, and synthesis of "features", streams of facts about entities derived from "analytical records".</p>
+
+<p>This library was originally written by a squad within the Analytics &amp; Information group at <a href="https://www.commbank.com.au/">Commonwealth Bank</a>, looking to improve the task of authoring and maintaining features for use in predictive analytics and machine learning.</p>
+
+<p>Our working hypothesis was that for all the complexity of the business domain and the size of the data sets involved, fundamentally the logic used in feature generation can be described as simple functions and those functions should be able to be composed. The framework now called <strong>coppersmith</strong> grew out of our efforts to improve the lives of feature authors.</p>
+
+<h2>
+<a id="documentation" class="anchor" href="#documentation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Documentation</h2>
+
+<p>We have a richly detailed <a href="https://github.com/CommBank/coppersmith/blob/master/USERGUIDE.markdown">user guide</a>.</p>
+
+<p>There is also a <a href="https://github.com/CommBank/coppersmith/blob/master/TROUBLESHOOTING.markdown">troubleshooting guide</a> available.</p>
+
+<h2>
+<a id="versioning" class="anchor" href="#versioning" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Versioning</h2>
+
+<p>The latest version of <strong>coppersmith</strong> is <code>0.13.1-20160520015824-5dde44b</code>.</p>
+
+<p>The <a href="https://github.com/CommBank/coppersmith/blob/master/CHANGELOG.markdown">change log</a> lists all backwards-incompatible changes to the library (i.e. changes which might break existing client code). Any such changes require bumping the second number in the version.</p>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Usage</h2>
+
+<p>Add the <strong>coppersmith plugin</strong> to your <strong>SBT configuration</strong> (inside <code>project/plugins.sbt</code>).</p>
+
+<pre><code>addSbtPlugin("au.com.cba.omnia" %% "coppersmith-plugin" % "0.13.1-20160520015824-5dde44b")
+</code></pre>
+
+<p>The plugin adds the appropriate <strong>coppersmith</strong> versions to your build and enables the publishing of feature metadata.</p>
+
+<h2>
+<a id="contributors" class="anchor" href="#contributors" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Contributors</h2>
+
+<ul>
+<li>Kristian Domagala <a href="https://github.com/dkristian">@dkristian</a>
+</li>
+<li>Todd Owen <a href="https://github.com/toddmowen">@toddmowen</a>
+</li>
+<li>Tin Pavlinic <a href="https://github.com/triggerNZ">@triggerNZ</a>
+</li>
+<li>Ewan Vaughan <a href="https://github.com/ewanv">@ewanv</a>
+</li>
+<li>Andrew Cowie <a href="https://github.com/afcowie">@afcowie</a>
+</li>
+<li>Konstantinos Servis <a href="https://github.com/knservis">@knservis</a>
+</li>
+<li>Afsal Thaj <a href="https://github.com/afsalthaj">@afsalthaj</a>
+</li>
+<li>TianYi Zhu <a href="https://github.com/Fantoccini">@Fantoccini</a>
+</li>
+<li>Michael Thomas <a href="https://github.com/Michaelt293">@Michaelt293</a>
+</li>
+</ul>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Coppersmith maintained by <a href="https://github.com/CommBank">CommBank</a></p>
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
