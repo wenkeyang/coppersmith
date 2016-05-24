@@ -31,7 +31,9 @@ We have a richly detailed [user guide](USERGUIDE.markdown),
 which we consider a good introduction to **coppersmith**. PR's to the user
 guide as you become familiar with the library are especially encouraged!!!
 
-There is also a [troubleshooting guide](TROUBLESHOOTING.markdown) available.
+There is also a [troubleshooting guide](TROUBLESHOOTING.markdown) available and
+a [GitHub Pages site](http://commbank.github.io/coppersmith/) which provides
+additional information including latest version and usage information.
 
 Versioning
 ----------
@@ -51,3 +53,4 @@ Contributors
 - Konstantinos Servis [@knservis](https://github.com/knservis)
 - Afsal Thaj [@afsalthaj](https://github.com/afsalthaj)
 - TianYi Zhu [@Fantoccini](https://github.com/Fantoccini)
+- Michael Thomas [@Michaelt293](https://github.com/Michaelt293)
