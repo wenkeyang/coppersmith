@@ -20,16 +20,20 @@ import commbank.coppersmith.Lift
 package object scalding {
 
   type FeatureJobConfig[S] = commbank.coppersmith.scalding.FeatureJobConfig[S]
-  type SimpleFeatureJobOps = commbank.coppersmith.scalding.SimpleFeatureJobOps
+  type FeatureSetExecution = commbank.coppersmith.scalding.FeatureSetExecution
+  type FeatureSetExecutions = commbank.coppersmith.scalding.FeatureSetExecutions
+  type FeatureSink = commbank.coppersmith.scalding.FeatureSink
+  type FixedSinkPartition[T, P] = commbank.coppersmith.scalding.FixedSinkPartition[T, P]
+  type Partitions[P] = commbank.coppersmith.scalding.Partitions[P]
+  type PathComponents[P] = commbank.coppersmith.scalding.Partitions.PathComponents[P]
   type SimpleFeatureJob = commbank.coppersmith.scalding.SimpleFeatureJob
+  type SimpleFeatureJobOps = commbank.coppersmith.scalding.SimpleFeatureJobOps
   type FeatureValueEnc[T] = commbank.coppersmith.scalding.FeatureValueEnc[T]
 
   val DataSourceView = commbank.coppersmith.scalding.DataSourceView
   val FeatureSetExecutions = commbank.coppersmith.scalding.FeatureSetExecutions
   val FeatureSetExecution = commbank.coppersmith.scalding.FeatureSetExecution
-
   val Partitions = commbank.coppersmith.scalding.Partitions
-  val PathComponents = commbank.coppersmith.scalding.Partitions
   val HiveTextSource = commbank.coppersmith.scalding.HiveTextSource
   val HiveParquetSource = commbank.coppersmith.scalding.HiveParquetSource
   val TypedPipeSource = commbank.coppersmith.scalding.TypedPipeSource

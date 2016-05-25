@@ -30,6 +30,7 @@ package object api extends GeneratedJoinTypeInstances with SourceBinderInstances
   }
 
   type AbstractFeatureSet[S] = commbank.coppersmith.AbstractFeatureSet[S]
+  type BoundFeatureSource[S, P[_]] = commbank.coppersmith.BoundFeatureSource[S, P]
   type Feature[S, +V <: Value] = commbank.coppersmith.Feature[S, V]
   type FeatureSet[S] = commbank.coppersmith.FeatureSet[S]
   type FeatureSource[S, FS <: FeatureSource[S, FS]] = commbank.coppersmith.FeatureSource[S, FS]
@@ -55,6 +56,9 @@ package object api extends GeneratedJoinTypeInstances with SourceBinderInstances
   type FeatureTime = commbank.coppersmith.Feature.FeatureTime
   type SourceBinder[DS, S, U, P[_]] = commbank.coppersmith.SourceBinder[DS, S, U, P]
   type Value = commbank.coppersmith.Feature.Value
+
+  type Datestamp = commbank.coppersmith.util.Datestamp
+  type Timestamp = commbank.coppersmith.util.Timestamp
 
   // Maestro dependencies below
   type JobStatus = au.com.cba.omnia.maestro.api.JobStatus
@@ -83,6 +87,9 @@ package object api extends GeneratedJoinTypeInstances with SourceBinderInstances
   val SetRange = Value.SetRange
   val MapRange = Value.MapRange
   val Patterns = commbank.coppersmith.Patterns
+
+  val Datestamp = commbank.coppersmith.util.Datestamp
+  val Timestamp = commbank.coppersmith.util.Timestamp
 
   //Maestro dependencies below
   lazy val JobFinished =  au.com.cba.omnia.maestro.scalding.JobFinished
