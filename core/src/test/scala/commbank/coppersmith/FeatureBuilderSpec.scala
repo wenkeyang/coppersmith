@@ -16,6 +16,7 @@ package commbank.coppersmith
 
 import org.joda.time.DateTime
 import org.scalacheck.Prop.forAll
+import org.scalacheck.Gen
 
 import org.specs2._
 import org.specs2.matcher.Matcher
@@ -28,7 +29,7 @@ import scalaz.syntax.std.list.ToListOpsFromList
 import Feature._, Value._, Type._
 import FeatureBuilderSource.fromFS
 import Arbitraries._
-import test.thrift.Customer
+import commbank.coppersmith.test.thrift.{Account, Customer}
 
 object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"""
   SelectFeatureSet - Test an example set of features based on selecting fields
@@ -99,6 +100,8 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
   An example feature set
     must generate expected metadata       $generateMetadata
     must generate expected feature values $generateFeatureValues
+  The avg aggregator
+    must generate expected values         $generateAvgValues
 """
 
   object CustomerFeatureSet extends AggregationFeatureSet[Customer] {
@@ -230,5 +233,37 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
           case _ => null
         }
       )
+  }
+
+  object AverageFeatureSet extends AggregationFeatureSet[Account] {
+    val namespace                               = "test.namespace"
+    def entity(a: Account)                      = a.id
+    def time(a: Account, ctx: FeatureContext)   = ctx.generationTime.getMillis
+
+    val source  = From[Account]()
+    val builder = source.featureSetBuilder(namespace, entity)
+    val select: FeatureSetBuilder[Account, Account] = builder
+
+    type CAF      = AggregationFeature[Account, Account, _, Value]
+    val avgF: CAF = select(avgBigDec(c => BigDecimal(c.balanceBigDecimal)))
+      .asFeature(Continuous, "avg", "Agg feature")
+
+    def aggregationFeatures = List(avgF)
+  }
+
+  def generateAvgValues = {
+    testAverage(NonEmptyList("1000000000000.02", "0.02"), BigDecimal("500000000000.02"))
+    testAverage(NonEmptyList("1200000000000.01", "1200000000000.03", "0.02"), BigDecimal("800000000000.02"))
+  }
+
+  def testAverage(vals: NonEmptyList[String], expected: BigDecimal) = {
+    val as   = vals.map(v => Gen.resultOf(Account.apply _).sample.get.copy(balanceBigDecimal = v))
+    val time = DateTime.now.getMillis
+
+    val featureValues = AverageFeatureSet.generate((as.head.id, as.list))
+
+    val eavtValues = featureValues.map { fv => fv.asEavt(time) }.toList
+
+    eavtValues.toList must matchEavts(List((as.head.id, "avg", expected: Decimal, time)))
   }
 }

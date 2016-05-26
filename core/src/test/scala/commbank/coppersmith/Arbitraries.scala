@@ -73,6 +73,7 @@ object Arbitraries {
     (strGen |@|
        strGen |@|
        arbitrary[Double] |@|
+       arbitrary[String] |@|
        option(strGen) |@|
        option(ageGen) |@|
        arbitrary[Option[Double]] |@|

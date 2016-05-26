@@ -28,10 +28,11 @@ struct Account {
   1 : required string id
   2 : required string customer_id
   3 : required double balance
-  4 : optional string name
-  5 : optional i32    age
-  6 : optional double min_balance
-  7 : required i64    time
+  4 : required string balance_big_decimal
+  5 : optional string name
+  6 : optional i32    age
+  7 : optional double min_balance
+  8 : required i64    time
 }
 
 //for testing joins
