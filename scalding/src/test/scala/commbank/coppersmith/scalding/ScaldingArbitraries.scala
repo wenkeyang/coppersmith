@@ -18,8 +18,9 @@ import org.scalacheck.Arbitrary
 
 import org.apache.hadoop.fs.Path
 
-import commbank.coppersmith.Arbitraries.arbNonEmptyAlphaStr
+import commbank.coppersmith.Arbitraries.{arbNonEmptyAlphaStr, hiveIdentifierGen}
 
 object ScaldingArbitraries {
   implicit val arbPath: Arbitrary[Path] = Arbitrary(arbNonEmptyAlphaStr.map(nes => new Path(nes.value)))
+  implicit val arbHivePath: Arbitrary[Path] = Arbitrary(hiveIdentifierGen.map(nes => new Path(nes)))
 }

@@ -28,9 +28,10 @@ object MetadataOutput {
   val defaultCombiner = (list: List[String]) => list.mkString("\n")
 
   private def psvValueTypeToString(v: ValueType) = v match {
-    case ValueType.IntegralType => "int"
-    case ValueType.DecimalType  => "double"
-    case ValueType.StringType   => "string"
+    case ValueType.IntegralType      => "int"
+    case ValueType.DecimalType       => "bigdecimal"
+    case ValueType.FloatingPointType => "double"
+    case ValueType.StringType        => "string"
   }
 
   private def psvFeatureTypeToString(f: Feature.Type) = f match {

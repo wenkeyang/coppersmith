@@ -96,6 +96,7 @@ package object api {
   type Integral = commbank.coppersmith.Feature.Value.Integral
   type Str = commbank.coppersmith.Feature.Value.Str
   type Decimal = commbank.coppersmith.Feature.Value.Decimal
+  type FloatingPoint = commbank.coppersmith.Feature.Value.FloatingPoint
   type BasicFeatureSet[S] = commbank.coppersmith.BasicFeatureSet[S]
   type QueryFeatureSet[S, V <: Value] = commbank.coppersmith.QueryFeatureSet[S, V]
   type FeatureContext = commbank.coppersmith.FeatureContext
@@ -113,6 +114,7 @@ package object api {
   val Integral = commbank.coppersmith.Feature.Value.Integral
   val Str = commbank.coppersmith.Feature.Value.Str
   val Decimal = commbank.coppersmith.Feature.Value.Decimal
+  val FloatingPoint = commbank.coppersmith.Feature.Value.FloatingPoint
   val FeatureStub = commbank.coppersmith.FeatureStub
   val ExplicitGenerationTime = commbank.coppersmith.ExplicitGenerationTime
   val From = commbank.coppersmith.From

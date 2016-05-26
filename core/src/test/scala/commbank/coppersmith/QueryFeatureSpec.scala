@@ -41,7 +41,7 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
 
   import Type._
 
-  object CustomerFeatureSet extends QueryFeatureSet[Customer, Decimal] {
+  object CustomerFeatureSet extends QueryFeatureSet[Customer, FloatingPoint] {
     val namespace   = "test.namespace"
     val featureType = Continuous
 
@@ -52,9 +52,9 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
       queryFeature(name, humanDescription, condition)
     }
 
-    val youngHeight: Feature[Customer, Decimal] = feature("youngHeight", "Young Height", _.age < 18)
-    val midHeight:   Feature[Customer, Decimal] = feature("midHeight",  "Middle Height", c => Range(18 , 65).contains(c.age))
-    val oldHeight:   Feature[Customer, Decimal] = feature("oldHeight", "Old Height",  _.age >= 65)
+    val youngHeight: Feature[Customer, FloatingPoint] = feature("youngHeight", "Young Height",  _.age < 18)
+    val midHeight:   Feature[Customer, FloatingPoint] = feature("midHeight",   "Middle Height", c => Range(18 , 65).contains(c.age))
+    val oldHeight:   Feature[Customer, FloatingPoint] = feature("oldHeight",  "Old Height",     _.age >= 65)
 
     def features = List(youngHeight, midHeight, oldHeight)
   }
@@ -64,9 +64,9 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      Metadata[Customer, Decimal](namespace, "youngHeight", "Young Height", Continuous),
-      Metadata[Customer, Decimal](namespace, "midHeight",   "Middle Height", Continuous),
-      Metadata[Customer, Decimal](namespace, "oldHeight",  "Old Height", Continuous)
+      Metadata[Customer, FloatingPoint](namespace, "youngHeight", "Young Height",  Continuous),
+      Metadata[Customer, FloatingPoint](namespace, "midHeight",   "Middle Height", Continuous),
+      Metadata[Customer, FloatingPoint](namespace, "oldHeight",   "Old Height",    Continuous)
     )
   }
 
@@ -77,7 +77,7 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     val expectedFeature = if (c.age < 18) youngHeight else if (c.age >= 65) oldHeight else midHeight
 
     featureValues must_== List(
-      FeatureValue[Decimal](c.id, expectedFeature.metadata.name, c.height)
+      FeatureValue[FloatingPoint](c.id, expectedFeature.metadata.name, c.height)
     )
   }}
 }

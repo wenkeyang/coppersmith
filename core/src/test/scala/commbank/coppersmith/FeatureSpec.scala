@@ -42,11 +42,13 @@ object MetadataSpec extends Specification with ScalaCheck { def is = s2"""
      */
     value match {
       case Integral(_) =>
-        Metadata[Customer, Integral](namespace, name, desc, fType).valueType must_== IntegralType
+        Metadata[Customer, Integral]     (namespace, name, desc, fType).valueType must_== IntegralType
       case Decimal(_) =>
-        Metadata[Customer, Decimal] (namespace, name, desc, fType).valueType must_== DecimalType
+        Metadata[Customer, Decimal]      (namespace, name, desc, fType).valueType must_== DecimalType
+      case FloatingPoint(_) =>
+        Metadata[Customer, FloatingPoint](namespace, name, desc, fType).valueType must_== FloatingPointType
       case Str(_) =>
-        Metadata[Customer, Str]     (namespace, name, desc, fType).valueType.must_==(StringType)
+        Metadata[Customer, Str]          (namespace, name, desc, fType).valueType.must_==(StringType)
     }
   }}
 }
@@ -75,6 +77,7 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
     Arbitrary(
       Gen.oneOf(
         NonEmptyListArbitrary(Arbitrary(decimalValueGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(floatingPointValueGen)).arbitrary,
         NonEmptyListArbitrary(Arbitrary(integralValueGen)).arbitrary,
         NonEmptyListArbitrary(Arbitrary(strValueGen)).arbitrary
       )
@@ -84,6 +87,7 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
   implicit val valueOrder: Order[Value] =
     Order.order((a, b) => (a, b) match {
       case (Decimal(d1), Decimal(d2)) => d1.cmp(d2)
+      case (FloatingPoint(d1), FloatingPoint(d2)) => d1.cmp(d2)
       case (Integral(i1), Integral(i2)) => i1.cmp(i2)
       case (Str(s1), Str(s2)) => s1.cmp(s2)
       case _ => sys.error("Assumption failed: Expected same value types from arbValues")
@@ -158,6 +162,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
   ===========
     Integral features convert to continuous and to categorical  $integralConversions
     Decimal features convert to continuous and to categorical  $decimalConversions
+    Floating point features convert to continuous and to categorical  $floatingPointConversions
     String features cannot convert to continuous  $stringConversions
 """
 
@@ -175,6 +180,18 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def decimalConversions = {
     val feature = Patterns.general[Customer, Value.Decimal, Value.Decimal](
+      "ns", "name", "Description", Type.Ordinal, _.id, c => Some(BigDecimal(c.age))
+    )
+    Seq(
+      feature.metadata.featureType === Type.Ordinal,
+      feature.as(Continuous).metadata.featureType === Type.Continuous,
+      feature.as(Ordinal).metadata.featureType === Type.Ordinal,
+      feature.as(Ordinal).as(Continuous).metadata.featureType === Type.Continuous
+    )
+  }
+
+  def floatingPointConversions = {
+    val feature = Patterns.general[Customer, Value.FloatingPoint, Value.FloatingPoint](
       "ns", "name", "Description", Type.Ordinal, _.id, c => Some(c.age.toDouble)
     )
     Seq(

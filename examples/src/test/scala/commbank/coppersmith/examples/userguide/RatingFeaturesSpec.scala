@@ -46,7 +46,7 @@ object RatingFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
     expectations { context =>
       context.lines(new Path(outPath)).toSet must_==
         Set(
-          "1|MOVIE_AVG_RATING|3.0|2015-01-01",
+          "1|MOVIE_AVG_RATING|3|2015-01-01",
           "1|RATING_STANDARD_DEVIATION|0.0|2015-01-01",
           "2|MOVIE_AVG_RATING|3.5|2015-01-01",
           "2|RATING_STANDARD_DEVIATION|1.5|2015-01-01"

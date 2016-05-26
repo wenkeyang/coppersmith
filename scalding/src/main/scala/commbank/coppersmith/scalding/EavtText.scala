@@ -32,6 +32,7 @@ object EavtText {
         val featureValue = (fv.value match {
           case Integral(v) => v.map(_.toString)
           case Decimal(v) => v.map(_.toString)
+          case FloatingPoint(v) => v.map(_.toString)
           case Str(v) => v
         }).getOrElse(HiveTextSink.NullValue)
 

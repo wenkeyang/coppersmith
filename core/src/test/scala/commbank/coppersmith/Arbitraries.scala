@@ -14,6 +14,8 @@
 
 package commbank.coppersmith
 
+import scala.util.Try
+
 import scalaz.{Value => _, _}, Scalaz.{option => _, _}
 import scalaz.scalacheck.ScalaCheckBinding._
 
@@ -31,9 +33,13 @@ object Arbitraries {
   implicit val arbFeatureType: Arbitrary[Type] = Arbitrary(oneOf(Nominal, Continuous, Ordinal, Discrete))
 
   implicit val integralValueGen: Gen[Integral] = arbitrary[Option[Long]].map(Integral(_))
-  implicit val decimalValueGen: Gen[Decimal] = arbitrary[Option[Double]].map(Decimal(_))
+  implicit val decimalValueGen: Gen[Decimal] =
+    arbitrary[Option[BigDecimal]].retryUntil(obd =>
+      Try(obd.hashCode()).isSuccess
+    ).map(Decimal(_))
+  implicit val floatingPointValueGen: Gen[FloatingPoint] = arbitrary[Option[Double]].map(FloatingPoint(_))
   implicit val strValueGen: Gen[Str] = arbitrary[Option[String]].map(Str(_))
-  implicit val arbValue: Arbitrary[Value] = Arbitrary(oneOf(integralValueGen, decimalValueGen, strValueGen))
+  implicit val arbValue: Arbitrary[Value] = Arbitrary(oneOf(integralValueGen, decimalValueGen, floatingPointValueGen, strValueGen))
 
 
   implicit val arbDateTime: Arbitrary[DateTime] = Arbitrary(for { year <- chooseNum(1970, 2100); month <- chooseNum(1, 12); day <- chooseNum(1, 28) }
@@ -102,4 +108,6 @@ object Arbitraries {
 
   val arbNonEmptyAlphaStr: Gen[NonEmptyString] =
     for (h <- alphaChar; t <- alphaStr) yield nonEmptyString(h, t)
+
+  val hiveIdentifierGen: Gen[String] = arbNonEmptyAlphaStr.map(_.value.take(127))
 }

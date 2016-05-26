@@ -209,8 +209,8 @@ object ScaldingJobSpec {
     def expectedFeatureValues(custAccts: CustomerAccounts, time: DateTime) = {
       custAccts.cas.flatMap(_.as.flatMap(acct => {
         val values = List(
-                  List(FeatureValue[Decimal] (acct.id, "balance", acct.balance)),
-          acct.age.map(FeatureValue[Integral](acct.id, "age",     _)).toList
+                  List(FeatureValue[FloatingPoint](acct.id, "balance", acct.balance)),
+          acct.age.map(FeatureValue[Integral]     (acct.id, "age",     _)).toList
         ).flatten
         values.map(v => EavtEnc.encode((v, time.getMillis)))
       })).toList
@@ -227,7 +227,7 @@ object ScaldingJobSpec {
 
     type AAF = AggregationFeature[Account, Account, _, Value]
 
-    val sizeF:  AAF = select(size)             .asFeature(Continuous, "size",   "test")
+    val sizeF:  AAF = select(size)             .asFeature(Continuous, "size",    "test")
     val sizeBF: AAF = select(size).having(_> 2).asFeature(Continuous, "sizeBig", "test")
     val minF:   AAF = select(min(_.balance))   .asFeature(Continuous, "min",     "test")
 
@@ -250,16 +250,16 @@ object ScaldingJobSpec {
     def expectedFeatureValues(custAccts: CustomerAccounts, time: DateTime) = {
 
       custAccts.cas.flatMap(cag => {
-        val size    = cag.as.size
+        val size       = cag.as.size
         val sizesOver2 = cag.as.size > 2
-        val min     = cag.as.map(_.balance).min
-        val ages    = cag.as.map(_.age).collect { case Some(age) => age }
-        val collect = ages.toNel.map(_.list.sum)
-        val values  = List(
-          Some(FeatureValue[Integral](cag.c.id, "size",    size)),
-          sizesOver2.option((FeatureValue[Integral](cag.c.id, "sizeBig",  size))),
-          Some(FeatureValue[Decimal] (cag.c.id, "min",     min)),
-          collect.map(FeatureValue[Integral](cag.c.id, "collect", _))
+        val min        = cag.as.map(_.balance).min
+        val ages       = cag.as.map(_.age).collect { case Some(age) => age }
+        val collect    = ages.toNel.map(_.list.sum)
+        val values     = List(
+          Some(FeatureValue[Integral]              (cag.c.id, "size",    size)),
+          sizesOver2.option((FeatureValue[Integral](cag.c.id, "sizeBig", size))),
+          Some(FeatureValue[FloatingPoint]         (cag.c.id, "min",     min)),
+          collect.map(FeatureValue[Integral]       (cag.c.id, "collect", _))
         ).flatten
         values.map(v => EavtEnc.encode((v, time.getMillis)))
       }).toList

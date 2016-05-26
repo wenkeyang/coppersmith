@@ -28,7 +28,7 @@ import commbank.coppersmith.examples.thrift._
 object Example2 {
   val customerJoinAccount = Join[Customer].to[Account].on(_.acct, _.id)
 
-  val feature = Patterns.general[(Customer, Account), Decimal, Decimal](
+  val feature = Patterns.general[(Customer, Account), FloatingPoint, FloatingPoint](
     "ns",
     "name",
     "description",

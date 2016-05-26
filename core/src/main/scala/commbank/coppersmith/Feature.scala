@@ -44,21 +44,25 @@ object Feature {
 
   sealed trait Value
   object Value {
-    case class Integral(value: Option[Long])  extends Value
-    case class Decimal(value: Option[Double]) extends Value
-    case class Str(value: Option[String])     extends Value
+    case class Integral(value: Option[Long])        extends Value
+    case class Decimal(value: Option[BigDecimal])   extends Value
+    case class FloatingPoint(value: Option[Double]) extends Value
+    case class Str(value: Option[String])           extends Value
 
-    implicit def fromInt(i: Int):                Integral = Option(i)
-    implicit def fromLong(l: Long):              Integral = Option(l)
-    implicit def fromDouble(d: Double):          Decimal  = Option(d)
-    implicit def fromString(s: String):          Str      = Option(s)
-    implicit def fromOInt(i: Option[Int]):       Integral = Integral(i.map(_.toLong))
-    implicit def fromOLong(l: Option[Long]):     Integral = Integral(l)
-    implicit def fromODouble(d: Option[Double]): Decimal  = Decimal(d)
-    implicit def fromOString(s: Option[String]): Str      = Str(s)
+    implicit def fromInt(i: Int):                         Integral      = Option(i)
+    implicit def fromLong(l: Long):                       Integral      = Option(l)
+    implicit def fromDouble(d: Double):                   FloatingPoint = Option(d)
+    implicit def fromBigDecimal(bd: BigDecimal):          Decimal       = Option(bd)
+    implicit def fromString(s: String):                   Str           = Option(s)
+    implicit def fromOInt(i: Option[Int]):                Integral      = Integral(i.map(_.toLong))
+    implicit def fromOLong(l: Option[Long]):              Integral      = Integral(l)
+    implicit def fromODouble(d: Option[Double]):          FloatingPoint = FloatingPoint(d)
+    implicit def fromOBigDecimal(bd: Option[BigDecimal]): Decimal       = Decimal(bd)
+    implicit def fromOString(s: Option[String]):          Str           = Str(s)
 
     implicit val intOrder: Order[Integral] = orderBy(_.value)
     implicit val decOrder: Order[Decimal] = orderBy(_.value)
+    implicit val fpOrder:  Order[FloatingPoint] = orderBy(_.value)
     implicit val strOrder: Order[Str] = orderBy(_.value)
 
     abstract class Range[+V : Order] {
@@ -89,15 +93,18 @@ object Feature {
     def typeTag:  TypeTag[T] = implicitly
     def valueTag: TypeTag[V] = implicitly
   }
-  implicit object NominalStr         extends Conforms[Type.Nominal.type,    Value.Str]
+  implicit object NominalStr              extends Conforms[Type.Nominal.type,    Value.Str]
 
-  implicit object OrdinalDecimal     extends Conforms[Type.Ordinal.type,    Value.Decimal]
-  implicit object ContinuousDecimal  extends Conforms[Type.Continuous.type, Value.Decimal]
+  implicit object OrdinalDecimal          extends Conforms[Type.Ordinal.type,    Value.Decimal]
+  implicit object ContinuousDecimal       extends Conforms[Type.Continuous.type, Value.Decimal]
 
-  implicit object OrdinalIntegral    extends Conforms[Type.Ordinal.type,    Value.Integral]
-  implicit object ContinuousIntegral extends Conforms[Type.Continuous.type, Value.Integral]
+  implicit object OrdinalFloatingPoint    extends Conforms[Type.Ordinal.type,    Value.FloatingPoint]
+  implicit object ContinuousFloatingPoint extends Conforms[Type.Continuous.type, Value.FloatingPoint]
 
-  implicit object DiscreteIntegral   extends Conforms[Type.Discrete.type,   Value.Integral]
+  implicit object OrdinalIntegral         extends Conforms[Type.Ordinal.type,    Value.Integral]
+  implicit object ContinuousIntegral      extends Conforms[Type.Continuous.type, Value.Integral]
+
+  implicit object DiscreteIntegral        extends Conforms[Type.Discrete.type,   Value.Integral]
 
   object Conforms {
 
@@ -126,16 +133,18 @@ object Feature {
   object Metadata {
     def valueType[V <: Value : TypeTag]: ValueType = typeOf[V] match {
         // Would be nice to get exhaustiveness checking here
-        case t if t =:= typeOf[Value.Integral] => ValueType.IntegralType
-        case t if t =:= typeOf[Value.Decimal] =>  ValueType.DecimalType
-        case t if t =:= typeOf[Value.Str] =>      ValueType.StringType
+        case t if t =:= typeOf[Value.Integral]      => ValueType.IntegralType
+        case t if t =:= typeOf[Value.Decimal]       => ValueType.DecimalType
+        case t if t =:= typeOf[Value.FloatingPoint] => ValueType.FloatingPointType
+        case t if t =:= typeOf[Value.Str]           => ValueType.StringType
       }
 
     sealed trait ValueType
     object ValueType {
-      case object IntegralType extends ValueType
-      case object DecimalType  extends ValueType
-      case object StringType   extends ValueType
+      case object IntegralType      extends ValueType
+      case object DecimalType       extends ValueType
+      case object FloatingPointType extends ValueType
+      case object StringType        extends ValueType
     }
 
     case class TypeInfo(typeName: String, typeArgs: List[TypeInfo]) {
