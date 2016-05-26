@@ -60,10 +60,10 @@ object Feature {
     implicit def fromOBigDecimal(bd: Option[BigDecimal]): Decimal       = Decimal(bd)
     implicit def fromOString(s: Option[String]):          Str           = Str(s)
 
-    implicit val intOrder: Order[Integral] = orderBy(_.value)
-    implicit val decOrder: Order[Decimal] = orderBy(_.value)
+    implicit val intOrder: Order[Integral]      = orderBy(_.value)
+    implicit val decOrder: Order[Decimal]       = orderBy(_.value)
     implicit val fpOrder:  Order[FloatingPoint] = orderBy(_.value)
-    implicit val strOrder: Order[Str] = orderBy(_.value)
+    implicit val strOrder: Order[Str]           = orderBy(_.value)
 
     abstract class Range[+V : Order] {
       // V needs to be covariant to satisfy Metadata type constraint, so can't be in contravariant

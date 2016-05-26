@@ -109,5 +109,7 @@ object Arbitraries {
   val arbNonEmptyAlphaStr: Gen[NonEmptyString] =
     for (h <- alphaChar; t <- alphaStr) yield nonEmptyString(h, t)
 
+  // Need take(127) as Hive will fail to store a string in "NAME" or "TBL_NAME"
+  // that is over 127 chars long
   val hiveIdentifierGen: Gen[String] = arbNonEmptyAlphaStr.map(_.value.take(127))
 }

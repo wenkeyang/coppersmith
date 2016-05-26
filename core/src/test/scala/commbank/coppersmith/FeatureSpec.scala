@@ -48,7 +48,7 @@ object MetadataSpec extends Specification with ScalaCheck { def is = s2"""
       case FloatingPoint(_) =>
         Metadata[Customer, FloatingPoint](namespace, name, desc, fType).valueType must_== FloatingPointType
       case Str(_) =>
-        Metadata[Customer, Str]          (namespace, name, desc, fType).valueType.must_==(StringType)
+        Metadata[Customer, Str]          (namespace, name, desc, fType).valueType must_== StringType
     }
   }}
 }

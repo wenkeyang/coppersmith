@@ -125,7 +125,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val avgF:     CAF = select(avg(_.age.toDouble))       .asFeature(Continuous, "avg",     "Agg feature")
     val sumBigDF: CAF = select(sum(bigD(_.height)))       .asFeature(Continuous, "sumBigD", "Agg feature")
     val maxBigDF: CAF = select(max(bigD(_.age)))          .asFeature(Continuous, "maxBigD", "Agg feature")
-    val avgBigDF: CAF = select(avg(bigD(_.age)))          .asFeature(Continuous, "avgBigD", "Agg feature")
+    val avgBigDF: CAF = select(avgBigDec(_.age))          .asFeature(Continuous, "avgBigD", "Agg feature")
     val ucbF:     CAF = select(uniqueCountBy(_.age % 10)) .asFeature(Continuous, "ucb",     "Agg feature")
 
     import com.twitter.algebird.Aggregator
@@ -166,7 +166,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
       Metadata[(EntityId, Iterable[Customer]), FloatingPoint](namespace, "min",     "Agg feature", Continuous),
       Metadata[(EntityId, Iterable[Customer]), FloatingPoint](namespace, "maxBy",   "Agg feature", Continuous),
       Metadata[(EntityId, Iterable[Customer]), Integral]     (namespace, "minBy",   "Agg feature", Continuous),
-      Metadata[(EntityId, Iterable[Customer]), Decimal]      (namespace, "avg",     "Agg feature", Continuous),
+      Metadata[(EntityId, Iterable[Customer]), FloatingPoint](namespace, "avg",     "Agg feature", Continuous),
       Metadata[(EntityId, Iterable[Customer]), Decimal]      (namespace, "sumBigD", "Agg feature", Continuous),
       Metadata[(EntityId, Iterable[Customer]), Decimal]      (namespace, "maxBigD", "Agg feature", Continuous),
       Metadata[(EntityId, Iterable[Customer]), Decimal]      (namespace, "avgBigD", "Agg feature", Continuous),
@@ -199,7 +199,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
                   Some((c.id, "min",     heights.min:                        FloatingPoint, time)),
                   Some((c.id, "maxBy",   maxCById.height:                    FloatingPoint, time)),
                   Some((c.id, "minBy",   minCById.age:                       Integral,      time)),
-                  Some((c.id, "avg",     (ages.sum / BigDecimal(ages.size)): Decimal,       time)),
+                  Some((c.id, "avg",     (ages.sum.toDouble / ages.size):    FloatingPoint, time)),
                   Some((c.id, "sumBigD", heights.map(BigDecimal(_)).sum:     Decimal,       time)),
                   Some((c.id, "maxBigD", ages.map(BigDecimal(_)).max:        Decimal,       time)),
                   Some((c.id, "avgBigD", (ages.sum / BigDecimal(ages.size)): Decimal,       time)),

@@ -120,21 +120,34 @@ trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
 
   // These allow aggregators to be created without specifying type args that
   // would otherwise be required if calling the delegated methods directly
-  def size: Aggregator[S, Long, Long]                                          = Aggregator.size
-  def count(where: S => Boolean = _ => true): Aggregator[S, Long, Long]        = Aggregator.count(where)
-  def avg[V](v: S => BigDecimal): Aggregator[S, BigDAveragedValue, BigDecimal] = AggregationFeature.avg[S](v)
-  def max[V : Ordering](v: S => V): Aggregator[S, V, V]                        = AggregationFeature.max[S, V](v)
-  def min[V : Ordering](v: S => V): Aggregator[S, V, V]                        = AggregationFeature.min[S, V](v)
-  def maxBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V]        = AggregationFeature.maxBy[S, O, V](o)(v)
-  def minBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V]        = AggregationFeature.minBy[S, O, V](o)(v)
-  def sum[V : Monoid](v: S => V): Aggregator[S, V, V]                          = Aggregator.prepareMonoid(v)
-  def uniqueCountBy[T](f : S => T): Aggregator[S, Set[T], Int]                 = AggregationFeature.uniqueCountBy(f)
+  def size: Aggregator[S, Long, Long]                                          =
+    Aggregator.size
+  def count(where: S => Boolean = _ => true): Aggregator[S, Long, Long]        =
+    Aggregator.count(where)
+  def avg[V](v: S => Double): Aggregator[S, AveragedValue, Double]             =
+    AggregationFeature.avg[S](v)
+  def avgBigDec[V](v: S => BigDecimal): Aggregator[S, BigDAveragedValue, BigDecimal] =
+    AggregationFeature.avgBigDec[S](v)
+  def max[V : Ordering](v: S => V): Aggregator[S, V, V]                        =
+    AggregationFeature.max[S, V](v)
+  def min[V : Ordering](v: S => V): Aggregator[S, V, V]                        =
+    AggregationFeature.min[S, V](v)
+  def maxBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V]        =
+    AggregationFeature.maxBy[S, O, V](o)(v)
+  def minBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V]        =
+    AggregationFeature.minBy[S, O, V](o)(v)
+  def sum[V : Monoid](v: S => V): Aggregator[S, V, V]                          =
+    Aggregator.prepareMonoid(v)
+  def uniqueCountBy[T](f : S => T): Aggregator[S, Set[T], Int]                 =
+    AggregationFeature.uniqueCountBy(f)
 }
 
 object AggregationFeature {
   import BigDAverages._
 
-  def avg[T](t: T => BigDecimal): Aggregator[T, BigDAveragedValue, BigDecimal] =
+  def avg[T](t: T => Double): Aggregator[T, AveragedValue, Double] =
+    AveragedValue.aggregator.composePrepare[T](t)
+  def avgBigDec[T](t: T => BigDecimal): Aggregator[T, BigDAveragedValue, BigDecimal] =
     BigDAverager.composePrepare[T](t)
   def maxBy[T, O : Ordering, V](o: T => O)(v: T => V): Aggregator[T, T, V] =
     Aggregator.maxBy[T, O](o).andThenPresent[V](v)

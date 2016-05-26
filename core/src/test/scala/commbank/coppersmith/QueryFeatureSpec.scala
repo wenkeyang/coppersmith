@@ -52,9 +52,10 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
       queryFeature(name, humanDescription, condition)
     }
 
-    val youngHeight: Feature[Customer, FloatingPoint] = feature("youngHeight", "Young Height",  _.age < 18)
-    val midHeight:   Feature[Customer, FloatingPoint] = feature("midHeight",   "Middle Height", c => Range(18 , 65).contains(c.age))
-    val oldHeight:   Feature[Customer, FloatingPoint] = feature("oldHeight",  "Old Height",     _.age >= 65)
+    type CustFeat = Feature[Customer, FloatingPoint]
+    val youngHeight: CustFeat = feature("youngHeight", "Young Height",  _.age < 18)
+    val midHeight:   CustFeat = feature("midHeight",   "Middle Height", c => Range(18 , 65).contains(c.age))
+    val oldHeight:   CustFeat = feature("oldHeight",   "Old Height",    _.age >= 65)
 
     def features = List(youngHeight, midHeight, oldHeight)
   }

@@ -7,6 +7,7 @@ Allow features values and aggregations to use `BigDecimal`
 - Change the value type of `Feature.Value.Decimal` to `BigDecimal`
 - Add `Feature.Value.FloatingPoint` that has a value of `Double`
 - Allow aggregations to accept and return `BigDecimal`
+- Add new aggregator `avgBigDec` to allow `BigDecimal` aggregations
 
  ### Upgrading
 
