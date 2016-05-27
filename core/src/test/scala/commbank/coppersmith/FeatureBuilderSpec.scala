@@ -227,7 +227,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
         }
       )
     case Decimal(Some(expectedBigDecimal)) =>
-      beCloseTo(expectedBigDecimal +/- 0.000000000001) ^^ (
+      beCloseTo(expectedBigDecimal +/- BigDecimal("0.0000000000000000001")) ^^ (
         (v: Value) => v match {
           case Decimal(Some(actualBigDecimal)) => actualBigDecimal
           case _ => null

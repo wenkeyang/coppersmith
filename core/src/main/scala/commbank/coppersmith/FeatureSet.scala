@@ -120,25 +120,25 @@ trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
 
   // These allow aggregators to be created without specifying type args that
   // would otherwise be required if calling the delegated methods directly
-  def size: Aggregator[S, Long, Long]                                          =
+  def size: Aggregator[S, Long, Long] =
     Aggregator.size
-  def count(where: S => Boolean = _ => true): Aggregator[S, Long, Long]        =
+  def count(where: S => Boolean = _ => true): Aggregator[S, Long, Long] =
     Aggregator.count(where)
-  def avg[V](v: S => Double): Aggregator[S, AveragedValue, Double]             =
+  def avg[V](v: S => Double): Aggregator[S, AveragedValue, Double] =
     AggregationFeature.avg[S](v)
   def avgBigDec[V](v: S => BigDecimal): Aggregator[S, BigDAveragedValue, BigDecimal] =
     AggregationFeature.avgBigDec[S](v)
-  def max[V : Ordering](v: S => V): Aggregator[S, V, V]                        =
+  def max[V : Ordering](v: S => V): Aggregator[S, V, V] =
     AggregationFeature.max[S, V](v)
-  def min[V : Ordering](v: S => V): Aggregator[S, V, V]                        =
+  def min[V : Ordering](v: S => V): Aggregator[S, V, V] =
     AggregationFeature.min[S, V](v)
-  def maxBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V]        =
+  def maxBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V] =
     AggregationFeature.maxBy[S, O, V](o)(v)
-  def minBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V]        =
+  def minBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V] =
     AggregationFeature.minBy[S, O, V](o)(v)
-  def sum[V : Monoid](v: S => V): Aggregator[S, V, V]                          =
+  def sum[V : Monoid](v: S => V): Aggregator[S, V, V] =
     Aggregator.prepareMonoid(v)
-  def uniqueCountBy[T](f : S => T): Aggregator[S, Set[T], Int]                 =
+  def uniqueCountBy[T](f : S => T): Aggregator[S, Set[T], Int] =
     AggregationFeature.uniqueCountBy(f)
 }
 
@@ -186,16 +186,6 @@ object AggregationFeature {
     }
 
     object BigDAveragedGroup extends Group[BigDAveragedValue] {
-      // When combining averages, if the counts sizes are too close we should use a different
-      // algorithm.  This constant defines how close the ratio of the smaller to the total count
-      // can be:
-      private val STABILITY_CONSTANT = 0.1
-      /**
-        * Uses a more stable online algorithm which should
-        * be suitable for large numbers of records
-        * similar to:
-        * http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
-        */
       val zero = BigDAveragedValue(0L, 0.0)
 
       override def isNonZero(av: BigDAveragedValue) = (av.count != 0L)
@@ -218,9 +208,7 @@ object AggregationFeature {
         } else {
           val an = big.value
           val ak = small.value
-          val scaling = k.toDouble / newCnt
-          // a_n + (a_k - a_n)*(k/(n+k)) is only stable if n is not approximately k
-          val newAve = if (scaling < STABILITY_CONSTANT) (an + (ak - an) * scaling) else (n * an + k * ak) / newCnt
+          val newAve = (n * an + k * ak) / newCnt
           new BigDAveragedValue(newCnt, newAve)
         }
       }
