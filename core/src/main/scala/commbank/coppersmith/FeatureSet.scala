@@ -163,7 +163,9 @@ object AggregationFeature {
     def toScalaz = new scalaz.Semigroup[T] { def append(t1: T, t2: =>T): T = s.plus(t1, t2) }
   }
 
-  // Duplicate code from com.twitter.algebird to allow BigDecimals
+  // Based on com.twitter.algebird.AveragedGroup. Omits the scaling code
+  // required for increasing the accuracy of averaging `Double`s, as it is
+  // not applicable for the `BigDecimal` implementation.
 
   object BigDAverages {
     import com.twitter.algebird.{Group, MonoidAggregator}
@@ -213,6 +215,5 @@ object AggregationFeature {
         }
       }
     }
-
   }
 }

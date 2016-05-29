@@ -52,5 +52,4 @@ object AggregationSpec extends Specification with ScalaCheck {
   def plus(vals: NonEmptyList[BigDAveragedValue]) = {
     vals.tail.foldLeft(vals.head)((l, r) => BigDAveragedGroup.plus(l, r))
   }
-
 }
