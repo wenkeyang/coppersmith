@@ -31,7 +31,7 @@ import au.com.cba.omnia.thermometer.fact.PathFactoids.{exists, missing, records}
 import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
 import commbank.coppersmith._, Arbitraries._, Feature.Value
-import ScaldingArbitraries._
+import ScaldingArbitraries.arbHivePath
 import thrift.Eavt
 
 abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec with Records { def is = s2"""
@@ -208,9 +208,9 @@ class HiveTextSinkSpec extends ScaldingSinkSpec[HiveTextSink[Eavt]] {
   implicit def arbSinkAndTime =
     Arbitrary(
       for {
-        dbName    <- arbNonEmptyAlphaStr.map(_.value)
+        dbName    <- hiveIdentifierGen
         tablePath <- arbitrary[Path]
-        tableName <- arbNonEmptyAlphaStr.map(_.value)
+        tableName <- hiveIdentifierGen
         dateTime  <- arbDateTime.arbitrary
       } yield {
         val sink = HiveTextSink[Eavt](
@@ -239,9 +239,9 @@ class HiveParquetSinkSpec extends ScaldingSinkSpec[HiveParquetSink[Eavt, (String
   implicit def arbSinkAndTime =
     Arbitrary(
       for {
-        dbName    <- arbNonEmptyAlphaStr.map(_.value)
+        dbName    <- hiveIdentifierGen
         tablePath <- arbitrary[Path]
-        tableName <- arbNonEmptyAlphaStr.map(_.value)
+        tableName <- hiveIdentifierGen
         dateTime  <- arbDateTime.arbitrary
       } yield {
         val sink = HiveParquetSink[Eavt, (String, String, String)](
@@ -261,6 +261,7 @@ class HiveParquetSinkSpec extends ScaldingSinkSpec[HiveParquetSink[Eavt, (String
         val featureValue = (fv.value match {
           case Integral(v) => v.map(_.toString)
           case Decimal(v) => v.map(_.toString)
+          case FloatingPoint(v) => v.map(_.toString)
           case Str(v) => v
         }).getOrElse("NULL")
 

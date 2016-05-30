@@ -103,7 +103,15 @@ case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
   }
 }
 
+object BigDecimalMonoid extends Monoid[BigDecimal] {
+  def plus(l: BigDecimal, r: BigDecimal) = l + r
+  def zero = 0L
+}
+
 trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
+  import commbank.coppersmith.AggregationFeature.BigDAverages.BigDAveragedValue
+  implicit val bigDecimalMonoid = BigDecimalMonoid
+
   def entity(s: S): EntityId
 
   def aggregationFeatures: Iterable[AggregationFeature[S, _, _, Value]]
@@ -112,31 +120,100 @@ trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
 
   // These allow aggregators to be created without specifying type args that
   // would otherwise be required if calling the delegated methods directly
-  def size: Aggregator[S, Long, Long]                                   = Aggregator.size
-  def count(where: S => Boolean = _ => true): Aggregator[S, Long, Long] = Aggregator.count(where)
-  def avg[V](v: S => Double): Aggregator[S, AveragedValue, Double]      = AggregationFeature.avg[S](v)
-  def max[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.max[S, V](v)
-  def min[V : Ordering](v: S => V): Aggregator[S, V, V]                 = AggregationFeature.min[S, V](v)
-  def maxBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V] = AggregationFeature.maxBy[S, O, V](o)(v)
-  def minBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V] = AggregationFeature.minBy[S, O, V](o)(v)
-  def sum[V : Monoid]  (v: S => V): Aggregator[S, V, V]                 = Aggregator.prepareMonoid(v)
-  def uniqueCountBy[T](f : S => T): Aggregator[S, Set[T], Int]          = AggregationFeature.uniqueCountBy(f)
+  def size: Aggregator[S, Long, Long] =
+    Aggregator.size
+  def count(where: S => Boolean = _ => true): Aggregator[S, Long, Long] =
+    Aggregator.count(where)
+  def avg[V](v: S => Double): Aggregator[S, AveragedValue, Double] =
+    AggregationFeature.avg[S](v)
+  def avgBigDec[V](v: S => BigDecimal): Aggregator[S, BigDAveragedValue, BigDecimal] =
+    AggregationFeature.avgBigDec[S](v)
+  def max[V : Ordering](v: S => V): Aggregator[S, V, V] =
+    AggregationFeature.max[S, V](v)
+  def min[V : Ordering](v: S => V): Aggregator[S, V, V] =
+    AggregationFeature.min[S, V](v)
+  def maxBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V] =
+    AggregationFeature.maxBy[S, O, V](o)(v)
+  def minBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V] =
+    AggregationFeature.minBy[S, O, V](o)(v)
+  def sum[V : Monoid](v: S => V): Aggregator[S, V, V] =
+    Aggregator.prepareMonoid(v)
+  def uniqueCountBy[T](f : S => T): Aggregator[S, Set[T], Int] =
+    AggregationFeature.uniqueCountBy(f)
 }
 
 object AggregationFeature {
-  def avg[T](t: T => Double): Aggregator[T, AveragedValue, Double]         =
+  import BigDAverages._
+
+  def avg[T](t: T => Double): Aggregator[T, AveragedValue, Double] =
     AveragedValue.aggregator.composePrepare[T](t)
+  def avgBigDec[T](t: T => BigDecimal): Aggregator[T, BigDAveragedValue, BigDecimal] =
+    BigDAverager.composePrepare[T](t)
   def maxBy[T, O : Ordering, V](o: T => O)(v: T => V): Aggregator[T, T, V] =
     Aggregator.maxBy[T, O](o).andThenPresent[V](v)
   def minBy[T, O : Ordering, V](o: T => O)(v: T => V): Aggregator[T, T, V] =
     Aggregator.minBy[T, O](o).andThenPresent[V](v)
 
-  def max[T, V : Ordering](v: T => V): Aggregator[T, V, V]                 = Aggregator.max[V].composePrepare[T](v)
-  def min[T, V : Ordering](v: T => V): Aggregator[T, V, V]                 = Aggregator.min[V].composePrepare[T](v)
-  def uniqueCountBy[S, T](f : S => T): Aggregator[S, Set[T], Int]          = Aggregator.uniqueCount[T].composePrepare(f)
+  def max[T, V : Ordering](v: T => V): Aggregator[T, V, V]        = Aggregator.max[V].composePrepare[T](v)
+  def min[T, V : Ordering](v: T => V): Aggregator[T, V, V]        = Aggregator.min[V].composePrepare[T](v)
+  def uniqueCountBy[S, T](f : S => T): Aggregator[S, Set[T], Int] = Aggregator.uniqueCount[T].composePrepare(f)
 
   // TODO: Would be surprised if this doesn't exist elsewhere
   implicit class AlgebirdSemigroup[T](s: Semigroup[T]) {
     def toScalaz = new scalaz.Semigroup[T] { def append(t1: T, t2: =>T): T = s.plus(t1, t2) }
+  }
+
+  // Based on com.twitter.algebird.AveragedGroup. Omits the scaling code
+  // required for increasing the accuracy of averaging `Double`s, as it is
+  // not applicable for the `BigDecimal` implementation.
+
+  object BigDAverages {
+    import com.twitter.algebird.{Group, MonoidAggregator}
+
+    object BigDAveragedValue {
+      implicit val group = BigDAveragedGroup
+      def numericAggregator[N](implicit num: Numeric[N]): MonoidAggregator[N, BigDAveragedValue, BigDecimal] =
+        Aggregator.prepareMonoid { n: N => new BigDAveragedValue(1L, num.toDouble(n)) }
+          .andThenPresent(_.value)
+    }
+
+    case class BigDAveragedValue(count: Long, value: BigDecimal)
+
+    object BigDAverager extends MonoidAggregator[BigDecimal, BigDAveragedValue, BigDecimal] {
+      val monoid = BigDAveragedGroup
+
+      def prepare(value: BigDecimal) = new BigDAveragedValue(1L, value)
+
+      def present(average: BigDAveragedValue) = average.value
+    }
+
+    object BigDAveragedGroup extends Group[BigDAveragedValue] {
+      val zero = BigDAveragedValue(0L, 0.0)
+
+      override def isNonZero(av: BigDAveragedValue) = (av.count != 0L)
+
+      override def negate(av: BigDAveragedValue) = BigDAveragedValue(-av.count, av.value)
+
+      def plus(cntAve1: BigDAveragedValue, cntAve2: BigDAveragedValue): BigDAveragedValue = {
+        val (big, small) = if (cntAve1.count >= cntAve2.count)
+          (cntAve1, cntAve2)
+        else
+          (cntAve2, cntAve1)
+        val n = big.count
+        val k = small.count
+        val newCnt = n + k
+        if (newCnt == n) {
+          // Handle zero without allocation
+          big
+        } else if (newCnt == 0L) {
+          zero
+        } else {
+          val an = big.value
+          val ak = small.value
+          val newAve = (n * an + k * ak) / newCnt
+          new BigDAveragedValue(newCnt, newAve)
+        }
+      }
+    }
   }
 }

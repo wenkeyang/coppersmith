@@ -1,6 +1,18 @@
 Change log
 ==========
 
+## 0.14.0
+Allow features values and aggregations to use `BigDecimal`
+
+- Change the value type of `Feature.Value.Decimal` to `BigDecimal`
+- Add `Feature.Value.FloatingPoint` that has a value of `Double`
+- Allow aggregations to accept and return `BigDecimal`
+- Add new aggregator `avgBigDec` to allow `BigDecimal` aggregations
+
+ ### Upgrading
+
+ - References to `Decimal` must either be passed a `BigDecimal`, or be changed to `FloatingPoint`
+
 ## 0.13.0
 Remove `TextSink.Configure`. This removes the hardcoded path
 (`/$dbRoot/view/warehouse/features/$groups/$tableName`), and the hardcoded

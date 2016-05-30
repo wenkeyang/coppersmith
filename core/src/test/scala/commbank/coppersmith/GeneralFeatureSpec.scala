@@ -59,7 +59,7 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
       field match {
         case f if f == Fields[Customer].Name   => general[Str](fValue = c => filter.option(c.name))
         case f if f == Fields[Customer].Age    => general[Integral](fValue = c => filter.option(c.age))
-        case f if f == Fields[Customer].Height => general[Decimal](fValue = c => filter.option(c.height))
+        case f if f == Fields[Customer].Height => general[FloatingPoint](fValue = c => filter.option(c.height))
       }
     feature.apply(namespace, name, desc, fType, entity)
   }
@@ -112,7 +112,7 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     val expectedValue = field match {
       case f if f == Fields[Customer].Name   => Str(Option(c.name))
       case f if f == Fields[Customer].Age    => Integral(Option(c.age))
-      case f if f == Fields[Customer].Height => Decimal(Option(c.height))
+      case f if f == Fields[Customer].Height => FloatingPoint(Option(c.height))
     }
 
     val featureValue = feature.generate(c)

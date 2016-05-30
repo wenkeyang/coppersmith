@@ -15,7 +15,7 @@
 package commbank.coppersmith
 
 import commbank.coppersmith.Feature.Type._
-import commbank.coppersmith.Feature.Value.{Str, Decimal, Integral}
+import commbank.coppersmith.Feature.Value.{Str, Decimal, FloatingPoint, Integral}
 import commbank.coppersmith.Feature._
 import commbank.coppersmith.test.thrift.Customer
 import org.scalacheck.Prop._
@@ -33,9 +33,10 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
 
   def psv = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, value: Value) => {
     val (metadata, expectedValueType) = value match {
-      case Integral(_) => (Metadata[Customer, Integral](namespace, name, desc, fType), "int")
-      case Decimal(_)  => (Metadata[Customer, Decimal] (namespace, name, desc, fType), "double")
-      case Str(_)      => (Metadata[Customer, Str]     (namespace, name, desc, fType), "string")
+      case Integral(_)      => (Metadata[Customer, Integral]     (namespace, name, desc, fType), "int")
+      case Decimal(_)       => (Metadata[Customer, Decimal]      (namespace, name, desc, fType), "bigdecimal")
+      case FloatingPoint(_) => (Metadata[Customer, FloatingPoint](namespace, name, desc, fType), "double")
+      case Str(_)           => (Metadata[Customer, Str]          (namespace, name, desc, fType), "string")
     }
 
     val expectedFeatureType = fType match {
@@ -51,9 +52,10 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
 
   def json = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, value: Value) => {
     val (metadata, expectedValueType) = value match {
-      case Integral(_) => (Metadata[Customer, Integral](namespace, name, desc, fType), "integral")
-      case Decimal(_)  => (Metadata[Customer, Decimal] (namespace, name, desc, fType), "decimal")
-      case Str(_)      => (Metadata[Customer, Str]     (namespace, name, desc, fType), "string")
+      case Integral(_)      => (Metadata[Customer, Integral]     (namespace, name, desc, fType), "integral")
+      case Decimal(_)       => (Metadata[Customer, Decimal]      (namespace, name, desc, fType), "decimal")
+      case FloatingPoint(_) => (Metadata[Customer, FloatingPoint](namespace, name, desc, fType), "floatingpoint")
+      case Str(_)           => (Metadata[Customer, Str]          (namespace, name, desc, fType), "string")
     }
 
     val expectedFeatureType = fType.toString.toLowerCase

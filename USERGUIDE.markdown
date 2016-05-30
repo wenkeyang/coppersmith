@@ -66,7 +66,7 @@ type and the *value* (or output) type respectively.
 You can think of it as a function from `S` to `V`:
 - The source type is typically a [thrift](https://thrift.apache.org/) struct,
   describing the schema of a source table.
-- The value type is one of `Integral`, `Decimal`, or `Str`.
+- The value type is one of `Integral`, `Decimal`, `FloatingPoint` or `Str`.
 
 A feature must also define some metadata, including:
 - a feature *namespace*,
@@ -348,9 +348,10 @@ case class AlternativeSinkMovieFeaturesConfig(conf: Config) extends FeatureJobCo
     def encode(fvt: (FeatureValue[_], Time)): FeatureEavt = fvt match {
       case (fv, time) =>
         val featureValue = (fv.value match {
-          case Integral(v) => v.map(_.toString)
-          case Decimal(v) => v.map(_.toString)
-          case Str(v) => v
+          case Integral(v)      => v.map(_.toString)
+          case Decimal(v)       => v.map(_.toString)
+          case FloatingPoint(v) => v.map(_.toString)
+          case Str(v)           => v
         }).getOrElse(HiveTextSink.NullValue)
 
         val featureTime = new DateTime(time).toString("yyyy-MM-dd")
