@@ -23,7 +23,7 @@ import au.com.cba.omnia.uniform.thrift.UniformThriftPlugin._
 import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
-  val maestroVersion = "2.19.1-20160204041454-9918a33"
+  val maestroVersion = "2.20.0-20160520031836-e06bc75"
 
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
