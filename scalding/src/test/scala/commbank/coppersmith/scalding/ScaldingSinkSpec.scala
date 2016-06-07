@@ -211,7 +211,8 @@ class HiveTextSinkSpec extends ScaldingSinkSpec[HiveTextSink[Eavt]] {
         dbName    <- hiveIdentifierGen
         tablePath <- arbitrary[Path]
         tableName <- hiveIdentifierGen
-        dateTime  <- arbDateTime.arbitrary
+        date      <- arbLocalDate.arbitrary
+        dateTime   = date.toDateTimeAtStartOfDay
       } yield {
         val sink = HiveTextSink[Eavt](
           dbName,
@@ -242,7 +243,8 @@ class HiveParquetSinkSpec extends ScaldingSinkSpec[HiveParquetSink[Eavt, (String
         dbName    <- hiveIdentifierGen
         tablePath <- arbitrary[Path]
         tableName <- hiveIdentifierGen
-        dateTime  <- arbDateTime.arbitrary
+        date      <- arbLocalDate.arbitrary
+        dateTime   = date.toDateTimeAtStartOfDay
       } yield {
         val sink = HiveParquetSink[Eavt, (String, String, String)](
           dbName,
