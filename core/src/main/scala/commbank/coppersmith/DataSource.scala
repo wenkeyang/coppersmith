@@ -15,5 +15,6 @@
 package commbank.coppersmith
 
 trait DataSource[S, P[_]] {
+  def where(condition: S => Boolean): DataSource[S, P]
   def load: P[S]
 }

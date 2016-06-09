@@ -60,6 +60,7 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
   // FIXME: Pull up to test project for use by client apps
   case class TestDataSource[T](testData: Iterable[T]) extends DataSource[T, TypedPipe] {
     def load = IterablePipe(testData)
+    def where(condition: T => Boolean) = TypedPipeSource(load.filter(condition))
   }
 
   def fromFilter = forAll { (cs: List[Customer]) => {

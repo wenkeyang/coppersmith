@@ -49,6 +49,11 @@ trait ScaldingDataSource[S] extends DataSource[S, TypedPipe] {
   def distinctBy[O : Ordering](fn: S => O) = TypedPipeSource(load.distinctBy(fn))
 }
 
+case class DataSourceView[T, S](underlying: DataSource[T, TypedPipe])(implicit tToS: T => S)
+    extends ScaldingDataSource[S] {
+  def load = underlying.load.map(tToS)
+}
+
 case class HiveTextSource[S <: ThriftStruct : Decode](
   paths:     List[Path],
   delimiter: String
@@ -97,7 +102,7 @@ case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : Tup
 }
 
 object HiveParquetSource {
-  def apply[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter , P](
+  def apply[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter, P](
     basePath: Path,
     partitions: Partitions[P]
   ): HiveParquetSource[S] =
