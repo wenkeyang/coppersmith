@@ -14,70 +14,76 @@
 
 package commbank.coppersmith
 
-import commbank.coppersmith.Join.{CompleteJoinHl}
+import scalaz.{Ordering => _, Length => _, Zip => _, _}, Scalaz._
+
 import shapeless._
 import shapeless.ops.function.FnToProduct
 import shapeless.ops.hlist._
 import shapeless.ops.nat.Pred
 
-import util.Conversion
-
-import scalaz.{Ordering => _, Length => _, Zip => _, _}, Scalaz._
+import commbank.coppersmith.Join.{CompleteJoinHl}
+import commbank.coppersmith.util.Conversion
+import commbank.coppersmith.generated.GeneratedLift
 
 import Feature.Value
 
 // Would have preferred functor to be specified as P[_] : Functor, but upcoming code in
 // ContextFeatureSource.bindWithContext is unable to derive implicit Functor instance,
 // and needs to access it via the Lift instance instead.
-abstract class Lift[P[_]](implicit val functor: Functor[P]) {
+abstract class Lift[P[_]](implicit val functor: Functor[P]) extends GeneratedLift[P] {
   def lift[S, V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[V]]
 
   def lift[S](fs: FeatureSet[S])(s: P[S]): P[FeatureValue[_]]
 
-  //Join stuff
+  // Join stuff
 
-  def innerJoinNext[LeftSides <: HList, RightSide, J : Ordering, Out <: HList]
-    (l: LeftSides => J, r: RightSide => J )
-    (a:P[LeftSides], b: P[RightSide])
-    (implicit pp: Prepend.Aux[LeftSides, RightSide :: HNil, Out])
-    : P[Out]
+  def innerJoinNext[LeftSides <: HList, RightSide, J : Ordering, Out <: HList](
+    l: LeftSides => J,
+    r: RightSide => J
+  )(a: P[LeftSides],
+    b: P[RightSide]
+  )(implicit pp: Prepend.Aux[LeftSides, RightSide :: HNil, Out]): P[Out]
 
-  def leftJoinNext[LeftSides <: HList, RightSide, J : Ordering, Out <: HList]
-  (l: LeftSides => J, r: RightSide => J )
-  (a:P[LeftSides], b: P[RightSide])
-  (implicit pp: Prepend.Aux[LeftSides, Option[RightSide] :: HNil, Out])
-  : P[Out]
-
+  def leftJoinNext[LeftSides <: HList, RightSide, J : Ordering, Out <: HList](
+    l: LeftSides => J,
+    r: RightSide => J
+  )(a: P[LeftSides],
+    b: P[RightSide]
+  )(implicit pp: Prepend.Aux[LeftSides, Option[RightSide] :: HNil, Out]): P[Out]
 
   //two is a special case, a little easier to do than the general case
-  def liftJoin[A, B, J : Ordering]
-    (joined: Joined[A, B, J, (A, B)])
-    (a:P[A], b: P[B]): P[(A, B)] = {
-    innerJoinNext((l: A :: HNil) =>
-      joined.left(l.head), joined.right)(a.map(_ :: HNil), b).map(_.tupled)
+  def liftJoin[A, B, J : Ordering](
+    joined: Joined[A, B, J, (A, B)]
+  )(a:P[A], b: P[B]): P[(A, B)] = {
+    innerJoinNext(
+      (l: A :: HNil) => joined.left(l.head),
+      joined.right
+    )(a.map(_ :: HNil), b).map(_.tupled)
   }
 
-  def liftLeftJoin[A, B, J : Ordering]
-    (joined: Joined[A, B, J, (A, Option[B])])
-    (a: P[A], b: P[B]): P[(A, Option[B])] = {
-    leftJoinNext((l: A :: HNil) =>
-      joined.left(l.head), joined.right)(a.map(_ :: HNil), b).map(_.tupled)
+  def liftLeftJoin[A, B, J : Ordering](
+    joined: Joined[A, B, J, (A, Option[B])]
+  )(a: P[A], b: P[B]): P[(A, Option[B])] = {
+    leftJoinNext(
+      (l: A :: HNil) => joined.left(l.head),
+      joined.right
+    )(a.map(_ :: HNil), b).map(_.tupled)
   }
 
-  def liftMultiwayJoin[ //type examples as comments for better readability
-  InTuple <: Product, // (List[A], List[B], List[C])
-  InHList <: HList, // List[A] :: List[B] :: List[C]
-  InHeadType, //List[A]
-  InHeadElementType, // A
-  InTail <: HList, // List[B] :: List[C]
-  NextPipes <: HList, // NextPipe[B,B] ::  NextPipe[C,C] :: HNil
-  Types <: HList,    // A :: B :: C :: HNil
-  TypesHead, // A
-  TypesTail <: HList, // B :: C :: HNil
-  Joins <: HList, // (A :: HNil => J, B => J) :: (A :: B :: HNil => J, C => J) :: HNil
-  OutTuple <: Product, // (A,B,C)
-  Zipped <: HList //  (NextPipe[B,B], (A :: HNil => J, B => J) ::
-                  // (NextPipe[C,C], (A :: B :: HNil => J, C => J)) :: HNil)
+  def liftMultiwayJoin[  // type examples as comments for better readability
+    InTuple <: Product,  // (List[A], List[B], List[C])
+    InHList <: HList,    // List[A] :: List[B] :: List[C]
+    InHeadType,          // List[A]
+    InHeadElementType,   // A
+    InTail <: HList,     // List[B] :: List[C]
+    NextPipes <: HList,  // NextPipe[B,B] ::  NextPipe[C,C] :: HNil
+    Types <: HList,      // A :: B :: C :: HNil
+    TypesHead,           // A
+    TypesTail <: HList,  // B :: C :: HNil
+    Joins <: HList,      // (A :: HNil => J, B => J) :: (A :: B :: HNil => J, C => J) :: HNil
+    OutTuple <: Product, // (A,B,C)
+    Zipped <: HList      // (NextPipe[B,B], (A :: HNil => J, B => J) ::
+                         // (NextPipe[C,C], (A :: B :: HNil => J, C => J)) :: HNil)
   ](join: CompleteJoinHl[Types, Joins])
    (in : InTuple)
    (implicit inToHlist  : Conversion.Aux[InTuple, InHList],
@@ -89,8 +95,8 @@ abstract class Lift[P[_]](implicit val functor: Functor[P]) {
              zipper     : Zip.Aux[NextPipes :: Joins :: HNil, Zipped],
              leftFolder : LeftFolder.Aux[Zipped, P[InHeadElementType :: HNil],
                                             JoinFolders.joinFolder.type, P[Types]],
-             tupler     : Tupler.Aux[Types, OutTuple])
-  : P[OutTuple] = {
+             tupler     : Tupler.Aux[Types, OutTuple]
+  ): P[OutTuple] = {
     val inHl : InHList = inToHlist.to(in)
     val inHead: P[InHeadElementType] = pEl2(inHl.head)
     val inTail: InTail = inHl.tail
@@ -104,8 +110,8 @@ abstract class Lift[P[_]](implicit val functor: Functor[P]) {
 
   def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, P]](
     underlying: U,
-    binder: B,
-    filter: Option[S => Boolean]
+    binder:     B,
+    filter:     Option[S => Boolean]
   ): BoundFeatureSource[S, P]
 
   def liftFilter[S](p: P[S], f: S => Boolean): P[S]

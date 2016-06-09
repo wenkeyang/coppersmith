@@ -14,15 +14,16 @@
 
 package commbank.coppersmith.lift
 
-import scalaz.std.list.listInstance
+import scalaz.{Order, Scalaz}, Scalaz._
 
 import shapeless._
 import shapeless.ops.hlist._
 
 import commbank.coppersmith._
 import commbank.coppersmith.Feature.Value
+import commbank.coppersmith.lift.generated.GeneratedMemoryLift
 
-trait MemoryLift extends Lift[List] {
+trait MemoryLift extends Lift[List] with GeneratedMemoryLift {
   def lift[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[V]] = {
     s.flatMap(s => f.generate(s))
   }
@@ -33,31 +34,30 @@ trait MemoryLift extends Lift[List] {
 
   type +:[A <: HList, B] =  Prepend[A, B :: HNil]
 
-
-  def innerJoinNext[LeftSides <: HList, RightSide, J : Ordering, Out <: HList]
-  (l: LeftSides => J, r: RightSide => J )
-  (a:List[LeftSides], b: List[RightSide])
-  (implicit pp: Prepend.Aux[LeftSides, RightSide :: HNil, Out])
-  : List[Out] = {
+  def innerJoinNext[LeftSides <: HList, RightSide, J : Ordering, Out <: HList](
+    l: LeftSides => J,
+    r: RightSide => J
+  )(a:List[LeftSides],
+    b: List[RightSide]
+  )(implicit pp: Prepend.Aux[LeftSides, RightSide :: HNil, Out]): List[Out] = {
     val aMap: Map[J, List[LeftSides]] = a.groupBy(l)
     val bMap: Map[J, List[RightSide]] = b.groupBy(r)
 
-    val result = for {
-      (k1,v1) <- aMap.toList
-      (k2,v2) <- bMap.toList if k2 == k1
-      a <- v1
-      b <-v2
+    for {
+      (k1, v1) <- aMap.toList
+      (k2, v2) <- bMap.toList if k2 == k1
+      a        <- v1
+      b        <- v2
     } yield a :+ b
-
-    result
   }
 
 
-  override def leftJoinNext[LeftSides <: HList, RightSide, J : Ordering, Out <: HList]
-  (l: LeftSides => J, r: RightSide => J )
-  (as:List[LeftSides], bs: List[RightSide])
-  (implicit pp: Prepend.Aux[LeftSides, Option[RightSide] :: HNil, Out])
-  : List[Out] =
+  def leftJoinNext[LeftSides <: HList, RightSide, J : Ordering, Out <: HList](
+    l: LeftSides => J,
+    r: RightSide => J
+  )(as:List[LeftSides],
+    bs: List[RightSide]
+  )(implicit pp: Prepend.Aux[LeftSides, Option[RightSide] :: HNil, Out]): List[Out] =
     as.flatMap { a =>
       val leftKey = l(a)
       val rightValues = bs.filter {b => r(b) == leftKey}
@@ -68,15 +68,54 @@ trait MemoryLift extends Lift[List] {
       }
     }
 
-  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, List]]
-    (underlying: U, binder: B, filter: Option[S => Boolean]) =
-      MemoryBoundFeatureSource(underlying, binder, filter)
+  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, List]](
+    underlying: U,
+    binder:     B,
+    filter:     Option[S => Boolean]
+  ) = MemoryBoundFeatureSource(underlying, binder, filter)
 
   def liftFilter[S](p: List[S], f: S => Boolean) = p.filter(f)
 }
 
 object memory extends MemoryLift {
   implicit def framework: Lift[List] = this
+}
+
+
+object MemoryLift {
+  def innerJoin[S1, S2, J : Ordering](
+    f1: S1 => J,
+    f2: S2 => J,
+    s1: List[S1],
+    s2: List[S2]
+  ): List[(S1, S2)] = {
+    implicit val orderJ: Order[J] = Order.fromScalaOrdering[J]
+    val map1: Map[J, Iterable[S1]] = s1.groupBy(f1)
+    val map2: Map[J, Iterable[S2]] = s2.groupBy(f2)
+    for {
+      (k1, s1s) <- map1.toList
+      (k2, s2s) <- map2.toList if (k1 === k2)
+      s1        <- s1s
+      s2        <- s2s
+    } yield (s1, s2)
+  }
+
+  def leftJoin[S1, S2, J : Ordering](
+    f1: S1 => J,
+    f2: S2 => J,
+    s1: List[S1],
+    s2: List[S2]
+  ): List[(S1, Option[S2])] = {
+    val map1: Map[J, Iterable[S1]] = s1.groupBy(f1)
+    val map2: Map[J, Iterable[S2]] = s2.groupBy(f2)
+    map1.toList.flatMap { case (k1, s1s) =>
+      s1s.flatMap(s1 =>
+        map2.get(k1).map(s2s =>
+          s2s.map(s2 => (s1, s2.some))
+        ).getOrElse(List((s1, None)))
+      )
+    }
+  }
 }
 
 import memory.framework
