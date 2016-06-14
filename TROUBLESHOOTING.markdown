@@ -1,6 +1,22 @@
 Troubleshooting Coppersmith
 ===========================
 
+### Missing imports
+Symptom: Code fails to comile with one of the following messages:
+```log
+value featureSetBuilder is not a member of commbank.coppersmith.From
+value featureSetBuilder is not a member of commbank.coppersmith.Joined
+value featureSetBuilder is not a member of commbank.coppersmith.CompleteJoinHlFeatureSource
+```
+Cause: Missing `Coppersmith._` import. Either:
+```scala
+import commbank.coppersmith.api.Coppersmith._
+```
+or
+```scala
+import commbank.coppersmith.api._, Coppersmith._
+```
+
 ### Serialisation issues
 
 The functions that make up feature definitions must only refer to fully

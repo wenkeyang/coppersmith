@@ -1,6 +1,40 @@
 Change log
 ==========
 
+## 0.16.0
+Shapeless multi-way join support replaced with generated code solution
+for more consistency in defining and binding feature sources. Also
+allows multi-way joins to be bound with a context (this was not
+previously possible for multi-way joins).
+
+### Upgrading
+ - Remove trailing `.src` call from joined source declaration, eg, remove the
+   last line from the following:
+```scala
+  val source = Join.multiway[Movie]
+      .inner[Rating].on((movie: Movie)               => movie.id,
+                         (rating: Rating)            => rating.movieId)
+      .inner[User].on((movie: Movie, rating: Rating) => rating.userId,
+                         (user: User)                => user.id)
+      .src
+```
+ - Remove the source parameter from the `bind` call and flatten
+   `joinMulti` tuple, eg, change:
+```scala
+   MultiJoinFeatures.source.bind(joinMulti((movies, ratings, users), MultiJoinFeatures.source))
+```
+   to
+```scala
+   MultiJoinFeatures.source.bind(joinMulti(movies, ratings, users))
+```
+
+## 0.15.0
+Introduction of `Date` and `Time` value types and `Instant` feature type.
+
+### Upgrading
+ - References to the `Feature.Time` alias should be replaced with
+   `Feature.FeatureTime`
+
 ## 0.14.0
 Allow features values and aggregations to use `BigDecimal`
 
@@ -9,7 +43,7 @@ Allow features values and aggregations to use `BigDecimal`
 - Allow aggregations to accept and return `BigDecimal`
 - Add new aggregator `avgBigDec` to allow `BigDecimal` aggregations
 
- ### Upgrading
+### Upgrading
 
  - References to `Decimal` must either be passed a `BigDecimal`, or be changed to `FloatingPoint`
 

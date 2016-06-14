@@ -35,6 +35,15 @@ There is also a [troubleshooting guide](TROUBLESHOOTING.markdown) available and
 a [GitHub Pages site](http://commbank.github.io/coppersmith/) which provides
 additional information including latest version and usage information.
 
+Generated Code
+--------------
+Classes and objects from the `commbank.coppersmith.generated`,
+`commbank.coppersmith.scalding.generated` and
+`commbank.coppersmith.lift.generated` packages are generated at
+build time with [`MultiwayJoinGenerator`](project/MultiwayJoinGenerator.scala).
+The generated files can be found under the `target/scala-2.11/src_managed/main/`
+directory of the `core`, `scalding` and `test` subprojects respectively.
+
 Versioning
 ----------
 
