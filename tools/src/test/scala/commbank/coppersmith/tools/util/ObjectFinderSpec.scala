@@ -29,6 +29,11 @@ package commbank.coppersmith.tools.util {
 
   object F extends someothersillypackage.Outside
 
+  trait V
+  object Outer {
+    object Nested extends V
+  }
+
   object ObjectFinderSpec extends Specification {
     def is =
       s2"""
@@ -36,6 +41,7 @@ package commbank.coppersmith.tools.util {
           Can find objects of a given trait $findObjects
           Can find objects of a given parameterised trait $findObjectsParam
           Can find objects of a trait from another package $findObjectsTraitOtherPackage
+          Can find nested objects $findNestedObjects
       """
 
     def findObjects = Seq(
@@ -57,6 +63,10 @@ package commbank.coppersmith.tools.util {
         "someothersillypackage"
       ) === Set(F)
     )
+
+    def findNestedObjects = {
+      ObjectFinder.findObjects[V]("commbank.coppersmith.tools.util") === Set(Outer.Nested)
+    }
   }
 }
 
