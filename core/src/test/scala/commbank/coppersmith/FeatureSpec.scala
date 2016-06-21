@@ -14,7 +14,7 @@
 
 package commbank.coppersmith
 
-import commbank.coppersmith.util.{Timestamp, Date}
+import commbank.coppersmith.util.{Timestamp, Datestamp}
 import org.joda.time.DateTime
 import org.scalacheck._, Arbitrary.arbitrary, Prop.forAll
 
@@ -52,10 +52,10 @@ object MetadataSpec extends Specification with ScalaCheck { def is = s2"""
         Metadata[Customer, FloatingPoint](namespace, name, desc, fType).valueType must_== FloatingPointType
       case Str(_) =>
         Metadata[Customer, Str]          (namespace, name, desc, fType).valueType must_== StringType
-      case DateV(_) =>
-        Metadata[Customer, DateV]        (namespace, name, desc, fType).valueType must_== DateType
-      case TimeV(_) =>
-        Metadata[Customer, TimeV]        (namespace, name, desc, fType).valueType must_== TimeType
+      case Date(_) =>
+        Metadata[Customer, Date]         (namespace, name, desc, fType).valueType must_== DateType
+      case Time(_) =>
+        Metadata[Customer, Time]         (namespace, name, desc, fType).valueType must_== TimeType
     }
   }}
 }
@@ -101,8 +101,8 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
       case (FloatingPoint(d1), FloatingPoint(d2)) => d1.cmp(d2)
       case (Integral(i1), Integral(i2)) => i1.cmp(i2)
       case (Str(s1), Str(s2)) => s1.cmp(s2)
-      case (DateV(d1), DateV(d2)) => d1.cmp(d2)
-      case (TimeV(t1), TimeV(t2)) => t1.cmp(t2)
+      case (Date(d1), Date(d2)) => d1.cmp(d2)
+      case (Time(t1), Time(t2)) => t1.cmp(t2)
       case _ => sys.error("Assumption failed: Expected same value types from arbValues")
     })
 
@@ -226,8 +226,8 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
   }
 
   def dateConversions = {
-    val feature = Patterns.general[Customer, Value.DateV, Value.DateV](
-      "ns", "name", "Description", Type.Instant, _.id, c => Some(Date.parse(new DateTime(c.time).toString("yyyy-MM-dd")))
+    val feature = Patterns.general[Customer, Value.Date, Value.Date](
+      "ns", "name", "Description", Type.Instant, _.id, c => Some(Datestamp.parse(new DateTime(c.time).toString("yyyy-MM-dd")))
     )
     feature.metadata.featureType === Type.Instant
     Seq(
@@ -237,7 +237,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
   }
 
   def timeConversions = {
-    val feature = Patterns.general[Customer, Value.TimeV, Value.TimeV](
+    val feature = Patterns.general[Customer, Value.Time, Value.Time](
       "ns", "name", "Description", Type.Instant, _.id, c => Some(Timestamp(c.time, Some((0,0))))
     )
     feature.metadata.featureType === Type.Instant

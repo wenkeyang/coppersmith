@@ -22,25 +22,25 @@ import scalaz.Order
 
 case class DatePeriod(years: Int, months: Int, days: Int)
 
-object Date {
-  def parse(date: String): Date = {
+object Datestamp {
+  def parse(date: String): Datestamp = {
     import org.joda.time.format.DateTimeFormat
 
     val fmt = DateTimeFormat.forPattern("yyyy-MM-dd")
     val d   = fmt.parseLocalDate(date)
-    Date(d.getYear, d.getMonthOfYear, d.getDayOfMonth)
+    Datestamp(d.getYear, d.getMonthOfYear, d.getDayOfMonth)
   }
 
-  def parse(date: String, pattern: String): Date = {
+  def parse(date: String, pattern: String): Datestamp = {
     import org.joda.time.format.DateTimeFormat
 
     val fmt = DateTimeFormat.forPattern(pattern)
     val d   = fmt.parseLocalDate(date)
-    Date(d.getYear, d.getMonthOfYear, d.getDayOfMonth)
+    Datestamp(d.getYear, d.getMonthOfYear, d.getDayOfMonth)
   }
 
-  implicit def ordering[A <: Date]: Ordering[A] = Ordering.by(_.toString)
-  implicit def scalazOrder[A <: Date]: Order[A] = Order.fromScalaOrdering(ordering)
+  implicit def ordering[A <: Datestamp]: Ordering[A] = Ordering.by(_.toString)
+  implicit def scalazOrder[A <: Datestamp]: Order[A] = Order.fromScalaOrdering(ordering)
 }
 
 object Timestamp {
@@ -133,15 +133,15 @@ object Timestamp {
   implicit def scalazOrder[A <: Timestamp]: Order[A] = Order.fromScalaOrdering(ordering)
 }
 
-case class Date(year: Int, month: Int, day: Int) {
+case class Datestamp(year: Int, month: Int, day: Int) {
   protected def toLocalDate: org.joda.time.LocalDate ={
     import org.joda.time.LocalDate
 
     new LocalDate(year, month, day)
   }
 
-  def difference(that: Date): DatePeriod = that match {
-    case Date(y, m, d) =>
+  def difference(that: Datestamp): DatePeriod = that match {
+    case Datestamp(y, m, d) =>
       import org.joda.time.Period
       val p = new Period(this.toLocalDate, that.toLocalDate)
       DatePeriod(p.getYears, p.getMonths, p.getDays)

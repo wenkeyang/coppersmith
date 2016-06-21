@@ -22,14 +22,14 @@ import scalaz.{Name => _, Value => _, _}, Scalaz._, Order.orderBy
 
 import shapeless.=:!=
 
-import commbank.coppersmith.util.{Date, Timestamp}, Date._, Timestamp._
+import commbank.coppersmith.util.{Datestamp, Timestamp}, Datestamp._, Timestamp._
 
 object Feature {
   type Namespace   = String
   type Name        = String
   type Description = String
   type EntityId    = String
-  type Time        = Long
+  type FeatureTime = Long
 
 
   sealed trait Type
@@ -44,7 +44,6 @@ object Feature {
 
     case object Ordinal extends Categorical
     case object Nominal extends Categorical
-
   }
 
   sealed trait Value
@@ -53,30 +52,30 @@ object Feature {
     case class Decimal(value: Option[BigDecimal])   extends Value
     case class FloatingPoint(value: Option[Double]) extends Value
     case class Str(value: Option[String])           extends Value
-    case class DateV(value: Option[Date])           extends Value
-    case class TimeV(value: Option[Timestamp])      extends Value
+    case class Date(value: Option[Datestamp])       extends Value
+    case class Time(value: Option[Timestamp])       extends Value
 
     implicit def fromInt(i: Int):                         Integral      = Option(i)
     implicit def fromLong(l: Long):                       Integral      = Option(l)
     implicit def fromDouble(d: Double):                   FloatingPoint = Option(d)
     implicit def fromBigDecimal(bd: BigDecimal):          Decimal       = Option(bd)
     implicit def fromString(s: String):                   Str           = Option(s)
-    implicit def fromDate(d: Date):                       DateV         = Option(d)
-    implicit def fromTime(t: Timestamp):                  TimeV         = Option(t)
+    implicit def fromDate(d: Datestamp):                  Date          = Option(d)
+    implicit def fromTime(t: Timestamp):                  Time          = Option(t)
     implicit def fromOInt(i: Option[Int]):                Integral      = Integral(i.map(_.toLong))
     implicit def fromOLong(l: Option[Long]):              Integral      = Integral(l)
     implicit def fromODouble(d: Option[Double]):          FloatingPoint = FloatingPoint(d)
     implicit def fromOBigDecimal(bd: Option[BigDecimal]): Decimal       = Decimal(bd)
     implicit def fromOString(s: Option[String]):          Str           = Str(s)
-    implicit def fromODate(d: Option[Date]):              DateV         = DateV(d)
-    implicit def fromOTime(t: Option[Timestamp]):         TimeV         = TimeV(t)
+    implicit def fromODate(d: Option[Datestamp]):         Date          = Date(d)
+    implicit def fromOTime(t: Option[Timestamp]):         Time          = Time(t)
 
     implicit val intOrder: Order[Integral]      = orderBy(_.value)
     implicit val decOrder: Order[Decimal]       = orderBy(_.value)
     implicit val fpOrder:  Order[FloatingPoint] = orderBy(_.value)
     implicit val strOrder: Order[Str]           = orderBy(_.value)
-    implicit val dvOrder:  Order[DateV]         = orderBy(_.value)
-    implicit val tvOrder:  Order[TimeV]         = orderBy(_.value)
+    implicit val dvOrder:  Order[Date]          = orderBy(_.value)
+    implicit val tvOrder:  Order[Time]          = orderBy(_.value)
 
     abstract class Range[+V : Order] {
       // V needs to be covariant to satisfy Metadata type constraint, so can't be in contravariant
@@ -119,8 +118,8 @@ object Feature {
 
   implicit object DiscreteIntegral        extends Conforms[Type.Discrete.type,   Value.Integral]
 
-  implicit object InstantDate             extends Conforms[Type.Instant.type,    Value.DateV]
-  implicit object InstantTime             extends Conforms[Type.Instant.type,    Value.TimeV]
+  implicit object InstantDate             extends Conforms[Type.Instant.type,    Value.Date]
+  implicit object InstantTime             extends Conforms[Type.Instant.type,    Value.Time]
 
   object Conforms {
 
@@ -153,8 +152,8 @@ object Feature {
         case t if t =:= typeOf[Value.Decimal]       => ValueType.DecimalType
         case t if t =:= typeOf[Value.FloatingPoint] => ValueType.FloatingPointType
         case t if t =:= typeOf[Value.Str]           => ValueType.StringType
-        case t if t =:= typeOf[Value.DateV]         => ValueType.DateType
-        case t if t =:= typeOf[Value.TimeV]         => ValueType.TimeType
+        case t if t =:= typeOf[Value.Date]          => ValueType.DateType
+        case t if t =:= typeOf[Value.Time]          => ValueType.TimeType
       }
 
     sealed trait ValueType
@@ -216,6 +215,6 @@ case class FeatureValue[+V <: Value](
 
 object FeatureValue {
   implicit class AsEavt[V <: Value](fv: FeatureValue[V]) {
-    def asEavt(time: Time): (EntityId, Name, V, Time) = (fv.entity, fv.name, fv.value, time)
+    def asEavt(time: FeatureTime): (EntityId, Name, V, FeatureTime) = (fv.entity, fv.name, fv.value, time)
   }
 }

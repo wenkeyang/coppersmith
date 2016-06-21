@@ -24,7 +24,7 @@ import org.specs2.{ScalaCheck, Specification}
 import org.scalacheck.Prop._
 
 import commbank.coppersmith.Arbitraries._
-import commbank.coppersmith.util.{DatePeriod, Timestamp, Date}
+import commbank.coppersmith.util.{DatePeriod, Timestamp, Datestamp}
 
 object TimeSpec extends Specification with ScalaCheck { def is = s2"""
   Parse valid date string $parseDate
@@ -36,12 +36,12 @@ object TimeSpec extends Specification with ScalaCheck { def is = s2"""
 
   def parseDate = forAll { (dateTime: DateTime) => {
     val dateStr  = dateTime.toString("yyyy-MM-dd")
-    val date     = Date.parse(dateStr)
+    val date     = Datestamp.parse(dateStr)
     val dateStrP = dateTime.toString("dd-MMM-yyyy")
-    val dateP    = Date.parse(dateStrP, "dd-MMM-yyyy")
+    val dateP    = Datestamp.parse(dateStrP, "dd-MMM-yyyy")
 
     Seq(
-      date  must_== Date(dateTime.getYear, dateTime.getMonthOfYear, dateTime.getDayOfMonth),
+      date  must_== Datestamp(dateTime.getYear, dateTime.getMonthOfYear, dateTime.getDayOfMonth),
       dateP must_== date
     )
   }}
@@ -84,7 +84,7 @@ object TimeSpec extends Specification with ScalaCheck { def is = s2"""
     )
   }}
 
-  def printDate = forAll { (date: Date) => {
+  def printDate = forAll { (date: Datestamp) => {
     val dateStr  = date.toString
     val dateTime = DateTimeFormat.forPattern("yyyy-MM-dd").parseLocalDate(dateStr)
 
@@ -102,7 +102,7 @@ object TimeSpec extends Specification with ScalaCheck { def is = s2"""
     else matchers
   }}
 
-  def dateDiff = forAll { (d1: Date, d2: Date) =>
+  def dateDiff = forAll { (d1: Datestamp, d2: Datestamp) =>
     val ld1 = new LocalDate(d1.year, d1.month, d1.day)
     val ld2 = new LocalDate(d2.year, d2.month, d2.day)
 

@@ -66,7 +66,7 @@ type and the *value* (or output) type respectively.
 You can think of it as a function from `S` to `V`:
 - The source type is typically a [thrift](https://thrift.apache.org/) struct,
   describing the schema of a source table.
-- The value type is one of `Integral`, `Decimal`, `FloatingPoint`, `Str`, `DateV` or `TimeV`.
+- The value type is one of `Integral`, `Decimal`, `FloatingPoint`, `Str`, `Date` or `Time`.
 
 A feature must also define some metadata, including:
 - a feature *namespace*,
@@ -90,7 +90,7 @@ import scala.util.Try
 
 import java.util.Locale
 
-import commbank.coppersmith.util.Date
+import commbank.coppersmith.util.Datestamp
 import commbank.coppersmith.api._
 import commbank.coppersmith.examples.thrift.Movie
 
@@ -101,7 +101,7 @@ object MovieReleaseYear extends Feature[Movie, Integral](
                             featureType    = Continuous)
 ) {
   def generate(movie: Movie) =
-    Try(Date.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption.map(v =>
+    Try(Datestamp.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption.map(v =>
         FeatureValue(entity = movie.id, name = "MOVIE_RELEASE_YEAR", value = v.year))
 }
 ```
@@ -144,7 +144,7 @@ import scala.util.Try
 
 import java.util.Locale
 
-import commbank.coppersmith.util.Date
+import commbank.coppersmith.util.Datestamp
 import commbank.coppersmith.api._
 import commbank.coppersmith.examples.thrift.Movie
 
@@ -154,7 +154,7 @@ object MovieFeatures extends BasicFeatureSet[Movie] {
 
   val movieReleaseYear = basicFeature[Integral](
     "MOVIE_RELEASE_YEAR", "Calendar year in which the movie was released", Continuous,
-    (movie) => Try(Date.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption.map(_.year)
+    (movie) => Try(Datestamp.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption.map(_.year)
   )
 
   val features = List(movieReleaseYear)
@@ -340,15 +340,15 @@ import commbank.coppersmith.examples.thrift.{FeatureEavt, Movie}
 
 case class AlternativeSinkMovieFeaturesConfig(conf: Config) extends FeatureJobConfig[Movie] {
   implicit object FeatureEavtEnc extends FeatureValueEnc[FeatureEavt] {
-    def encode(fvt: (FeatureValue[_], Time)): FeatureEavt = fvt match {
+    def encode(fvt: (FeatureValue[_], FeatureTime)): FeatureEavt = fvt match {
       case (fv, time) =>
         val featureValue = (fv.value match {
           case Integral(v)      => v.map(_.toString)
           case Decimal(v)       => v.map(_.toString)
           case FloatingPoint(v) => v.map(_.toString)
           case Str(v)           => v
-          case DateV(v)         => v.map(_.toString)
-          case TimeV(v)         => v.map(_.toString)
+          case Date(v)          => v.map(_.toString)
+          case Time(v)          => v.map(_.toString)
         }).getOrElse(HiveTextSink.NullValue)
 
         val featureTime = new DateTime(time).toString("yyyy-MM-dd")
@@ -429,7 +429,7 @@ import scala.util.Try
 
 import java.util.Locale
 
-import commbank.coppersmith.util.Date
+import commbank.coppersmith.util.Datestamp
 import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
@@ -440,9 +440,9 @@ object FluentMovieFeatures extends FeatureSetWithTime[Movie] {
   val source      = From[Movie]()  // FeatureSource (see above)
   val select      = source.featureSetBuilder(namespace, entity)
 
-  val movieReleaseDay  = select(movie => Try(Date.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption)
+  val movieReleaseDay  = select(movie => Try(Datestamp.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption)
     .asFeature(Instant, "MOVIE_RELEASE_DAY", "Day on which the movie was released")
-  val movieReleaseYear = select(movie => Try(Date.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption.map(_.year))
+  val movieReleaseYear = select(movie => Try(Datestamp.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption.map(_.year))
     .asFeature(Continuous, "MOVIE_RELEASE_YEAR", "Calendar year in which the movie was released")
 
   val features = List(movieReleaseDay, movieReleaseYear)
@@ -471,20 +471,20 @@ import scala.util.Try
 
 import java.util.Locale
 
-import commbank.coppersmith.util.Date
+import commbank.coppersmith.util.Datestamp
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
 object Implicits {
   implicit class RichMovie(movie: Movie) {
-    def safeReleaseDate: Option[Date] =
-      Try(Date.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption
+    def safeReleaseDate: Option[Datestamp] =
+      Try(Datestamp.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption
     def releaseYear:     Option[Int]      = safeReleaseDate.map(_.year)
     def isComedy:        Boolean          = movie.comedy == 1
     def isFantasy:       Boolean          = movie.fantasy == 1
     def isAction:        Boolean          = movie.action == 1
     def isScifi:         Boolean          = movie.scifi == 1
 
-    def ageAt(date: Date): Option[Int] = safeReleaseDate.map(_.difference(date).years)
+    def ageAt(date: Datestamp): Option[Int] = safeReleaseDate.map(_.difference(date).years)
   }
 }
 ```
@@ -1222,7 +1222,7 @@ package commbank.coppersmith.examples.userguide
 
 import org.joda.time.DateTime
 
-import commbank.coppersmith.util.Date
+import commbank.coppersmith.util.Datestamp
 import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
@@ -1239,7 +1239,7 @@ object ContextFeatures extends FeatureSetWithTime[(Movie, DateTime)] {
   val select = source.featureSetBuilder(namespace, entity)
 
   def movieAgeFeature =
-    select(mdt => mdt._1.ageAt(Date(mdt._2.getYear, mdt._2.getMonthOfYear, mdt._2.getDayOfMonth)))
+    select(mdt => mdt._1.ageAt(Datestamp(mdt._2.getYear, mdt._2.getMonthOfYear, mdt._2.getDayOfMonth)))
       .asFeature(Ordinal, "MOVIE_AGE", "Age of movie")
 
   val features = List(movieAgeFeature)

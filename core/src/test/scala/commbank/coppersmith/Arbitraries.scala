@@ -26,7 +26,7 @@ import org.joda.time.{DateTimeZone, LocalDate, DateTime}
 import au.com.cba.omnia.maestro.api.{Field, Maestro}, Maestro.Fields
 
 import Feature.{Value, Type}, Value._, Type._
-import util.{Date, Timestamp}
+import util.{Datestamp, Timestamp}
 
 import test.thrift.{Account, Customer}
 
@@ -51,7 +51,7 @@ object Arbitraries {
     zm  <- chooseNum(0, 59)
   } yield new DateTime(y, m, d, h, min, s, ms, DateTimeZone.forOffsetHoursMinutes(zh, zm)))
 
-  implicit val arbTime: Arbitrary[Timestamp] = {
+  implicit val arbTimestamp: Arbitrary[Timestamp] = {
     import java.util.concurrent.TimeUnit.MILLISECONDS
     Arbitrary(for {
       dt     <- arbDateTime.arbitrary
@@ -66,9 +66,9 @@ object Arbitraries {
     })
   }
 
-  implicit val arbDateUtil: Arbitrary[Date] = for {
+  implicit val arbDatestamp: Arbitrary[Datestamp] = for {
     date <- arbLocalDate
-  } yield Date(date.getYear, date.getMonthOfYear, date.getDayOfMonth)
+  } yield Datestamp(date.getYear, date.getMonthOfYear, date.getDayOfMonth)
 
   implicit val integralValueGen: Gen[Integral] = arbitrary[Option[Long]].map(Integral(_))
   implicit val decimalValueGen: Gen[Decimal] =
@@ -77,8 +77,8 @@ object Arbitraries {
     ).map(Decimal(_))
   implicit val floatingPointValueGen: Gen[FloatingPoint] = arbitrary[Option[Double]].map(FloatingPoint(_))
   implicit val strValueGen: Gen[Str] = arbitrary[Option[String]].map(Str(_))
-  implicit val dateValueGen: Gen[DateV] = arbitrary[Option[Date]].map(DateV(_))
-  implicit val timeValueGen: Gen[TimeV] = arbitrary[Option[Timestamp]].map(TimeV(_))
+  implicit val dateValueGen: Gen[Date] = arbitrary[Option[Datestamp]].map(Date(_))
+  implicit val timeValueGen: Gen[Time] = arbitrary[Option[Timestamp]].map(Time(_))
   implicit val arbValue: Arbitrary[Value] = Arbitrary(oneOf(integralValueGen, decimalValueGen, floatingPointValueGen, strValueGen, dateValueGen, timeValueGen))
 
   val arbTimeMillis: Gen[Long] = arbitrary[DateTime].map(_.getMillis)

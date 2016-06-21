@@ -74,7 +74,7 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
       Metadata[Customer, Integral]     (namespace, "age",       "Age",            Ordinal),
       Metadata[Customer, Integral]     (namespace, "tallAge",   "Tall Age",       Continuous),
       Metadata[Customer, FloatingPoint](namespace, "oldHeight", "Old Height",     Continuous),
-      Metadata[Customer, TimeV]        (namespace, "time",      "Time",           Instant),
+      Metadata[Customer, Time]         (namespace, "time",      "Time",           Instant),
       Metadata[Customer, FloatingPoint](namespace, "credit",    "Credit Score",   Continuous),
       Metadata[Customer, FloatingPoint](namespace, "altCredit", "Alternate Impl", Continuous)
     )
@@ -91,7 +91,7 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
                         Some(FeatureValue[Integral]     (c.id, "age",       c.age)),
       expectTallAge.option(  FeatureValue[Integral]     (c.id, "tallAge",   c.age)),
       expectOldHieght.option(FeatureValue[FloatingPoint](c.id, "oldHeight", c.height)),
-                        Some(FeatureValue[TimeV]        (c.id, "time",      Timestamp(c.time, None))),
+                        Some(FeatureValue[Time]         (c.id, "time",      Timestamp(c.time, None))),
       expectCredit.option(   FeatureValue[FloatingPoint](c.id, "credit",    c.credit)),
       expectCredit.option(   FeatureValue[FloatingPoint](c.id, "altCredit", c.credit))
     ).flatten
@@ -217,12 +217,12 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     eavtValues.toList must matchEavts(expected)
   }}
 
-  def matchEavts(expected: List[(EntityId, Name, Value, Time)])
-      : Matcher[List[(EntityId, Name, Value, Time)]] =
+  def matchEavts(expected: List[(EntityId, Name, Value, FeatureTime)])
+      : Matcher[List[(EntityId, Name, Value, FeatureTime)]] =
     expected.contain(_.zip(===, ===, matchValue, ===))
 
   def matchValue(expected: Value): Matcher[Value] = expected match {
-    case Integral(_) | Str(_) | FloatingPoint(None) | Decimal(None) | DateV(_) | TimeV(_) => be_===(expected)
+    case Integral(_) | Str(_) | FloatingPoint(None) | Decimal(None) | Date(_) | Time(_) => be_===(expected)
     case FloatingPoint(Some(expectedDouble)) =>
       beCloseTo(expectedDouble +/- 0.000000000001) ^^ (
         (v: Value) => v match {

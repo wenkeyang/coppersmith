@@ -265,8 +265,8 @@ class HiveParquetSinkSpec extends ScaldingSinkSpec[HiveParquetSink[Eavt, (String
           case Decimal(v) => v.map(_.toString)
           case FloatingPoint(v) => v.map(_.toString)
           case Str(v) => v
-          case DateV(v) => v.map(_.toString)
-          case TimeV(v) => v.map(_.toString)
+          case Date(v) => v.map(_.toString)
+          case Time(v) => v.map(_.toString)
         }).getOrElse("NULL")
 
         val featureTime = new DateTime(time).toString("yyyy-MM-dd")

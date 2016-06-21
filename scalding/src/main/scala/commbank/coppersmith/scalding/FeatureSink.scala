@@ -43,7 +43,7 @@ trait FeatureSink {
     * Persist feature values, returning the list of paths written (for committing at the
     * end of the job) or an error if trying to write to a path that is already committed
     */
-  def write(features: TypedPipe[(FeatureValue[_], Time)]): WriteResult
+  def write(features: TypedPipe[(FeatureValue[_], FeatureTime)]): WriteResult
 }
 
 object FeatureSink {
@@ -113,8 +113,8 @@ final case class DerivedSinkPartition[T, PP : PathComponents : TupleSetter](
   def tupleSetter = implicitly
 }
 
-trait FeatureValueEnc[T] extends Encoder[(FeatureValue[_], Time), T] {
-  def encode(fvt: (FeatureValue[_], Time)): T
+trait FeatureValueEnc[T] extends Encoder[(FeatureValue[_], FeatureTime), T] {
+  def encode(fvt: (FeatureValue[_], FeatureTime)): T
 }
 
 object HiveTextSink {
@@ -135,7 +135,7 @@ case class HiveTextSink[
   delimiter: String = HiveTextSink.Delimiter,
   dcs:       DelimiterConflictStrategy[T] = FailJob[T]()
 ) extends FeatureSink {
-  def write(features: TypedPipe[(FeatureValue[_], Time)]) = {
+  def write(features: TypedPipe[(FeatureValue[_], FeatureTime)]) = {
     val textPipe = features.map(implicitly[FeatureValueEnc[T]].encode)
 
     val hiveConfig =

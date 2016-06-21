@@ -97,8 +97,8 @@ package object api {
   type Str = commbank.coppersmith.Feature.Value.Str
   type Decimal = commbank.coppersmith.Feature.Value.Decimal
   type FloatingPoint = commbank.coppersmith.Feature.Value.FloatingPoint
-  type DateV = commbank.coppersmith.Feature.Value.DateV
-  type TimeV = commbank.coppersmith.Feature.Value.TimeV
+  type Date = commbank.coppersmith.Feature.Value.Date
+  type Time = commbank.coppersmith.Feature.Value.Time
   type BasicFeatureSet[S] = commbank.coppersmith.BasicFeatureSet[S]
   type QueryFeatureSet[S, V <: Value] = commbank.coppersmith.QueryFeatureSet[S, V]
   type FeatureContext = commbank.coppersmith.FeatureContext
@@ -106,7 +106,7 @@ package object api {
   type ContextFeatureSource[S, C, FS <: FeatureSource[S, FS]] = commbank.coppersmith.ContextFeatureSource[S, C, FS]
   type DataSource[S, P[_]] = commbank.coppersmith.DataSource[S, P]
   type FeatureValue[+V <: Value] = commbank.coppersmith.FeatureValue[V]
-  type Time = commbank.coppersmith.Feature.Time
+  type FeatureTime = commbank.coppersmith.Feature.FeatureTime
 
   // Maestro dependencies below
   type JobStatus = au.com.cba.omnia.maestro.api.JobStatus
@@ -117,8 +117,8 @@ package object api {
   val Str = commbank.coppersmith.Feature.Value.Str
   val Decimal = commbank.coppersmith.Feature.Value.Decimal
   val FloatingPoint = commbank.coppersmith.Feature.Value.FloatingPoint
-  val DateV = commbank.coppersmith.Feature.Value.DateV
-  val TimeV = commbank.coppersmith.Feature.Value.TimeV
+  val Date = commbank.coppersmith.Feature.Value.Date
+  val Time = commbank.coppersmith.Feature.Value.Time
   val FeatureStub = commbank.coppersmith.FeatureStub
   val ExplicitGenerationTime = commbank.coppersmith.ExplicitGenerationTime
   val From = commbank.coppersmith.From

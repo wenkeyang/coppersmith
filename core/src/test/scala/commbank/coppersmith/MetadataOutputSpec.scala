@@ -37,8 +37,8 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       case Decimal(_)       => (Metadata[Customer, Decimal]      (namespace, name, desc, fType), "bigdecimal")
       case FloatingPoint(_) => (Metadata[Customer, FloatingPoint](namespace, name, desc, fType), "double")
       case Str(_)           => (Metadata[Customer, Str]          (namespace, name, desc, fType), "string")
-      case DateV(_)         => (Metadata[Customer, DateV]        (namespace, name, desc, fType), "date")
-      case TimeV(_)         => (Metadata[Customer, TimeV]        (namespace, name, desc, fType), "datetime")
+      case Date(_)          => (Metadata[Customer, Date]         (namespace, name, desc, fType), "date")
+      case Time(_)          => (Metadata[Customer, Time]         (namespace, name, desc, fType), "datetime")
     }
 
     val expectedFeatureType = fType match {
@@ -59,8 +59,8 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       case Decimal(_)       => (Metadata[Customer, Decimal]      (namespace, name, desc, fType), "decimal")
       case FloatingPoint(_) => (Metadata[Customer, FloatingPoint](namespace, name, desc, fType), "floatingpoint")
       case Str(_)           => (Metadata[Customer, Str]          (namespace, name, desc, fType), "string")
-      case DateV(_)         => (Metadata[Customer, DateV]        (namespace, name, desc, fType), "date")
-      case TimeV(_)         => (Metadata[Customer, TimeV]        (namespace, name, desc, fType), "time")
+      case Date(_)          => (Metadata[Customer, Date]         (namespace, name, desc, fType), "date")
+      case Time(_)          => (Metadata[Customer, Time]         (namespace, name, desc, fType), "time")
     }
 
     val expectedFeatureType = fType.toString.toLowerCase
@@ -71,8 +71,8 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       case (Ordinal,    Integral(_)) => Some(OrdinalIntegral)
       case (Continuous, Integral(_)) => Some(ContinuousIntegral)
       case (Discrete,   Integral(_)) => Some(DiscreteIntegral)
-      case (Instant,    DateV(_))    => Some(InstantDate)
-      case (Instant,    TimeV(_))    => Some(InstantTime)
+      case (Instant,    Date(_))     => Some(InstantDate)
+      case (Instant,    Time(_))     => Some(InstantTime)
       case _                         => None
     }
     val expectedTypesConform = oConforms.isDefined
