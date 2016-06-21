@@ -90,6 +90,7 @@ import scala.util.Try
 
 import java.util.Locale
 
+import commbank.coppersmith.util.Date
 import commbank.coppersmith.api._
 import commbank.coppersmith.examples.thrift.Movie
 
@@ -143,6 +144,7 @@ import scala.util.Try
 
 import java.util.Locale
 
+import commbank.coppersmith.util.Date
 import commbank.coppersmith.api._
 import commbank.coppersmith.examples.thrift.Movie
 
@@ -427,6 +429,7 @@ import scala.util.Try
 
 import java.util.Locale
 
+import commbank.coppersmith.util.Date
 import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 
@@ -468,7 +471,7 @@ import scala.util.Try
 
 import java.util.Locale
 
-import commbank.coppersmith.api.Date
+import commbank.coppersmith.util.Date
 import commbank.coppersmith.examples.thrift.{Movie, Rating}
 
 object Implicits {
@@ -1219,6 +1222,7 @@ package commbank.coppersmith.examples.userguide
 
 import org.joda.time.DateTime
 
+import commbank.coppersmith.util.Date
 import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
 

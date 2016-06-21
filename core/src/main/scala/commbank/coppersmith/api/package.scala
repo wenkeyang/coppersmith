@@ -99,8 +99,6 @@ package object api {
   type FloatingPoint = commbank.coppersmith.Feature.Value.FloatingPoint
   type DateV = commbank.coppersmith.Feature.Value.DateV
   type TimeV = commbank.coppersmith.Feature.Value.TimeV
-  type Date = commbank.coppersmith.util.Date
-  type Timestamp = commbank.coppersmith.util.Timestamp
   type BasicFeatureSet[S] = commbank.coppersmith.BasicFeatureSet[S]
   type QueryFeatureSet[S, V <: Value] = commbank.coppersmith.QueryFeatureSet[S, V]
   type FeatureContext = commbank.coppersmith.FeatureContext
@@ -121,8 +119,6 @@ package object api {
   val FloatingPoint = commbank.coppersmith.Feature.Value.FloatingPoint
   val DateV = commbank.coppersmith.Feature.Value.DateV
   val TimeV = commbank.coppersmith.Feature.Value.TimeV
-  val Date = commbank.coppersmith.util.Date
-  val Timestamp = commbank.coppersmith.util.Timestamp
   val FeatureStub = commbank.coppersmith.FeatureStub
   val ExplicitGenerationTime = commbank.coppersmith.ExplicitGenerationTime
   val From = commbank.coppersmith.From
