@@ -26,21 +26,12 @@ import org.joda.time.{DateTimeZone, LocalDate, DateTime}
 import au.com.cba.omnia.maestro.api.{Field, Maestro}, Maestro.Fields
 
 import Feature.{Value, Type}, Value._, Type._
-import util.{Date, Time}
+import util.{Date, Timestamp}
 
 import test.thrift.{Account, Customer}
 
 object Arbitraries {
   implicit val arbFeatureType: Arbitrary[Type] = Arbitrary(oneOf(Nominal, Continuous, Ordinal, Discrete))
-
-  implicit val integralValueGen: Gen[Integral] = arbitrary[Option[Long]].map(Integral(_))
-  implicit val decimalValueGen: Gen[Decimal] =
-    arbitrary[Option[BigDecimal]].retryUntil(obd =>
-      Try(obd.hashCode()).isSuccess
-    ).map(Decimal(_))
-  implicit val floatingPointValueGen: Gen[FloatingPoint] = arbitrary[Option[Double]].map(FloatingPoint(_))
-  implicit val strValueGen: Gen[Str] = arbitrary[Option[String]].map(Str(_))
-  implicit val arbValue: Arbitrary[Value] = Arbitrary(oneOf(integralValueGen, decimalValueGen, floatingPointValueGen, strValueGen))
 
   implicit val arbLocalDate: Arbitrary[LocalDate] = Arbitrary(for {
     year  <- chooseNum(1970, 2100)
@@ -60,9 +51,7 @@ object Arbitraries {
     zm  <- chooseNum(0, 59)
   } yield new DateTime(y, m, d, h, min, s, ms, DateTimeZone.forOffsetHoursMinutes(zh, zm)))
 
-  val arbTimeMillis: Gen[Long] = arbitrary[DateTime].map(_.getMillis)
-
-  implicit val arbTime: Arbitrary[Time] = {
+  implicit val arbTime: Arbitrary[Timestamp] = {
     import java.util.concurrent.TimeUnit.MILLISECONDS
     Arbitrary(for {
       dt     <- arbDateTime.arbitrary
@@ -70,14 +59,8 @@ object Arbitraries {
       offsetL = dt.getZone.getOffset(dt)
       offset  = (MILLISECONDS.toHours(offsetL).toInt, Math.abs(MILLISECONDS.toMinutes(offsetL).toInt % 60))
     } yield {
-      Time(
-        dt.getYear,
-        dt.getMonthOfYear,
-        dt.getDayOfMonth,
-        dt.getHourOfDay,
-        dt.getMinuteOfHour,
-        dt.getSecondOfMinute,
-        dt.getMillisOfSecond,
+      Timestamp(
+        dt.getMillis,
         if (b) Some(offset) else None
       )
     })
@@ -86,6 +69,19 @@ object Arbitraries {
   implicit val arbDateUtil: Arbitrary[Date] = for {
     date <- arbLocalDate
   } yield Date(date.getYear, date.getMonthOfYear, date.getDayOfMonth)
+
+  implicit val integralValueGen: Gen[Integral] = arbitrary[Option[Long]].map(Integral(_))
+  implicit val decimalValueGen: Gen[Decimal] =
+    arbitrary[Option[BigDecimal]].retryUntil(obd =>
+      Try(obd.hashCode()).isSuccess
+    ).map(Decimal(_))
+  implicit val floatingPointValueGen: Gen[FloatingPoint] = arbitrary[Option[Double]].map(FloatingPoint(_))
+  implicit val strValueGen: Gen[Str] = arbitrary[Option[String]].map(Str(_))
+  implicit val dateValueGen: Gen[DateV] = arbitrary[Option[Date]].map(DateV(_))
+  implicit val timeValueGen: Gen[TimeV] = arbitrary[Option[Timestamp]].map(TimeV(_))
+  implicit val arbValue: Arbitrary[Value] = Arbitrary(oneOf(integralValueGen, decimalValueGen, floatingPointValueGen, strValueGen, dateValueGen, timeValueGen))
+
+  val arbTimeMillis: Gen[Long] = arbitrary[DateTime].map(_.getMillis)
 
   implicit val arbFeatureValue: Arbitrary[FeatureValue[Value]] = Arbitrary(
     (arbNonEmptyAlphaStr.map(_.value) |@|
@@ -101,7 +97,7 @@ object Arbitraries {
        ageGen |@|
        arbitrary[Double] |@|
        arbitrary[Option[Double]] |@|
-       arbitrary[Long])(Customer.apply)
+       arbTimeMillis)(Customer.apply)
 
   implicit val arbCustomer: Arbitrary[Customer] = Arbitrary(customerGen(arbitrary[String]))
 
