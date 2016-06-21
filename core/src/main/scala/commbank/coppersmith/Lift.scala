@@ -23,7 +23,7 @@ import shapeless.ops.nat.Pred
 
 import commbank.coppersmith.Join.{CompleteJoinHl}
 import commbank.coppersmith.util.Conversion
-import commbank.coppersmith.generated.GeneratedLift
+import commbank.coppersmith.generated.{GeneratedLift, Joined2}
 
 import Feature.Value
 
@@ -53,20 +53,20 @@ abstract class Lift[P[_]](implicit val functor: Functor[P]) extends GeneratedLif
 
   //two is a special case, a little easier to do than the general case
   def liftJoin[A, B, J : Ordering](
-    joined: Joined[A, B, J, (A, B)]
+    joined: Joined2[A, B, J, A, B]
   )(a:P[A], b: P[B]): P[(A, B)] = {
     innerJoinNext(
-      (l: A :: HNil) => joined.left(l.head),
-      joined.right
+      (l: A :: HNil) => joined.s1j1(l.head),
+      joined.s2j1
     )(a.map(_ :: HNil), b).map(_.tupled)
   }
 
   def liftLeftJoin[A, B, J : Ordering](
-    joined: Joined[A, B, J, (A, Option[B])]
+    joined: Joined2[A, B, J, A, Option[B]]
   )(a: P[A], b: P[B]): P[(A, Option[B])] = {
     leftJoinNext(
-      (l: A :: HNil) => joined.left(l.head),
-      joined.right
+      (l: A :: HNil) => joined.s1j1(l.head),
+      joined.s2j1
     )(a.map(_ :: HNil), b).map(_.tupled)
   }
 

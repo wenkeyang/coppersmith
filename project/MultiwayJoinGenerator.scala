@@ -42,9 +42,8 @@ object MultiwayJoinGenerator {
   // S1, S2, S3, ...
   def sourceTypeParamsList(level: Int): List[String] = 1.to(level).map(l => s"S$l").toList
 
-  // S12, S123, S1234, ...
-  def joinedSourceParamsList(supportedDepth: Int, level: Int = 2): List[String] =
-    level.to(supportedDepth).foldRight(List[String]())((l, acc) => s"S${numbersTo(l)}" :: acc)
+  // T1, T2, T3, ...
+  def joinedSourceParamsList(level: Int): List[String] = 1.to(level).map(l => s"T$l").toList
 
   // J1, J2, J3, ...
   def joinTypeParamsList(level: Int) = 1.to(level - 1).map(l => s"J$l")
@@ -65,22 +64,22 @@ object MultiwayJoinGenerator {
 
   def joinFunctions(level: Int, start: Int = 2): List[NameType] =
     start.to(level).foldRight(List[NameType]())((l, nameTypes) => {
-      //                   eg, s123j3                        eg,  S123 => J3
-      val soFar = NameType(s"s${numbersTo(l - 1)}j${l - 1}", s"S${numbersTo(l - 1)} => J${l - 1}")
+      val joinedSourceSoFar = joinedSourceParamsList(l - 1).mkString("(", ", ", ")")
+      //                   eg, s123j3                        eg,  (T1, T2, T3) => J3
+      val soFar = NameType(s"s${numbersTo(l - 1)}j${l - 1}", s"${joinedSourceSoFar} => J${l - 1}")
       //                  eg, s4j3           eg, S4 => J3
       val next = NameType(s"s${l}j${l - 1}", s"S${l} => J${l - 1}")
       soFar :: next :: nameTypes
     })
 
-  // (S1, Option[S2]), (S1, Option[S2], S3), (S1, Option[S2], S3, S4), ...
+  // S1, Option[S2], S3, ...
   def joinedSourceTypes(level: Int, permutation: List[JoinType], start: Int = 2): String =
-    start.to(level).foldRight(List[List[String]]())((l, acc) =>
-      ("S1" :: permutation.zipWithIndex.take(l - 1).map {
+    (
+      "S1" :: permutation.zipWithIndex.map {
         case (Inner, idx) => s"S${idx + 2}"
         case (Left, idx) => s"Option[S${idx + 2}]"
-      }) :: acc
-    ).map(_.mkString("(", ", ", ")")).mkString(", ")
-
+      }
+    ).mkString(", ")
 
   val prelude =
     """/*
@@ -105,7 +104,7 @@ object MultiwayJoinGenerator {
 
   def genJoined(level: Int, supportedDepth: Int): String = {
     val srcTypeParams = sourceTypeParamsList(level).mkString(", ")
-    val srcTypeParam = sourceTypeParam(level)
+    val srcTypeParam = joinedSourceParamsList(level).mkString("(", ", ", ")")
     val nextSrcTypeParams = sourceTypeParamsList(level + 1).mkString(", ")
     val joinOrderingTypeParams = joinTypeParamsList(level).map(_ + " : Ordering").mkString(", ")
     val joinTypeParams = joinTypeParamsList(level).mkString(", ")
@@ -120,23 +119,25 @@ object MultiwayJoinGenerator {
       |  ${joinedSrcParams}
       |](
       |  ${joinFunctionsAndTypes},
-      |  filter: Option[${srcTypeParam} => Boolean]
+      |  filter: Option[(${srcTypeParam}) => Boolean]
       |) extends FeatureSource[${srcTypeParam}, Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}]](filter) {
       |
       |  type FS = Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}]
       |
-      |  def copyWithFilter(filter: Option[${srcTypeParam} => Boolean]) = copy(filter = filter)""".stripMargin +
+      |  def copyWithFilter(filter: Option[(${srcTypeParam}) => Boolean]) = copy(filter = filter)""".stripMargin +
       {
         if (level < supportedDepth) { s"""
       |
       |  def innerJoinTo[S${level + 1}] =
       |    IncompleteJoin${level + 1}[
-      |      ${nextSrcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}, (${srcTypeParam}, S${level + 1})
+      |      ${nextSrcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}, S${level + 1}
       |    ](${joinFunctions(level).map(_.name).mkString(", ")})
+      |  def inner[S${level + 1}] = innerJoinTo[S${level + 1}]
       |  def leftJoinTo[S${level + 1}] =
       |    IncompleteJoin${level + 1}[
-      |      ${nextSrcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}, (${srcTypeParam}, Option[S${level + 1}])
-      |    ](${joinFunctions(level).map(_.name).mkString(", ")})""".stripMargin
+      |      ${nextSrcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}, Option[S${level + 1}]
+      |    ](${joinFunctions(level).map(_.name).mkString(", ")})
+      |  def left[S${level + 1}] = leftJoinTo[S${level + 1}]""".stripMargin
         } else ""
       } + """
       |}
@@ -157,7 +158,7 @@ object MultiwayJoinGenerator {
       ).mkString(",\n    ")
 
       Some(
-        s"""case class IncompleteJoin${level + 1}[${nextSrcTypeParams}, ${joinOrderingTypeParams}, ${joinedSrcParams}, ${sourceTypeParam(level + 1)}](
+        s"""case class IncompleteJoin${level + 1}[${nextSrcTypeParams}, ${joinOrderingTypeParams}, ${joinedSrcParams}, T${level + 1}](
         |  ${joinFunctionsAndTypes}
         |) {
         |  def on[J${level} : Ordering](
@@ -223,8 +224,8 @@ object MultiwayJoinGenerator {
     s"""
       |case class Joined${level}${joinType}Binder[${srcTypeParams}, ${joinOrderingTypeParams}, P[_] : Lift](
       |  ${sources}
-      |) extends SourceBinder[${joinedReturnType}, Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcTypes}], P] {
-      |  def bind(j: Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcTypes}]): P[${joinedReturnType}] = {
+      |) extends SourceBinder[(${joinedReturnType}), Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcTypes}], P] {
+      |  def bind(j: Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcTypes}]): P[(${joinedReturnType})] = {
       |    implicitly[Lift[P]].liftJoin${joinType}(j)(${loadCalls})
       |  }
       |}
@@ -256,7 +257,7 @@ object MultiwayJoinGenerator {
 
     s"""  def liftJoin${joinType}[${srcTypeParams}, ${joinOrderingTypeParams}](
     |    joined: Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcTypes}]
-    |  )(${sources}): ${pType}[${joinedReturnType}]""".stripMargin
+    |  )(${sources}): ${pType}[(${joinedReturnType})]""".stripMargin
   }
 
   def generateLiftScalding(joins: List[GeneratedJoinLevel]): String = {
@@ -288,10 +289,11 @@ object MultiwayJoinGenerator {
         val joinSrc = s"s${numbersTo(level)}"
         val nextSrc = s"s${level + 1}"
         val join = s"j${level}"
+        val tupled = if (level == 1) "" else ".tupled"
 
         val init = if (level == 1) "    s1" else "  "
 
-        val group = s".groupBy(joined.${joinSrc}${join}).${joinType}(${nextSrc}.groupBy(joined.${nextSrc}${join})).values"
+        val group = s".groupBy(joined.${joinSrc}${join}${tupled}).${joinType}(${nextSrc}.groupBy(joined.${nextSrc}${join})).values"
 
         val map = if (level == 1) "" else {
           val sources = 1.to(level).map(l => s"s$l").mkString(", ")
@@ -331,8 +333,9 @@ object MultiwayJoinGenerator {
         val joinSrc = s"s${numbersTo(level)}"
         val nextSrc = s"s${level + 1}"
         val join = s"j${level}"
+        val tupled = if (level == 1) "" else ".tupled"
 
-        val group = s"    val s${numbersTo(level + 1)} = ${joinType}(joined.${joinSrc}${join}, joined.${nextSrc}${join}, ${joinSrc}, ${nextSrc})"
+        val group = s"    val s${numbersTo(level + 1)} = ${joinType}(joined.${joinSrc}${join}${tupled}, joined.${nextSrc}${join}, ${joinSrc}, ${nextSrc})"
 
         val map = if (level == 1) "" else {
           val sources = 1.to(level).map(l => s"s$l").mkString(", ")

@@ -22,8 +22,9 @@ import shapeless.{HNil, ::, Generic, HList}
 import commbank.coppersmith.Feature.Value
 import commbank.coppersmith.Join.CompleteJoinHlFeatureSource
 import commbank.coppersmith.util.Conversion
+import commbank.coppersmith.generated.GeneratedBindings
 
-package object api {
+package object api extends GeneratedBindings {
 
   object Coppersmith extends au.com.cba.omnia.maestro.macros.MacroSupport {
     implicit def fromFS[S](fs: FeatureSource[S, _]) =

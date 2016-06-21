@@ -15,13 +15,12 @@
 package commbank.coppersmith
 
 import shapeless._
-
 import shapeless.ops.function._
 import shapeless.ops.hlist._
+import shapeless.ops.product.ToHList
 import shapeless.syntax.std.function._
 
-
-import shapeless.ops.product.ToHList
+import commbank.coppersmith.generated.Joined2
 
 object From {
   def apply[S](): From[S] = From(None)
@@ -33,89 +32,32 @@ case class From[S](filter: Option[S => Boolean] = None) extends FeatureSource[S,
   def copyWithFilter(filter: Option[S => Boolean]) = copy(filter)
 }
 
-case class Joined[L, R, J : Ordering, S](left: L => J, right: R => J, filter: Option[S => Boolean])
-    extends FeatureSource[S, Joined[L, R, J, S]](filter) {
-  type FS = Joined[L, R, J, S]
-
-  def copyWithFilter(filter: Option[S => Boolean]) = copy(filter = filter)
-
-  def innerJoinTo[S3] = Join.IncompleteJoin3[L, R, S3, J, S, (S, S3)](left, right)
-  def leftJoinTo[S3] = Join.IncompleteJoin3[L, R, S3, J, S, (S, Option[S3])](left, right)
-}
-
-case class Joined3[S1, S2, S3, J1 : Ordering, J2 : Ordering, S12, S123](
-  s1j1:   S1  => J1,
-  s2j1:   S2  => J1,
-  s12j2:  S12 => J2,
-  s3j2:   S3  => J2,
-  filter: Option[S123 => Boolean]
-) extends FeatureSource[S123, Joined3[S1, S2, S3, J1, J2, S12, S123]](filter) {
-  type FS = Joined3[S1, S2, S3, J1, J2, S12, S123]
-
-  def copyWithFilter(filter: Option[S123 => Boolean]) = copy(filter = filter)
-  def innerJoinTo[S4] =
-    Join.IncompleteJoin4[S1, S2, S3, S4, J1, J2, S12, S123, (S123, S4)](s1j1, s2j1, s12j2, s3j2)
-  def leftJoinTo[S4] =
-    Join.IncompleteJoin4[S1, S2, S3, S4, J1, J2, S12, S123, (S123, Option[S4])](s1j1, s2j1, s12j2, s3j2)
-}
-
-case class Joined4[S1, S2, S3, S4, J1 : Ordering, J2 : Ordering, J3 : Ordering, S12, S123, S1234](
-  s1j1:   S1   => J1,
-  s2j1:   S2   => J1,
-  s12j2:  S12  => J2,
-  s3j2:   S3   => J2,
-  s123j3: S123 => J3,
-  s4j3:   S4   => J3,
-  filter: Option[S1234 => Boolean]
-) extends FeatureSource[S1234, Joined4[S1, S2, S3, S4, J1, J2, J3, S12, S123, S1234]](filter) {
-  type FS = Joined4[S1, S2, S3, S4, J1, J2, J3, S12, S123, S1234]
-
-  def copyWithFilter(filter: Option[S1234 => Boolean]) = copy(filter = filter)
-}
-
 object Join {
-  def join[T]: InnerJoinableTo[T] = new EmptyInnerJoinableTo[T]
+  def join[T]: InnerJoinableTo[T] = new InnerJoinableTo[T]
   def apply[T] = join[T]
 
-  def left[T]: LeftOuterJoinableTo[T] = new EmptyLeftOuterJoinableTo[T]
+  def left[T]: LeftOuterJoinableTo[T] = new LeftOuterJoinableTo[T]
 
-  class EmptyInnerJoinableTo[L] extends InnerJoinableTo[L]
+  def multiway[T]: JoinableTo[T] = new JoinableTo[T]
 
-  class EmptyLeftOuterJoinableTo[L] extends LeftOuterJoinableTo[L]
-
-  sealed trait InnerJoinableTo[L] {
-    def to[R]: IncompleteJoin[L, R, (L, R)] = new IncompleteJoin[L, R, (L, R)]
+  class InnerJoinableTo[L] {
+    def to[R]: IncompleteJoin[L, R, L, R] = new IncompleteJoin[L, R, L, R]
   }
 
-  sealed trait LeftOuterJoinableTo[L] {
-    def to[R]: IncompleteJoin[L, R, (L, Option[R])] = new IncompleteJoin[L, R, (L, Option[R])]
+  class LeftOuterJoinableTo[L] {
+    def to[R]: IncompleteJoin[L, R, L, Option[R]] = new IncompleteJoin[L, R, L, Option[R]]
   }
 
-  class IncompleteJoin[L, R, S] {
-    def on[J: Ordering](l: L => J, r: R => J): Joined[L, R, J, S] = Joined(l, r, None)
+  class JoinableTo[L] {
+    def inner[R]: IncompleteJoin[L, R, L, R]         = new IncompleteJoin[L, R, L, R]
+    def left[R]:  IncompleteJoin[L, R, L, Option[R]] = new IncompleteJoin[L, R, L, Option[R]]
   }
 
-  case class IncompleteJoin3[S1, S2, S3, J1 : Ordering, S12, S123](s1j1: S1 => J1, s2j1: S2 => J1) {
-    def on[J2 : Ordering](
-      s12j2: S12 => J2,
-      s3j2:  S3 => J2
-    ): Joined3[S1, S2, S3, J1, J2, S12, S123] = Joined3(s1j1, s2j1, s12j2, s3j2, None)
+  class IncompleteJoin[S1, S2, T1, T2] {
+    def on[J: Ordering](s1: T1 => J, s2: S2 => J): Joined2[S1, S2, J, T1, T2] = Joined2(s1, s2, None)
   }
 
-  case class IncompleteJoin4[S1, S2, S3, S4, J1 : Ordering, J2 : Ordering, S12, S123, S1234](
-    s1j1:  S1  => J1,
-    s2j1:  S2  => J1,
-    s12j2: S12  => J2,
-    s3j2:  S3   => J2
-  ) {
-    def on[J3 : Ordering](
-      s123j3: S123 => J3,
-      s4j3:   S4 => J3
-    ): Joined4[S1, S2, S3, S4, J1, J2, J3, S12, S123, S1234] =
-      Joined4(s1j1, s2j1, s12j2, s3j2, s123j3, s4j3, None)
-  }
-
-  def multiway[A] = Multiway[A]()
+  def multiwayShapeless[A] = Multiway[A]()
 
   case class Multiway[A]() {
     def inner[B] = IncompleteJoinedHl[A :: HNil, B, B, A :: B :: HNil, HNil](HNil)

@@ -108,7 +108,7 @@ class LiftSpec extends Specification {
     type Joins = (A :: HNil => Int, B => Int) :: HNil
 
     val join: CompleteJoinHl[Types, Joins] =
-      Join.multiway[A].inner[B].on((a: A) => a.id, (b: B) => b.id)
+      Join.multiwayShapeless[A].inner[B].on((a: A) => a.id, (b: B) => b.id)
 
     import ToNextPipe._
 
@@ -149,7 +149,7 @@ class LiftSpec extends Specification {
     type Joins = (A :: HNil => Int, B => Int) :: HNil
 
     val join: CompleteJoinHl[Types, Joins] =
-      Join.multiway[A].left[B].on((a: A) => a.id, (b: B) => b.id)
+      Join.multiwayShapeless[A].left[B].on((a: A) => a.id, (b: B) => b.id)
 
     import ToNextPipe._
 
@@ -182,7 +182,7 @@ class LiftSpec extends Specification {
       C("2"),
       C("22")
     )
-    val join = Join.multiway[A].inner[B].on((a: A) => a.id, (b: B) => b.id).
+    val join = Join.multiwayShapeless[A].inner[B].on((a: A) => a.id, (b: B) => b.id).
       inner[C].on((a: A, b: B) => b.str, (c: C) => c.str)
 
 

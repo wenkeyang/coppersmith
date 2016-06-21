@@ -971,10 +971,9 @@ object MultiJoinFeatures extends AggregationFeatureSet[(Movie, Rating, User)] {
 
   val source = Join.multiway[Movie]
       .inner[Rating].on((movie: Movie)               => movie.id,
-                         (rating: Rating)            => rating.movieId)
+                        (rating: Rating)             => rating.movieId)
       .inner[User].on((movie: Movie, rating: Rating) => rating.userId,
-                         (user: User)                => user.id)
-      .src  // Note the use of the .src call. Awkward implementation detail
+                      (user: User)                   => user.id)
 
   val select = source.featureSetBuilder(namespace, entity)
 
@@ -996,7 +995,7 @@ case class MultiJoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie
   val users: DataSource[User, TypedPipe]      = HiveTextSource[User, Nothing](new Path("data/users"),
                                                   Partitions.unpartitioned)
 
-  val featureSource  = MultiJoinFeatures.source.bind(joinMulti((movies, ratings, users), MultiJoinFeatures.source))
+  val featureSource  = MultiJoinFeatures.source.bind(joinInnerInner(movies, ratings, users))
   val featureSink    = HiveTextSink[Eavt]("userguide", new Path("dev/ratings"), "ratings", eavtByDay)
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 }
@@ -1324,11 +1323,10 @@ object DirectorFeatures extends AggregationFeatureSet[(Director, Movie, Rating)]
   def entity(s: (Director, Movie, Rating)) = s._1.name
 
   val source = Join.multiway[Director]
-    .inner[Movie].on((director: Director)      => director.movieTitle,
-                    (movie: Movie)             => movie.title)
-    .inner[Rating].on((d: Director, m: Movie)  => m.id,
-                      (rating: Rating)         => rating.movieId)
-    .src
+    .inner[Movie].on((director: Director)     => director.movieTitle,
+                     (movie: Movie)           => movie.title)
+    .inner[Rating].on((d: Director, m: Movie) => m.id,
+                      (rating: Rating)        => rating.movieId)
 
   val select = source.featureSetBuilder(namespace, entity)
 
@@ -1368,7 +1366,7 @@ case class DirectorFeaturesConfig(conf: Config) extends FeatureJobConfig[(Direct
 
   val directorsSource: DataSource[Director, TypedPipe] = DirectorSourceConfig.dataSource
 
-  val featureSource  = source.bind(joinMulti((directorsSource, movies, ratings), source))
+  val featureSource  = source.bind(joinInnerInner(directorsSource, movies, ratings))
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
   val featureSink    = HiveTextSink[Eavt]("userguide", new Path("dev/directors"), "directors", eavtByDay)
 }

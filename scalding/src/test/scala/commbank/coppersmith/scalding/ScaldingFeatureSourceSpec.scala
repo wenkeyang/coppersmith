@@ -194,13 +194,12 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     val source = Join.multiway[Customer].inner[Account].on(
       (c: Customer) => c.id,
       (a: Account) => a.customerId
-    ).src
+    )
 
     val customersDs: DataSource[Customer, TypedPipe] = TestDataSource(cas.map(_.c))
     val accountsDs: DataSource[Account, TypedPipe] = TestDataSource(cas.flatMap(_.as))
 
-    val binder = joinMulti((customersDs, accountsDs), source)
-    val bound = source.bind(binder)
+    val bound = source.bind(joinInner(customersDs, accountsDs))
 
     runsSuccessfully(bound.load).toSet must_== expected.toSet
 
@@ -218,13 +217,12 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     val source = Join.multiway[Customer].inner[Account].on(
       (c: Customer) => c.id,
       (a: Account) => a.customerId
-    ).src.filter(filter)
+    ).filter(filter)
 
     val customersDs: DataSource[Customer, TypedPipe] = TestDataSource(cas.map(_.c))
     val accountsDs:  DataSource[Account,  TypedPipe] = TestDataSource(cas.flatMap(_.as))
 
-    val binder = joinMulti((customersDs, accountsDs), source)
-    val bound = source.bind(binder)
+    val bound = source.bind(joinInner(customersDs, accountsDs))
 
     runsSuccessfully(bound.load).toSet must_== expected.toSet
 
