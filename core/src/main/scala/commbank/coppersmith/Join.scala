@@ -14,12 +14,6 @@
 
 package commbank.coppersmith
 
-import shapeless._
-import shapeless.ops.function._
-import shapeless.ops.hlist._
-import shapeless.ops.product.ToHList
-import shapeless.syntax.std.function._
-
 import commbank.coppersmith.generated.Joined2
 
 object From {
@@ -55,50 +49,5 @@ object Join {
 
   class IncompleteJoin[S1, S2, T1, T2] {
     def on[J: Ordering](s1: T1 => J, s2: S2 => J): Joined2[S1, S2, J, T1, T2] = Joined2(s1, s2, None)
-  }
-
-  def multiwayShapeless[A] = Multiway[A]()
-
-  case class Multiway[A]() {
-    def inner[B] = IncompleteJoinedHl[A :: HNil, B, B, A :: B :: HNil, HNil](HNil)
-
-    def left[B] = IncompleteJoinedHl[A :: HNil, Option[B], B, A :: Option[B] :: HNil, HNil](HNil)
-  }
-
-  case class IncompleteJoinedHl[
-    LeftSides <: HList,
-    RightSide, FlatRight,
-    Out <: HList,
-    PreviousJoins <: HList](pjs: PreviousJoins) {
-
-    def on[J: Ordering, F, NextJoins <: HList]
-      (leftFun: F, rightFun: FlatRight => J)
-      (implicit
-       fnHLister : FnToProduct.Aux[F,  LeftSides => J] ,
-       pp1       : Prepend.Aux[LeftSides, RightSide :: HNil, Out],
-       pp2       : Prepend.Aux[PreviousJoins, (LeftSides => J, FlatRight => J) :: HNil, NextJoins]): CompleteJoinHl[Out, NextJoins] = {
-      val leftHListFun: LeftSides => J = leftFun.toProduct
-      CompleteJoinHl[Out, NextJoins](pjs :+ ((leftHListFun, rightFun)))
-    }
-  }
-
-  case class CompleteJoinHl[Types <: HList, Joins <: HList](joins: Joins) {
-    def inner[B](implicit np: Prepend[Types, B :: HNil]) =
-      IncompleteJoinedHl[Types, B, B, np.Out, Joins](joins)
-
-    def left[B] (implicit np: Prepend[Types, Option[B] :: HNil]) =
-      IncompleteJoinedHl[Types, Option[B], B, np.Out, Joins](joins)
-
-    def src[TypesTuple <: Product]
-    (implicit tupler: shapeless.ops.hlist.Tupler.Aux[Types,TypesTuple]):CompleteJoinHlFeatureSource[Types, Joins, TypesTuple] =
-      CompleteJoinHlFeatureSource[Types, Joins, TypesTuple](this, None)
-  }
-
-  case class CompleteJoinHlFeatureSource[Types <: HList, Joins <: HList, TypesTuple <: Product](
-      join: CompleteJoinHl[Types, Joins],
-      filter: Option[TypesTuple => Boolean])
-     (implicit tupler: Tupler.Aux[Types, TypesTuple])
-        extends FeatureSource[TypesTuple, CompleteJoinHlFeatureSource[Types, Joins, TypesTuple]] {
-      def copyWithFilter(filter: Option[TypesTuple => Boolean]) = copy(filter = filter)
   }
 }

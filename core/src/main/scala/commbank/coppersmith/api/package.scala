@@ -16,12 +16,7 @@ package commbank.coppersmith
 
 import scala.reflect.runtime.universe.TypeTag
 
-import shapeless.ops.hlist._
-import shapeless.{HNil, ::, Generic, HList}
-
 import commbank.coppersmith.Feature.Value
-import commbank.coppersmith.Join.CompleteJoinHlFeatureSource
-import commbank.coppersmith.util.Conversion
 import commbank.coppersmith.generated.GeneratedBindings
 
 package object api extends GeneratedBindings {
@@ -42,51 +37,6 @@ package object api extends GeneratedBindings {
 
   def leftJoin[L, R, J : Ordering, P[_] : Lift](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
     commbank.coppersmith.SourceBinder.leftJoin(leftSrc, rightSrc)
-
-  def joinMulti[
-    P[_] : Lift,
-    Tuple <: Product,
-    Types <: HList,
-    Joins <: HList,
-    DSHL <: HList,
-    PipesHL <: HList,
-    PipesTuple <: Product,
-    PipesHead,
-    PipesTail <: HList,
-    TypesHead,
-    TypesTail <: HList,
-    NextPipes <: HList,
-    HeadElement,
-    Zipped <: HList,
-    TypesTuple <: Product
-  ](in: Tuple, j: CompleteJoinHlFeatureSource[Types, Joins, TypesTuple])
-   (implicit
-    //Map data source tuple to pipes tuple
-    dshlGen     : Generic.Aux[Tuple, DSHL],
-    mapper      : Mapper.Aux[DataSourcesToPipes.dataSourceToPipe.type, DSHL, PipesHL],
-    pipesConv   : Conversion.Aux[PipesTuple, PipesHL],
-
-    //Prove that pipes is cons
-    inIsCons: IsHCons.Aux[PipesHL, PipesHead, PipesTail],
-
-    //Prove that types is cons
-    typesIsCons: IsHCons.Aux[Types, TypesHead, TypesTail],
-
-    // Zip everything together
-    tnp: ToNextPipe.Aux[PipesTail, TypesTail, NextPipes],
-
-    // Proof that head is a pipe
-    pipeIsHead: P[HeadElement] =:= PipesHead,
-    headIsPipe: PipesHead =:= P[HeadElement],
-
-    //Folding to do actual join
-    zipper : Zip.Aux[NextPipes :: Joins :: HNil, Zipped],
-    leftFolder: LeftFolder.Aux[Zipped,P[HeadElement :: HNil], JoinFolders.joinFolder.type, P[Types]],
-
-    //and finally turning to tuple
-    typesTupler: Tupler.Aux[Types, TypesTuple]
-
-   ) = commbank.coppersmith.SourceBinder.joinMulti(in, j)
 
   type Feature[S, +V <: Value] = commbank.coppersmith.Feature[S, V]
   type FeatureSet[S] = commbank.coppersmith.FeatureSet[S]
