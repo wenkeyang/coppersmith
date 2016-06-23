@@ -74,8 +74,8 @@ object Feature {
     implicit val decOrder: Order[Decimal]       = orderBy(_.value)
     implicit val fpOrder:  Order[FloatingPoint] = orderBy(_.value)
     implicit val strOrder: Order[Str]           = orderBy(_.value)
-    implicit val dvOrder:  Order[Date]          = orderBy(_.value)
-    implicit val tvOrder:  Order[Time]          = orderBy(_.value)
+    implicit val dOrder:   Order[Date]          = orderBy(_.value)
+    implicit val tOrder:   Order[Time]          = orderBy(_.value)
 
     abstract class Range[+V : Order] {
       // V needs to be covariant to satisfy Metadata type constraint, so can't be in contravariant

@@ -84,13 +84,13 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
     val featureValues = CustomerFeatureSet.generate(c)
 
     val expectTallAge   = c.height > 2.0
-    val expectOldHieght = c.age > 65
+    val expectOldHeight = c.age > 65
     val expectCredit    = c.credit.isDefined
 
     featureValues must_== List(
                         Some(FeatureValue[Integral]     (c.id, "age",       c.age)),
       expectTallAge.option(  FeatureValue[Integral]     (c.id, "tallAge",   c.age)),
-      expectOldHieght.option(FeatureValue[FloatingPoint](c.id, "oldHeight", c.height)),
+      expectOldHeight.option(FeatureValue[FloatingPoint](c.id, "oldHeight", c.height)),
                         Some(FeatureValue[Time]         (c.id, "time",      Timestamp(c.time, None))),
       expectCredit.option(   FeatureValue[FloatingPoint](c.id, "credit",    c.credit)),
       expectCredit.option(   FeatureValue[FloatingPoint](c.id, "altCredit", c.credit))
