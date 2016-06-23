@@ -18,25 +18,34 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 
 import commbank.coppersmith.util.Timestamp.Offset
 
+import scala.util.{Failure, Success, Try}
 import scalaz.Order
 
 case class DatePeriod(years: Int, months: Int, days: Int)
 
 object Datestamp {
-  def parse(date: String): Datestamp = {
-    import org.joda.time.format.DateTimeFormat
+  val parseDefault       = parseFormat("yyyy-MM-dd")
+  val parseDefaultUnsafe = parseFormatUnsafe("yyyy-MM-dd")
 
-    val fmt = DateTimeFormat.forPattern("yyyy-MM-dd")
-    val d   = fmt.parseLocalDate(date)
-    Datestamp(d.getYear, d.getMonthOfYear, d.getDayOfMonth)
-  }
+  def parse(date: String): Either[(String, String), Datestamp] = parseDefault(date)
 
-  def parse(date: String, pattern: String): Datestamp = {
+  def parseUnsafe(date: String): Datestamp = parseDefaultUnsafe(date)
+
+  def parseFormat(pattern: String): (String => Either[(String, String), Datestamp]) = {
     import org.joda.time.format.DateTimeFormat
 
     val fmt = DateTimeFormat.forPattern(pattern)
-    val d   = fmt.parseLocalDate(date)
-    Datestamp(d.getYear, d.getMonthOfYear, d.getDayOfMonth)
+    time => {
+      Try(fmt.parseLocalDate(time)) match {
+        case Success(d) => Right(Datestamp(d.getYear, d.getMonthOfYear, d.getDayOfMonth))
+        case Failure(_) => Left((time, pattern))
+      }
+    }
+  }
+
+  def parseFormatUnsafe(pattern: String): (String => Datestamp) = {
+    val f = parseFormat(pattern)
+    time => f(time).right.getOrElse(sys.error(s"Unable to parse date: ${f(time).left.get}"))
   }
 
   implicit def ordering[A <: Datestamp]: Ordering[A] = Ordering.by(_.toString)
@@ -46,73 +55,133 @@ object Datestamp {
 object Timestamp {
   type Offset = Option[(Int, Int)]
 
+  val parseWithMillisDefault          = parseFormatWithOffset("yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
+  val parseWithoutMillisDefault       = parseFormatWithOffset("yyyy-MM-dd'T'HH:mm:ssZZ")
+  val parseWithMillisDefaultUnsafe    = parseFormatWithOffsetUnsafe("yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
+  val parseWithoutMillisDefaultUnsafe = parseFormatWithOffsetUnsafe("yyyy-MM-dd'T'HH:mm:ssZZ")
+
   /**
     * Parses a timestamp in RFC3339 format with millisecond precision.
+    *
     * @param time The timestamp to parse
-    * @return The timestamp
+    * @return Either the parsed timestamp, or the time arg and pattern used if parsing fails
     */
 
-  def parseWithMillis(time: String): Timestamp = {
-    val offset = parseOffset(time)
-    parsePatternWithOffset(time, "yyyy-MM-dd'T'HH:mm:ss.SSSZZ", offset)
-  }
+  def parseWithMillis(time: String): Either[(String, String), Timestamp] =
+    parseWithMillisDefault(time, parseOffset(time))
+
+  /**
+    * Parses a timestamp in RFC3339 format with millisecond precision. An exception is thrown if
+    * parsing fails.
+    *
+    * @param time The timestamp to parse
+    * @return The parsed timestamp
+    */
+
+  def parseWithMillisUnsafe(time: String): Timestamp =
+    parseWithMillisDefaultUnsafe(time, parseOffset(time))
 
   /**
     * Parses a timestamp in RFC3339 format without millisecond precision.
-    * @param time The timestamp to parse
-    * @return The timestamp
+    *
+    * @param time The time string to parse
+    * @return Either the parsed Timestamp, or the time arg and pattern used if parsing fails
     */
 
-  def parseWithoutMillis(time: String): Timestamp = {
-    val offset = parseOffset(time)
-    parsePatternWithOffset(time, "yyyy-MM-dd'T'HH:mm:ssZZ", offset)
-  }
+  def parseWithoutMillis(time: String): Either[(String, String), Timestamp] =
+    parseWithoutMillisDefault(time, parseOffset(time))
 
   /**
-    * Parses a timestamp with a pattern. Note: The pattern must parse timezone information.
-    * @param time The timestamp to parse
-    * @param pattern The pattern to use (Must parse timezone)
-    * @return The timestamp
+    * Parses a timestamp in RFC3339 format without millisecond precision. An exception is thrown if
+    * parsing fails.
+    *
+    * @param time The time string to parse
+    * @return The parsed Timestamp
     */
 
-  def parsePattern(time: String, pattern: String): Timestamp = {
+  def parseWithoutMillisUnsafe(time: String): Timestamp =
+    parseWithoutMillisDefaultUnsafe(time, parseOffset(time))
+
+  /**
+    * Creates a parse function for a pattern. Note: The pattern must parse timezone information.
+    *
+    * @param pattern The pattern to use (Must parse timezone)
+    * @return A function from a time string to either the parsed Timestamp,
+    *         or the time arg and pattern used if parsing fails
+    */
+
+  def parseFormat(pattern: String): String => Either[(String, String), Timestamp] = {
     import org.joda.time.format.DateTimeFormat
 
     // Remove literals
     val p = pattern.replaceAll("'[^']*'", "")
-    if (!p.contains("Z")) throw new IllegalArgumentException("Pattern must parse timezones.")
+    if (!p.contains("Z")) throw new IllegalArgumentException(s"$pattern doesn't parse timezones.")
 
     val fmt = DateTimeFormat.forPattern(pattern)
-    val dt  = fmt.withOffsetParsed.parseDateTime(time)
-    val tz  = dt.getZone.getOffset(dt)
+    time => {
+      val triedTime = Try {
+        val dt     = fmt.withOffsetParsed.parseDateTime(time)
+        val tz     = dt.getZone.getOffset(dt)
+        val offset = Some((MILLISECONDS.toHours(tz).toInt,
+          Math.abs(MILLISECONDS.toMinutes(tz).toInt % 60)))
 
-    val offset = Some((MILLISECONDS.toHours(tz).toInt,
-      Math.abs(MILLISECONDS.toMinutes(tz).toInt % 60)))
-
-    Timestamp(dt.getMillis, offset)
+        Timestamp(dt.getMillis, offset)
+      }
+      Either.cond(triedTime.isSuccess, triedTime.get, (time, pattern))
+    }
   }
 
   /**
-    * Parses a timestamp and sets offset. Use to provide offset information missing from th
-    * timestamp, or to overwrite offset information. Note: The time will not be adjusted to the new
-    * offset, the existing offset will be replaced.
-    * @param time The timestamp to parse
-    * @param pattern The pattern to use to parse
-    * @param offset The offset to set
-    * @return The timestamp
+    * Creates an unsafe parse function for a pattern. Note: The pattern must parse timezone
+    * information. An exception is thrown if parsing fails.
+    *
+    * @param pattern The pattern to use (Must parse timezone)
+    * @return An unsafe parse function from time string to Timestamp
     */
 
-  def parsePatternWithOffset(time: String, pattern: String, offset: Offset): Timestamp = {
+
+  def parseFormatUnsafe(pattern: String): String => Timestamp = {
+    val f = parseFormat(pattern)
+    s => f(s).right.getOrElse(sys.error(s"Unable to parse time: ${f(s).left.get}"))
+  }
+
+  /**
+    * Creates a parse function for a pattern. The function should be used to provide offset
+    * information missing from the timestamp, or to overwrite offset information.
+    * Note: The time will not be adjusted to the new offset, the existing offset will be replaced.
+    *
+    * @param pattern The pattern to use to parse
+    * @return A function from a time string and offset to either the parsed Timestamp,
+    *         or the time arg and pattern used if parsing fails
+    */
+
+  def parseFormatWithOffset(pattern: String): (String, Offset) => Either[(String, String), Timestamp] = {
     import org.joda.time.format.DateTimeFormat
     import org.joda.time.DateTimeZone
 
-    val (h, m) = offset.getOrElse((0,0))
-    val tz     = DateTimeZone.forOffsetHoursMinutes(h, m)
-    val fmt    = DateTimeFormat.forPattern(pattern)
-    // Without withOffsetParsed the timezone fields are moved to system timezone
-    val dt     = fmt.withOffsetParsed().parseDateTime(time).withZoneRetainFields(tz)
+    val fmt = DateTimeFormat.forPattern(pattern)
+    (time, offset) => {
+      val (h, m)  = offset.getOrElse((0, 0))
+      val tz      = DateTimeZone.forOffsetHoursMinutes(h, m)
+      // Without withOffsetParsed the timezone fields are moved to system timezone
+      val triedDT = Try(fmt.withOffsetParsed().parseDateTime(time).withZoneRetainFields(tz))
 
-    Timestamp(dt.getMillis, offset)
+      Either.cond(triedDT.isSuccess, Timestamp(triedDT.get.getMillis, offset), (time, pattern))
+    }
+  }
+
+  /**
+    * Creates an unsafe parse function for a pattern. The function should be used to provide offset
+    * information missing from the timestamp, or to overwrite offset information.
+    * Note: The time will not be adjusted to the new offset, the existing offset will be replaced.
+    *
+    * @param pattern The pattern to use to parse
+    * @return An unsafe function from a time string to a parsed Timestamp
+    */
+
+  def parseFormatWithOffsetUnsafe(pattern: String): (String, Offset) => Timestamp = {
+    val f = parseFormatWithOffset(pattern)
+    (s, o) => f(s, o).right.getOrElse(sys.error(s"Unable to parse time: ${f(s, o).left.get}"))
   }
 
   private def parseOffset(time: String): Option[(Int, Int)] = {
@@ -129,7 +198,7 @@ object Timestamp {
     offset
   }
 
-  implicit def ordering[A <: Timestamp]: Ordering[A] = Ordering.by(_.toUTC.toString)
+  implicit def ordering[A <: Timestamp]: Ordering[A] = Ordering.by(t => (t.toUTC.toString, t.offset))
   implicit def scalazOrder[A <: Timestamp]: Order[A] = Order.fromScalaOrdering(ordering)
 }
 
@@ -158,7 +227,7 @@ case class Timestamp(millis: Long, offset: Offset) {
     import org.joda.time.DateTimeZone
 
     val dt = toDateTime.toDateTime(DateTimeZone.UTC)
-    Timestamp.parseWithMillis(dt.toString("yyyy-MM-dd'T'HH:mm:ss.SSSZZ"))
+    Timestamp.parseWithMillisUnsafe(dt.toString("yyyy-MM-dd'T'HH:mm:ss.SSSZZ"))
   }
 
   protected def toDateTime: org.joda.time.DateTime ={

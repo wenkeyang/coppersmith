@@ -227,7 +227,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def dateConversions = {
     val feature = Patterns.general[Customer, Value.Date, Value.Date](
-      "ns", "name", "Description", Type.Instant, _.id, c => Some(Datestamp.parse(new DateTime(c.time).toString("yyyy-MM-dd")))
+      "ns", "name", "Description", Type.Instant, _.id, c => Some(Datestamp.parseUnsafe(new DateTime(c.time).toString("yyyy-MM-dd")))
     )
     feature.metadata.featureType === Type.Instant
     Seq(

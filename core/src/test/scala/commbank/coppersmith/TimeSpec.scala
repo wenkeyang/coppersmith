@@ -28,7 +28,9 @@ import commbank.coppersmith.util.{DatePeriod, Timestamp, Datestamp}
 
 object TimeSpec extends Specification with ScalaCheck { def is = s2"""
   Parse valid date string $parseDate
-  Parse RFC3339 time string $parseRFC3339
+  Not parse invalid date string $parseInvalidDate
+  Parse valid time string $parseValidTime
+  Not parse invalid time string $parseInvalidTime
   Print valid date string $printDate
   Print valid time string $printTime
   Calculate correct date differences $dateDiff
@@ -36,17 +38,33 @@ object TimeSpec extends Specification with ScalaCheck { def is = s2"""
 
   def parseDate = forAll { (dateTime: DateTime) => {
     val dateStr  = dateTime.toString("yyyy-MM-dd")
-    val date     = Datestamp.parse(dateStr)
     val dateStrP = dateTime.toString("dd-MMM-yyyy")
-    val dateP    = Datestamp.parse(dateStrP, "dd-MMM-yyyy")
-
+    val expected = Datestamp(dateTime.getYear, dateTime.getMonthOfYear, dateTime.getDayOfMonth)
     Seq(
-      date  must_== Datestamp(dateTime.getYear, dateTime.getMonthOfYear, dateTime.getDayOfMonth),
-      dateP must_== date
+      Datestamp.parse(dateStr).right.get                       must_== expected,
+      Datestamp.parseUnsafe(dateStr)                           must_== expected,
+      Datestamp.parseFormat("dd-MMM-yyyy")(dateStrP).right.get must_== expected,
+      Datestamp.parseFormatUnsafe("dd-MMM-yyyy")(dateStrP)     must_== expected
     )
   }}
 
-  def parseRFC3339 = forAll { (dateTime: DateTime) => {
+  def parseInvalidDate = forAll { (dateTime: DateTime) => {
+    val dateStr = dateTime.toString("dd-MM-yyyy")
+    val pattern = "yyyy-MM-dd"
+    val expected = (dateStr, pattern)
+
+    Seq(
+      Datestamp.parse(dateStr).left.get                must_== expected,
+      Datestamp.parseFormat(pattern)(dateStr).left.get must_== expected,
+      Datestamp.parseUnsafe(dateStr)
+        must throwA(new RuntimeException(s"Unable to parse date: $expected")),
+      Datestamp.parseFormatUnsafe(pattern)(dateStr)
+        must throwA(new RuntimeException(s"Unable to parse date: $expected"))
+
+    )
+  }}
+
+  def parseValidTime = forAll { (dateTime: DateTime) => {
     def testParse(dt: DateTime, format: String, p: (String) => Timestamp, e: (DateTime) => Timestamp) = {
       val s = dt.toString(format)
       val t = p(s)
@@ -63,24 +81,91 @@ object TimeSpec extends Specification with ScalaCheck { def is = s2"""
     Seq(
       testParse(dateTime,
         "yyyy-MM-dd'T'HH:mm:ss.SSSZZ",
-        Timestamp.parseWithMillis,
+        Timestamp.parseWithMillis(_).right.get,
         dt => Timestamp(dt.getMillis, parseOffset(dt))
       ),
       testParse(dateTime,
         "yyyy-MM-dd'T'HH:mm:ssZZ",
-        Timestamp.parseWithoutMillis,
+        Timestamp.parseWithoutMillis(_).right.get,
         dt => Timestamp(dt.withMillisOfSecond(0).getMillis, parseOffset(dt))
       ),
       testParse(dateTime,
         "yyyy-MM-dd'T'HH:mm:ss.SSS'-00:00'",
-        Timestamp.parseWithMillis,
+        Timestamp.parseWithMillis(_).right.get,
         dt => Timestamp(toUTC(dt).getMillis, None)
       ),
       testParse(dateTime,
         "yyyy-MM-dd'T'HH:mm:ss'-00:00'",
-        Timestamp.parseWithoutMillis,
+        Timestamp.parseWithoutMillis(_).right.get,
         dt => Timestamp(toUTC(dt).withMillisOfSecond(0).getMillis, None)
+      ),
+      testParse(dateTime,
+        "yyyy-MM-dd'T'HH:mm:ss.SSSZZ",
+        Timestamp.parseWithMillisUnsafe,
+        dt => Timestamp(dt.getMillis, parseOffset(dt))
+      ),
+      testParse(dateTime,
+        "yyyy-MM-dd'T'HH:mm:ssZZ",
+        Timestamp.parseWithoutMillisUnsafe,
+        dt => Timestamp(dt.withMillisOfSecond(0).getMillis, parseOffset(dt))
+      ),
+      testParse(dateTime,
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'-00:00'",
+        Timestamp.parseWithMillisUnsafe,
+        dt => Timestamp(toUTC(dt).getMillis, None)
+      ),
+      testParse(dateTime,
+        "yyyy-MM-dd'T'HH:mm:ss'-00:00'",
+        Timestamp.parseWithoutMillisUnsafe,
+        dt => Timestamp(toUTC(dt).withMillisOfSecond(0).getMillis, None)
+      ),
+      testParse(dateTime,
+        "yyyy-dd-MM'T'HH:mm:ss.SSSZZ",
+        Timestamp.parseFormat("yyyy-dd-MM'T'HH:mm:ss.SSSZZ")(_).right.get,
+        dt => Timestamp(dt.getMillis, parseOffset(dt))
+      ),
+      testParse(dateTime,
+        "yyyy-dd-MM'T'HH:mm:ss.SSSZZ",
+        Timestamp.parseFormatWithOffset("yyyy-dd-MM'T'HH:mm:ss.SSSZZ")(_, None).right.get,
+        dt => Timestamp(toUTC(dt).getMillis, None)
+     ),
+      testParse(dateTime,
+        "yyyy-dd-MM'T'HH:mm:ss.SSSZZ",
+        Timestamp.parseFormatUnsafe("yyyy-dd-MM'T'HH:mm:ss.SSSZZ")(_),
+        dt => Timestamp(dt.getMillis, parseOffset(dt))
+      ),
+      testParse(dateTime,
+        "yyyy-dd-MM'T'HH:mm:ss.SSSZZ",
+        Timestamp.parseFormatWithOffsetUnsafe("yyyy-dd-MM'T'HH:mm:ss.SSSZZ")(_, None),
+        dt => Timestamp(toUTC(dt).getMillis, None)
       )
+    )
+  }}
+
+  def parseInvalidTime = forAll { (dateTime: DateTime) => {
+    val invalidTimeStr = dateTime.toString("dd-MM-yyyy'T'HH:mm:ss.SSSZZ")
+    val pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZZ"
+    val noTzPattern = "yyyy-MM-dd'T'HH:mm:ss.SSS"
+    val expected = (invalidTimeStr, pattern)
+    val noMillisExpected = (invalidTimeStr, "yyyy-MM-dd'T'HH:mm:ssZZ")
+
+    Seq(
+      Timestamp.parseWithMillis(invalidTimeStr).left.get                      must_== expected,
+      Timestamp.parseWithoutMillis(invalidTimeStr).left.get                   must_== noMillisExpected,
+      Timestamp.parseFormat(pattern)(invalidTimeStr).left.get                 must_== expected,
+      Timestamp.parseFormatWithOffset(pattern)(invalidTimeStr, None).left.get must_== expected,
+      Timestamp.parseWithMillisUnsafe(invalidTimeStr)
+        must throwA(new RuntimeException(s"Unable to parse time: $expected")),
+      Timestamp.parseWithoutMillisUnsafe(invalidTimeStr)
+        must throwA(new RuntimeException(s"Unable to parse time: $noMillisExpected")),
+      Timestamp.parseFormatUnsafe(pattern)(invalidTimeStr)
+        must throwA(new RuntimeException(s"Unable to parse time: $expected")),
+      Timestamp.parseFormatWithOffsetUnsafe(pattern)(invalidTimeStr, None)
+        must throwA(new RuntimeException(s"Unable to parse time: $expected")),
+
+      Timestamp.parseFormat(noTzPattern)
+        must throwA(new IllegalArgumentException(s"$noTzPattern doesn't parse timezones."))
+
     )
   }}
 

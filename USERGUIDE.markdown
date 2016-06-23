@@ -86,10 +86,6 @@ we'll see how this can be made a lot easier.
 
 package commbank.coppersmith.examples.userguide
 
-import scala.util.Try
-
-import java.util.Locale
-
 import commbank.coppersmith.util.Datestamp
 import commbank.coppersmith.api._
 import commbank.coppersmith.examples.thrift.Movie
@@ -100,8 +96,10 @@ object MovieReleaseYear extends Feature[Movie, Integral](
                             description    = "Calendar year in which the movie was released",
                             featureType    = Continuous)
 ) {
+  val parse = Datestamp.parseFormat("dd-MMM-yyyy")
+
   def generate(movie: Movie) =
-    Try(Datestamp.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption.map(v =>
+    parse(movie.releaseDate).right.toOption.map(v =>
         FeatureValue(entity = movie.id, name = "MOVIE_RELEASE_YEAR", value = v.year))
 }
 ```
@@ -140,10 +138,6 @@ For details of the other classes available, refer to the **Advanced** section.
 ```scala
 package commbank.coppersmith.examples.userguide
 
-import scala.util.Try
-
-import java.util.Locale
-
 import commbank.coppersmith.util.Datestamp
 import commbank.coppersmith.api._
 import commbank.coppersmith.examples.thrift.Movie
@@ -152,9 +146,11 @@ object MovieFeatures extends BasicFeatureSet[Movie] {
   val namespace              = "userguide.examples"
   def entity(movie: Movie)   = movie.id
 
+  val parse = Datestamp.parseFormat("dd-MMM-yyyy")
+
   val movieReleaseYear = basicFeature[Integral](
     "MOVIE_RELEASE_YEAR", "Calendar year in which the movie was released", Continuous,
-    (movie) => Try(Datestamp.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption.map(_.year)
+    (movie) => parse(movie.releaseDate).right.toOption.map(_.year)
   )
 
   val features = List(movieReleaseYear)
@@ -425,10 +421,6 @@ returning a `Feature` object.
 ```scala
 package commbank.coppersmith.examples.userguide
 
-import scala.util.Try
-
-import java.util.Locale
-
 import commbank.coppersmith.util.Datestamp
 import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.Movie
@@ -439,10 +431,11 @@ object FluentMovieFeatures extends FeatureSetWithTime[Movie] {
 
   val source      = From[Movie]()  // FeatureSource (see above)
   val select      = source.featureSetBuilder(namespace, entity)
+  val parse = Datestamp.parseFormat("dd-MMM-yyyy")
 
-  val movieReleaseDay  = select(movie => Try(Datestamp.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption)
+  val movieReleaseDay  = select(movie => parse(movie.releaseDate).right.toOption)
     .asFeature(Instant, "MOVIE_RELEASE_DAY", "Day on which the movie was released")
-  val movieReleaseYear = select(movie => Try(Datestamp.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption.map(_.year))
+  val movieReleaseYear = select(movie => parse(movie.releaseDate).right.toOption.map(_.year))
     .asFeature(Continuous, "MOVIE_RELEASE_YEAR", "Calendar year in which the movie was released")
 
   val features = List(movieReleaseDay, movieReleaseYear)
@@ -451,7 +444,7 @@ object FluentMovieFeatures extends FeatureSetWithTime[Movie] {
 
 The above example uses `FeatureSetWithTime`, which, by default, uses the feature
 context to give us the feature time. This implementation can be overridden like so:
-`def time(movie: Movie, ctx: FeatureContext)   = DateTime.parse(movie.releaseDate).getMillis`
+`def time(movie: Movie, ctx: FeatureContext) = DateTime.parse(movie.releaseDate).getMillis`
 Most of the time however, the default implementation is the correct thing to do.
 
 Advanced
@@ -467,17 +460,15 @@ can help to keep feature definitions clear and concise.
 ```scala
 package commbank.coppersmith.examples.userguide
 
-import scala.util.Try
-
-import java.util.Locale
-
 import commbank.coppersmith.util.Datestamp
-import commbank.coppersmith.examples.thrift.{Movie, Rating}
+import commbank.coppersmith.examples.thrift.Movie
 
 object Implicits {
   implicit class RichMovie(movie: Movie) {
+    val parse = Datestamp.parseFormat("dd-MMM-yyyy")
+
     def safeReleaseDate: Option[Datestamp] =
-      Try(Datestamp.parse(movie.releaseDate, "dd-MMM-yyyy")).toOption
+      parse(movie.releaseDate).right.toOption
     def releaseYear:     Option[Int]      = safeReleaseDate.map(_.year)
     def isComedy:        Boolean          = movie.comedy == 1
     def isFantasy:       Boolean          = movie.fantasy == 1
