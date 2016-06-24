@@ -16,24 +16,25 @@ package commbank.coppersmith.util
 
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
-import commbank.coppersmith.util.Timestamp.Offset
-
 import scala.util.{Failure, Success, Try}
 import scalaz.Order
+
+import org.joda.time.{DateTime, Period, LocalDate, DateTimeZone}
+import org.joda.time.format.DateTimeFormat
+
+import commbank.coppersmith.util.Timestamp.Offset
 
 case class DatePeriod(years: Int, months: Int, days: Int)
 
 object Datestamp {
   val parseDefault       = parseFormat("yyyy-MM-dd")
-  val parseDefaultUnsafe = parseFormatUnsafe("yyyy-MM-dd")
+  val unsafeParseDefault = unsafeParseFormat("yyyy-MM-dd")
 
   def parse(date: String): Either[(String, String), Datestamp] = parseDefault(date)
 
-  def parseUnsafe(date: String): Datestamp = parseDefaultUnsafe(date)
+  def unsafeParse(date: String): Datestamp = unsafeParseDefault(date)
 
   def parseFormat(pattern: String): (String => Either[(String, String), Datestamp]) = {
-    import org.joda.time.format.DateTimeFormat
-
     val fmt = DateTimeFormat.forPattern(pattern)
     time => {
       Try(fmt.parseLocalDate(time)) match {
@@ -43,7 +44,7 @@ object Datestamp {
     }
   }
 
-  def parseFormatUnsafe(pattern: String): (String => Datestamp) = {
+  def unsafeParseFormat(pattern: String): (String => Datestamp) = {
     val f = parseFormat(pattern)
     time => f(time).right.getOrElse(sys.error(s"Unable to parse date: ${f(time).left.get}"))
   }
@@ -57,8 +58,8 @@ object Timestamp {
 
   val parseWithMillisDefault          = parseFormatWithOffset("yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
   val parseWithoutMillisDefault       = parseFormatWithOffset("yyyy-MM-dd'T'HH:mm:ssZZ")
-  val parseWithMillisDefaultUnsafe    = parseFormatWithOffsetUnsafe("yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
-  val parseWithoutMillisDefaultUnsafe = parseFormatWithOffsetUnsafe("yyyy-MM-dd'T'HH:mm:ssZZ")
+  val unsafeParseWithMillisDefault    = unsafeParseFormatWithOffset("yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
+  val unsafeParseWithoutMillisDefault = unsafeParseFormatWithOffset("yyyy-MM-dd'T'HH:mm:ssZZ")
 
   /**
     * Parses a timestamp in RFC3339 format with millisecond precision.
@@ -66,7 +67,6 @@ object Timestamp {
     * @param time The timestamp to parse
     * @return Either the parsed timestamp, or the time arg and pattern used if parsing fails
     */
-
   def parseWithMillis(time: String): Either[(String, String), Timestamp] =
     parseWithMillisDefault(time, parseOffset(time))
 
@@ -77,9 +77,8 @@ object Timestamp {
     * @param time The timestamp to parse
     * @return The parsed timestamp
     */
-
-  def parseWithMillisUnsafe(time: String): Timestamp =
-    parseWithMillisDefaultUnsafe(time, parseOffset(time))
+  def unsafeParseWithMillis(time: String): Timestamp =
+    unsafeParseWithMillisDefault(time, parseOffset(time))
 
   /**
     * Parses a timestamp in RFC3339 format without millisecond precision.
@@ -87,7 +86,6 @@ object Timestamp {
     * @param time The time string to parse
     * @return Either the parsed Timestamp, or the time arg and pattern used if parsing fails
     */
-
   def parseWithoutMillis(time: String): Either[(String, String), Timestamp] =
     parseWithoutMillisDefault(time, parseOffset(time))
 
@@ -98,9 +96,8 @@ object Timestamp {
     * @param time The time string to parse
     * @return The parsed Timestamp
     */
-
-  def parseWithoutMillisUnsafe(time: String): Timestamp =
-    parseWithoutMillisDefaultUnsafe(time, parseOffset(time))
+  def unsafeParseWithoutMillis(time: String): Timestamp =
+    unsafeParseWithoutMillisDefault(time, parseOffset(time))
 
   /**
     * Creates a parse function for a pattern. Note: The pattern must parse timezone information.
@@ -109,10 +106,7 @@ object Timestamp {
     * @return A function from a time string to either the parsed Timestamp,
     *         or the time arg and pattern used if parsing fails
     */
-
   def parseFormat(pattern: String): String => Either[(String, String), Timestamp] = {
-    import org.joda.time.format.DateTimeFormat
-
     // Remove literals
     val p = pattern.replaceAll("'[^']*'", "")
     if (!p.contains("Z")) throw new IllegalArgumentException(s"$pattern doesn't parse timezones.")
@@ -138,9 +132,7 @@ object Timestamp {
     * @param pattern The pattern to use (Must parse timezone)
     * @return An unsafe parse function from time string to Timestamp
     */
-
-
-  def parseFormatUnsafe(pattern: String): String => Timestamp = {
+  def unsafeParseFormat(pattern: String): String => Timestamp = {
     val f = parseFormat(pattern)
     s => f(s).right.getOrElse(sys.error(s"Unable to parse time: ${f(s).left.get}"))
   }
@@ -154,11 +146,7 @@ object Timestamp {
     * @return A function from a time string and offset to either the parsed Timestamp,
     *         or the time arg and pattern used if parsing fails
     */
-
   def parseFormatWithOffset(pattern: String): (String, Offset) => Either[(String, String), Timestamp] = {
-    import org.joda.time.format.DateTimeFormat
-    import org.joda.time.DateTimeZone
-
     val fmt = DateTimeFormat.forPattern(pattern)
     (time, offset) => {
       val (h, m)  = offset.getOrElse((0, 0))
@@ -178,8 +166,7 @@ object Timestamp {
     * @param pattern The pattern to use to parse
     * @return An unsafe function from a time string to a parsed Timestamp
     */
-
-  def parseFormatWithOffsetUnsafe(pattern: String): (String, Offset) => Timestamp = {
+  def unsafeParseFormatWithOffset(pattern: String): (String, Offset) => Timestamp = {
     val f = parseFormatWithOffset(pattern)
     (s, o) => f(s, o).right.getOrElse(sys.error(s"Unable to parse time: ${f(s, o).left.get}"))
   }
@@ -204,14 +191,11 @@ object Timestamp {
 
 case class Datestamp(year: Int, month: Int, day: Int) {
   protected def toLocalDate: org.joda.time.LocalDate ={
-    import org.joda.time.LocalDate
-
     new LocalDate(year, month, day)
   }
 
   def difference(that: Datestamp): DatePeriod = that match {
     case Datestamp(y, m, d) =>
-      import org.joda.time.Period
       val p = new Period(this.toLocalDate, that.toLocalDate)
       DatePeriod(p.getYears, p.getMonths, p.getDays)
   }
@@ -224,15 +208,11 @@ case class Datestamp(year: Int, month: Int, day: Int) {
 case class Timestamp(millis: Long, offset: Offset) {
 
   def toUTC: Timestamp = {
-    import org.joda.time.DateTimeZone
-
     val dt = toDateTime.toDateTime(DateTimeZone.UTC)
-    Timestamp.parseWithMillisUnsafe(dt.toString("yyyy-MM-dd'T'HH:mm:ss.SSSZZ"))
+    Timestamp.unsafeParseWithMillis(dt.toString("yyyy-MM-dd'T'HH:mm:ss.SSSZZ"))
   }
 
   protected def toDateTime: org.joda.time.DateTime ={
-    import org.joda.time.{DateTimeZone, DateTime}
-
     val (h, m) = offset.getOrElse((0,0))
     val tz = DateTimeZone.forOffsetHoursMinutes(h, m)
     new DateTime(millis, tz)
