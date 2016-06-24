@@ -199,7 +199,7 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     val customersDs: DataSource[Customer, TypedPipe] = TestDataSource(cas.map(_.c))
     val accountsDs: DataSource[Account, TypedPipe] = TestDataSource(cas.flatMap(_.as))
 
-    val bound = source.bind(joinInner(customersDs, accountsDs))
+    val bound = source.bind(joinMulti(customersDs, accountsDs))
 
     runsSuccessfully(bound.load).toSet must_== expected.toSet
 
@@ -222,7 +222,7 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     val customersDs: DataSource[Customer, TypedPipe] = TestDataSource(cas.map(_.c))
     val accountsDs:  DataSource[Account,  TypedPipe] = TestDataSource(cas.flatMap(_.as))
 
-    val bound = source.bind(joinInner(customersDs, accountsDs))
+    val bound = source.bind(joinMulti(customersDs, accountsDs))
 
     runsSuccessfully(bound.load).toSet must_== expected.toSet
 

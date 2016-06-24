@@ -64,18 +64,20 @@ trait SourceBinder[S, U, P[_]] {
 
 object SourceBinder extends SourceBinderInstances
 
-trait SourceBinderInstances extends commbank.coppersmith.generated.GeneratedBindings {
+import commbank.coppersmith.generated._
+
+trait SourceBinderInstances extends GeneratedBindings with GeneratedJoinTypeInstances {
   def from[S, P[_] : Lift](dataSource: DataSource[S, P]) = FromBinder(dataSource)
 
   def join[L, R, J : Ordering, P[_] : Lift](
     leftSrc:  DataSource[L, P],
     rightSrc: DataSource[R, P]
-  ) = joinInner(leftSrc, rightSrc) // From GeneratedBindings
+  ) = joinMulti[L, R, J, L, R, P](leftSrc, rightSrc) // From GeneratedBindings
 
   def leftJoin[L, R, J : Ordering, P[_] : Lift](
     leftSrc:  DataSource[L, P],
     rightSrc: DataSource[R, P]
-  ) = joinLeft(leftSrc, rightSrc) // From GeneratedBindings
+  ) = joinMulti[L, R, J, L, Option[R], P](leftSrc, rightSrc) // From GeneratedBindings
 }
 
 case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, From[S], P] {

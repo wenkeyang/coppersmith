@@ -17,9 +17,9 @@ package commbank.coppersmith
 import scala.reflect.runtime.universe.TypeTag
 
 import commbank.coppersmith.Feature.Value
-import commbank.coppersmith.generated.GeneratedBindings
+import commbank.coppersmith.generated.GeneratedJoinTypeInstances
 
-package object api extends GeneratedBindings {
+package object api extends GeneratedJoinTypeInstances with SourceBinderInstances {
 
   object Coppersmith extends au.com.cba.omnia.maestro.macros.MacroSupport {
     implicit def fromFS[S](fs: FeatureSource[S, _]) =
@@ -28,15 +28,6 @@ package object api extends GeneratedBindings {
     implicit def fromCFS[S, C: TypeTag](fs: ContextFeatureSource[S, C, _]) =
       commbank.coppersmith.FeatureBuilderSource.fromCFS(fs)
   }
-
-  def from[S, P[_] : Lift](dataSource: DataSource[S, P]) =
-    commbank.coppersmith.SourceBinder.from(dataSource)
-
-  def join[L, R, J : Ordering, P[_] : Lift](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
-    commbank.coppersmith.SourceBinder.join(leftSrc, rightSrc)
-
-  def leftJoin[L, R, J : Ordering, P[_] : Lift](leftSrc: DataSource[L, P], rightSrc: DataSource[R, P]) =
-    commbank.coppersmith.SourceBinder.leftJoin(leftSrc, rightSrc)
 
   type Feature[S, +V <: Value] = commbank.coppersmith.Feature[S, V]
   type FeatureSet[S] = commbank.coppersmith.FeatureSet[S]

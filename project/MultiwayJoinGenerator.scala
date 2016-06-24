@@ -1,14 +1,19 @@
 object MultiwayJoinGenerator {
   case class Joined(code: String)
   case class IncompleteJoin(code: String)
-  case class Binding(code: String)
   case class Binder(code: String)
+  case class Binding(code: String)
+  case class LevelJoinType(code: String)
+  case class JoinTypeBinding(code: String)
   case class Lift(methodSignature: String, memoryImpl: String, scaldingImpl: String)
-  case class JoinPermutation(binding: Binding, binder: Binder, lift: Lift)
+  case class JoinPermutation(joinTypeBinding: JoinTypeBinding, lift: Lift)
 
   case class GeneratedJoinLevel(
     joined:           Joined,
     nextIncomplete:   Option[IncompleteJoin],
+    binding:          Binding,
+    binder:           Binder,
+    joinType:         LevelJoinType,
     joinPermutations: List[JoinPermutation]
   )
 
@@ -17,19 +22,21 @@ object MultiwayJoinGenerator {
 
       val joined = Joined(genJoined(level, supportedDepth))
       val incompleteJoin = genIncompleteJoin(level, supportedDepth).map(IncompleteJoin(_))
+      val binding = Binding(genBinding(level))
+      val binder = Binder(genBinder(level))
+      val joinType = LevelJoinType(genJoinType(level))
 
       val joinPermutations = permute(joinTypes, level - 1).map(permutation => {
 
-        val binding = Binding(genBinding(level, permutation))
-        val binder = Binder(genBinder(level, permutation))
+        val joinTypeBinding = JoinTypeBinding(genJoinTypeBinding(level, permutation))
         val lift = genLiftMethodSig(level, permutation, "P")
         val liftMemory = genLiftMemory(level, permutation)
         val liftScalding = genLiftScalding(level, permutation)
 
-        JoinPermutation(binding, binder, Lift(lift, liftMemory, liftScalding))
+        JoinPermutation(joinTypeBinding, Lift(lift, liftMemory, liftScalding))
 
       })
-      GeneratedJoinLevel(joined, incompleteJoin, joinPermutations) :: generated
+      GeneratedJoinLevel(joined, incompleteJoin, binding, binder, joinType, joinPermutations) :: generated
     })
   }
 
@@ -58,9 +65,8 @@ object MultiwayJoinGenerator {
   sealed abstract class JoinType(val camelName: String)
   case object Inner extends JoinType("Inner")
   case object Left  extends JoinType("Left")
-//  case object Right extends JoinType("Right")
 
-  def joinTypes = List[JoinType](Inner, Left/*, Right*/)
+  def joinTypes = List[JoinType](Inner, Left)
 
   def joinFunctions(level: Int, start: Int = 2): List[NameType] =
     start.to(level).foldRight(List[NameType]())((l, nameTypes) => {
@@ -170,66 +176,112 @@ object MultiwayJoinGenerator {
     } else None
   }
 
-  def generateBindings(joins: List[GeneratedJoinLevel]): String = {
-    val content = joins.map(
-      _.joinPermutations.map(_.binding.code).mkString("\n")
+  def generateBinders(joins: List[GeneratedJoinLevel]): String = {
+    val bindings = joins.map(
+      _.binding.code
     ).mkString("\n\n")
+    val binders = joins.map(
+      _.binder.code
+    ).mkString("\n\n")
+    prelude + s"""
+      |package commbank.coppersmith.generated
+      |
+      |import commbank.coppersmith.{DataSource, Lift, SourceBinder}
+      |
+      |trait GeneratedBindings {
+      |${bindings}
+      |}
+      |
+      |${binders}
+      |""".stripMargin
+  }
+
+  def genBinding(level: Int): String = {
+    val srcTypeParams = sourceTypeParamsList(level).mkString(", ")
+    val joinOrderingTypeParams = joinTypeParamsList(level).map(_ + " : Ordering").mkString(", ")
+    val joinedSrcParams = joinedSourceParamsList(level).mkString(", ")
+    val joinTypeParams = joinTypeParamsList(level).mkString(", ")
+    val sources = 1.to(level).map(l => s"s${l}: DataSource[S${l}, P]").mkString(",\n    ")
+    val sourceNames = 1.to(level).map(l => s"s${l}").mkString(", ")
+
+    s"""  def joinMulti[${srcTypeParams}, ${joinOrderingTypeParams}, ${joinedSrcParams}, P[_] : Lift](
+      |    ${sources}
+      |  )(implicit jt: Join${level}Type[${srcTypeParams}, ${joinedSrcParams}, P]) =
+      |    Joined${level}Binder[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}, P]($sourceNames)""".stripMargin
+  }
+
+  def genBinder(level: Int): String = {
+    val srcTypeParams = sourceTypeParamsList(level).mkString(", ")
+    val joinOrderingTypeParams = joinTypeParamsList(level).map(_ + " : Ordering").mkString(", ")
+    val joinedSrcParams = joinedSourceParamsList(level).mkString(", ")
+    val joinTypeParams = joinTypeParamsList(level).mkString(", ")
+    val sources = 1.to(level).map(l => s"s${l}: DataSource[S${l}, P]").mkString(",\n  ")
+    val sourceNames = 1.to(level).map(l => s"s${l}").mkString(", ")
+    val joinedType = s"Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}]"
+
+    s"""case class Joined${level}Binder[${srcTypeParams}, ${joinOrderingTypeParams}, ${joinedSrcParams}, P[_] : Lift](
+      |  ${sources}
+      |)(implicit jt: Join${level}Type[${srcTypeParams}, ${joinedSrcParams}, P])
+      |     extends SourceBinder[(${joinedSrcParams}), ${joinedType}, P] {
+      |  def bind(j: ${joinedType}): P[(${joinedSrcParams})] =
+      |    jt.lift(j)(${sourceNames})
+      |}""".stripMargin
+  }
+
+  def generateJoinTypes(joins: List[GeneratedJoinLevel]): String = {
+    val joinTypes = joins.map(_.joinType.code).mkString("\n\n")
+    val joinTypeBindings = joins.map(
+      _.joinPermutations.map(_.joinTypeBinding.code).mkString("\n")
+    ).mkString("\n\n")
+
     prelude + s"""
       |package commbank.coppersmith.generated
       |
       |import commbank.coppersmith.{DataSource, Lift}
       |
-      |trait GeneratedBindings {
-      |${content}
+      |${joinTypes}
+      |
+      |trait GeneratedJoinTypeInstances {
+      |${joinTypeBindings}
       |}
       |""".stripMargin
   }
 
-  def genBinding(level: Int, permutation: List[JoinType]): String = {
-    val joinType = permutation.map(_.camelName).mkString
+  def genJoinType(level: Int): String = {
     val srcTypeParams = sourceTypeParamsList(level).mkString(", ")
+    val joinedSrcParams = joinedSourceParamsList(level).mkString(", ")
     val joinOrderingTypeParams = joinTypeParamsList(level).map(_ + " : Ordering").mkString(", ")
     val joinTypeParams = joinTypeParamsList(level).mkString(", ")
     val sources = 1.to(level).map(l => s"s${l}: DataSource[S${l}, P]").mkString(",\n    ")
-    val sourceNames = 1.to(level).map(l => s"s${l}").mkString(", ")
+    val joinedType = s"Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}]"
 
-    s"""  def join${joinType}[${srcTypeParams}, ${joinOrderingTypeParams}, P[_] : Lift](
-      |    ${sources}
-      |  ) = Joined${level}${joinType}Binder[${srcTypeParams}, ${joinTypeParams}, P](${sourceNames})""".stripMargin
+    s"""sealed abstract class Join${level}Type[${srcTypeParams}, ${joinedSrcParams}, P[_] : Lift] {
+      |  def lift[${joinOrderingTypeParams}](
+      |    j: ${joinedType}
+      |  )(${sources}
+      |  ): P[(${joinedSrcParams})]
+      |}""".stripMargin
   }
 
-  def generateBinders(joins: List[GeneratedJoinLevel]): String = {
-    val content = joins.map(
-      _.joinPermutations.map(_.binder.code).mkString("\n")
-    ).mkString("\n\n")
-    prelude + s"""
-      |package commbank.coppersmith.generated
-      |
-      |import commbank.coppersmith.{DataSource, SourceBinder, Lift}
-      |
-      |${content}
-      |""".stripMargin
-  }
-
-  def genBinder(level: Int, permutation: List[JoinType]): String = {
+  def genJoinTypeBinding(level: Int, permutation: List[JoinType]): String = {
     val joinType = permutation.map(_.camelName).mkString
     val srcTypeParams = sourceTypeParamsList(level).mkString(", ")
     val joinOrderingTypeParams = joinTypeParamsList(level).map(_ + " : Ordering").mkString(", ")
     val joinTypeParams = joinTypeParamsList(level).mkString(", ")
     val joinedSrcTypes = joinedSourceTypes(level, permutation)
     val joinedReturnType = joinedSourceTypes(level, permutation, level)
-    val sources = 1.to(level).map(l => s"s${l}: DataSource[S${l}, P]").mkString(",\n  ")
+    val sources = 1.to(level).map(l => s"s${l}: DataSource[S${l}, P]").mkString(",\n      ")
     val loadCalls = 1.to(level).map(l => s"s${l}.load").mkString(", ")
+    val joinedType = s"Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcTypes}]"
 
-    s"""
-      |case class Joined${level}${joinType}Binder[${srcTypeParams}, ${joinOrderingTypeParams}, P[_] : Lift](
-      |  ${sources}
-      |) extends SourceBinder[(${joinedReturnType}), Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcTypes}], P] {
-      |  def bind(j: Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcTypes}]): P[(${joinedReturnType})] = {
-      |    implicitly[Lift[P]].liftJoin${joinType}(j)(${loadCalls})
-      |  }
-      |}
-      """.stripMargin.trim
+    s"""  implicit def type${joinType}[${srcTypeParams}, P[_]: Lift] =
+      |      new Join${level}Type[${srcTypeParams}, ${joinedReturnType}, P] {
+      |    def lift[${joinOrderingTypeParams}](
+      |      j: ${joinedType}
+      |    )(${sources}
+      |    ): P[(${joinedReturnType})] =
+      |      implicitly[Lift[P]].liftJoin${joinType}(j)(${loadCalls})
+      |  }""".stripMargin
   }
 
   def generateLift(joins: List[GeneratedJoinLevel]): String = {

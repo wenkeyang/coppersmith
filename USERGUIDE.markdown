@@ -995,7 +995,7 @@ case class MultiJoinFeaturesConfig(conf: Config) extends FeatureJobConfig[(Movie
   val users: DataSource[User, TypedPipe]      = HiveTextSource[User, Nothing](new Path("data/users"),
                                                   Partitions.unpartitioned)
 
-  val featureSource  = MultiJoinFeatures.source.bind(joinInnerInner(movies, ratings, users))
+  val featureSource  = MultiJoinFeatures.source.bind(joinMulti(movies, ratings, users))
   val featureSink    = HiveTextSink[Eavt]("userguide", new Path("dev/ratings"), "ratings", eavtByDay)
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 }
@@ -1366,7 +1366,7 @@ case class DirectorFeaturesConfig(conf: Config) extends FeatureJobConfig[(Direct
 
   val directorsSource: DataSource[Director, TypedPipe] = DirectorSourceConfig.dataSource
 
-  val featureSource  = source.bind(joinInnerInner(directorsSource, movies, ratings))
+  val featureSource  = source.bind(joinMulti(directorsSource, movies, ratings))
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
   val featureSink    = HiveTextSink[Eavt]("userguide", new Path("dev/directors"), "directors", eavtByDay)
 }
