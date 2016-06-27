@@ -27,13 +27,15 @@ object EavtText {
   )
 
   implicit object EavtEnc extends FeatureValueEnc[Eavt] {
-    def encode(fvt: (FeatureValue[_], Time)): Eavt = fvt match {
+    def encode(fvt: (FeatureValue[_], FeatureTime)): Eavt = fvt match {
       case (fv, time) =>
         val featureValue = (fv.value match {
           case Integral(v) => v.map(_.toString)
           case Decimal(v) => v.map(_.toString)
           case FloatingPoint(v) => v.map(_.toString)
           case Str(v) => v
+          case Date(v) => v.map(_.toString)
+          case Time(v) => v.map(_.toString)
         }).getOrElse(HiveTextSink.NullValue)
 
         val featureTime = new DateTime(time).toString("yyyy-MM-dd")

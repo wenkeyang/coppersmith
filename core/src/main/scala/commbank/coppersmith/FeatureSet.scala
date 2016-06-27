@@ -40,7 +40,7 @@ trait FeatureSetWithTime[S] extends FeatureSet[S] {
    * Specifies the time associated with a feature. Most of the time that will be
    * the job time, but when it depends on data, this method should be overridden.
    */
-  def time(source: S, c: FeatureContext): Time = c.generationTime.getMillis
+  def time(source: S, c: FeatureContext): FeatureTime = c.generationTime.getMillis
 }
 
 trait MetadataSet[S] {

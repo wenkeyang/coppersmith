@@ -14,12 +14,15 @@
 
 package commbank.coppersmith
 
+import commbank.coppersmith.util.{Timestamp, Datestamp}
+import org.joda.time.DateTime
 import org.scalacheck._, Arbitrary.arbitrary, Prop.forAll
 
 import org.specs2._
 import org.specs2.execute._, Typecheck._
 import org.specs2.matcher.TypecheckMatchers._
 
+import scala.util.Try
 import scalaz.{Name => _, Value =>_, _}, Scalaz._
 import scalaz.scalacheck.ScalazArbitrary.NonEmptyListArbitrary
 
@@ -49,6 +52,10 @@ object MetadataSpec extends Specification with ScalaCheck { def is = s2"""
         Metadata[Customer, FloatingPoint](namespace, name, desc, fType).valueType must_== FloatingPointType
       case Str(_) =>
         Metadata[Customer, Str]          (namespace, name, desc, fType).valueType must_== StringType
+      case Date(_) =>
+        Metadata[Customer, Date]         (namespace, name, desc, fType).valueType must_== DateType
+      case Time(_) =>
+        Metadata[Customer, Time]         (namespace, name, desc, fType).valueType must_== TimeType
     }
   }}
 }
@@ -79,9 +86,13 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
         NonEmptyListArbitrary(Arbitrary(decimalValueGen)).arbitrary,
         NonEmptyListArbitrary(Arbitrary(floatingPointValueGen)).arbitrary,
         NonEmptyListArbitrary(Arbitrary(integralValueGen)).arbitrary,
-        NonEmptyListArbitrary(Arbitrary(strValueGen)).arbitrary
+        NonEmptyListArbitrary(Arbitrary(strValueGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(dateValueGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(timeValueGen)).arbitrary
       )
     )
+
+  implicit def arbStrs: Arbitrary[NonEmptyList[Str]] = NonEmptyListArbitrary(Arbitrary(strValueGen))
 
   // Only for use with arbValues above - assumed values to be compared are of the same subtype
   implicit val valueOrder: Order[Value] =
@@ -90,6 +101,8 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
       case (FloatingPoint(d1), FloatingPoint(d2)) => d1.cmp(d2)
       case (Integral(i1), Integral(i2)) => i1.cmp(i2)
       case (Str(s1), Str(s2)) => s1.cmp(s2)
+      case (Date(d1), Date(d2)) => d1.cmp(d2)
+      case (Time(t1), Time(t2)) => t1.cmp(t2)
       case _ => sys.error("Assumption failed: Expected same value types from arbValues")
     })
 
@@ -147,7 +160,7 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
     SetRange(vals.list).widestValueSize must beNone
   }}
 
-  def widestStr = forAll { (vals: NonEmptyList[Value]) => vals.head.isInstanceOf[Str] ==> {
+  def widestStr = forAll { (vals: NonEmptyList[Str]) => {
     val widest = vals.map {
       case Str(Some(s)) => s.length
       case _ => 0
@@ -164,6 +177,8 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
     Decimal features convert to continuous and to categorical  $decimalConversions
     Floating point features convert to continuous and to categorical  $floatingPointConversions
     String features cannot convert to continuous  $stringConversions
+    Date features only convert to instant  $dateConversions
+    Time features only convert to instant  $timeConversions
 """
 
   def integralConversions = {
@@ -208,5 +223,27 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
     )
     feature.metadata.featureType === Type.Nominal
     typecheck("feature.as(Continuous)") must not succeed
+  }
+
+  def dateConversions = {
+    val feature = Patterns.general[Customer, Value.Date, Value.Date](
+      "ns", "name", "Description", Type.Instant, _.id, c => Some(Datestamp.unsafeParse(new DateTime(c.time).toString("yyyy-MM-dd")))
+    )
+    feature.metadata.featureType === Type.Instant
+    Seq(
+      typecheck("feature.as(Continuous)") must not succeed,
+      typecheck("feature.as(Ordinal)") must not succeed
+    )
+  }
+
+  def timeConversions = {
+    val feature = Patterns.general[Customer, Value.Time, Value.Time](
+      "ns", "name", "Description", Type.Instant, _.id, c => Some(Timestamp(c.time, Some((0,0))))
+    )
+    feature.metadata.featureType === Type.Instant
+    Seq(
+      typecheck("feature.as(Continuous)") must not succeed,
+      typecheck("feature.as(Ordinal)") must not succeed
+    )
   }
 }

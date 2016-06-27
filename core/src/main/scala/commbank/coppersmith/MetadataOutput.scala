@@ -32,11 +32,14 @@ object MetadataOutput {
     case ValueType.DecimalType       => "bigdecimal"
     case ValueType.FloatingPointType => "double"
     case ValueType.StringType        => "string"
+    case ValueType.DateType          => "date"
+    case ValueType.TimeType          => "datetime"
   }
 
   private def psvFeatureTypeToString(f: Feature.Type) = f match {
     case t : Type.Categorical => "categorical"
     case t : Type.Numeric     => "continuous"
+    case Type.Instant         => "datetime"
   }
 
   private def genericFeatureTypeToString(f: Feature.Type) = f.toString.toLowerCase
