@@ -194,13 +194,12 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     val source = Join.multiway[Customer].inner[Account].on(
       (c: Customer) => c.id,
       (a: Account) => a.customerId
-    ).src
+    )
 
     val customersDs: DataSource[Customer, TypedPipe] = TestDataSource(cas.map(_.c))
     val accountsDs: DataSource[Account, TypedPipe] = TestDataSource(cas.flatMap(_.as))
 
-    val binder = joinMulti((customersDs, accountsDs), source)
-    val bound = source.bind(binder)
+    val bound = source.bind(joinMulti(customersDs, accountsDs))
 
     runsSuccessfully(bound.load).toSet must_== expected.toSet
 
@@ -218,21 +217,53 @@ object ScaldingFeatureSourceSpec extends ThermometerSpec { def is = s2"""
     val source = Join.multiway[Customer].inner[Account].on(
       (c: Customer) => c.id,
       (a: Account) => a.customerId
-    ).src.filter(filter)
+    ).filter(filter)
 
     val customersDs: DataSource[Customer, TypedPipe] = TestDataSource(cas.map(_.c))
     val accountsDs:  DataSource[Account,  TypedPipe] = TestDataSource(cas.flatMap(_.as))
 
-    val binder = joinMulti((customersDs, accountsDs), source)
-    val bound = source.bind(binder)
+    val bound = source.bind(joinMulti(customersDs, accountsDs))
 
     runsSuccessfully(bound.load).toSet must_== expected.toSet
 
   }}.set(minTestsOk = 10)
 
-  def multiwayJoinContext =
-    pending("Missing generality in multiway join binder currently prevents withContext from compiling")
+  def multiwayJoinContext = forAll { (customerAccounts: CustomerAccounts, ctx: String) => {
+    val cas = customerAccounts.cas
 
-  def multiwayJoinContextFilter =
-    pending("Missing generality in multiway join binder currently prevents withContext from compiling")
+    val expected = cas.flatMap(ca =>
+      ca.as.toList.toNel.map(as =>
+        as.list.map(a => (ca.c, a.some))
+      ).getOrElse(List((ca.c, None)))
+    ).map((_, ctx))
+
+    val source = Join.multiway[Customer].left[Account].on(_.id, _.customerId).withContext[String]
+    val bound = source.bindWithContext(
+      joinMulti(TestDataSource(cas.map(_.c)), TestDataSource(cas.flatMap(_.as))),
+      ctx
+    )
+    runsSuccessfully(bound.load).toSet must_== expected.toSet
+  }}.set(minTestsOk = 10)
+
+  def multiwayJoinContextFilter = forAll { (customerAccounts: CustomerAccounts, ctx: Boolean) => {
+    val cas = customerAccounts.cas
+    def filter(cab: ((Customer, Option[Account]), Boolean)) = cab._1._1.age < 18 || cab._2
+
+    val expected = cas.flatMap(ca =>
+      ca.as.toList.toNel.map(as =>
+        as.list.map(a => (ca.c, a.some))
+      ).getOrElse(List((ca.c, None)))
+    ).map((_, ctx)).filter(filter)
+
+    val source = Join.multiway[Customer].left[Account].on(
+      _.id,
+      _.customerId
+    ).withContext[Boolean].filter(filter)
+
+    val bound = source.bindWithContext(
+      joinMulti(TestDataSource(cas.map(_.c)), TestDataSource(cas.flatMap(_.as))),
+      ctx
+    )
+    runsSuccessfully(bound.load).toSet must_== expected.toSet
+  }}.set(minTestsOk = 10)
 }

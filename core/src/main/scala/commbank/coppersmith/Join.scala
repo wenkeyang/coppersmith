@@ -14,14 +14,7 @@
 
 package commbank.coppersmith
 
-import shapeless._
-
-import shapeless.ops.function._
-import shapeless.ops.hlist._
-import shapeless.syntax.std.function._
-
-
-import shapeless.ops.product.ToHList
+import commbank.coppersmith.generated.Joined2
 
 object From {
   def apply[S](): From[S] = From(None)
@@ -33,82 +26,28 @@ case class From[S](filter: Option[S => Boolean] = None) extends FeatureSource[S,
   def copyWithFilter(filter: Option[S => Boolean]) = copy(filter)
 }
 
-case class Joined[L, R, J: Ordering, S](left: L => J, right: R => J, filter: Option[S => Boolean])
-  extends FeatureSource[S, Joined[L, R, J, S]](filter) {
-  type FS = Joined[L, R, J, S]
-
-  def copyWithFilter(filter: Option[S => Boolean]) = copy(filter = filter)
-}
-
-
 object Join {
-
-  sealed trait InnerJoinableTo[L] {
-    def to[R]: IncompleteJoin[L, R, (L, R)] = new IncompleteJoin[L, R, (L, R)]
-  }
-
-  sealed trait LeftOuterJoinableTo[L] {
-    def to[R]: IncompleteJoin[L, R, (L, Option[R])] = new IncompleteJoin[L, R, (L, Option[R])]
-  }
-
-  class EmptyInnerJoinableTo[L] extends InnerJoinableTo[L]
-
-  class EmptyLeftOuterJoinableTo[L] extends LeftOuterJoinableTo[L]
-
-  class IncompleteJoin[L, R, S] {
-    //Write as many of these as we need...
-    def on[J: Ordering](l: L => J, r: R => J): Joined[L, R, J, S] = Joined(l, r, None)
-  }
-
-
-  def join[T]: InnerJoinableTo[T] = new EmptyInnerJoinableTo[T]
-
-  def left[T]: LeftOuterJoinableTo[T] = new EmptyLeftOuterJoinableTo[T]
-
+  def join[T]: InnerJoinableTo[T] = new InnerJoinableTo[T]
   def apply[T] = join[T]
 
-  def multiway[A] = Multiway[A]()
+  def left[T]: LeftOuterJoinableTo[T] = new LeftOuterJoinableTo[T]
 
-  case class Multiway[A]() {
-    def inner[B] = IncompleteJoinedHl[A :: HNil, B, B, A :: B :: HNil, HNil](HNil)
+  def multiway[T]: JoinableTo[T] = new JoinableTo[T]
 
-    def left[B] = IncompleteJoinedHl[A :: HNil, Option[B], B, A :: Option[B] :: HNil, HNil](HNil)
+  class InnerJoinableTo[L] {
+    def to[R]: IncompleteJoin[L, R, L, R] = new IncompleteJoin[L, R, L, R]
   }
 
-  case class IncompleteJoinedHl[
-    LeftSides <: HList,
-    RightSide, FlatRight,
-    Out <: HList,
-    PreviousJoins <: HList](pjs: PreviousJoins) {
-
-    def on[J: Ordering, F, NextJoins <: HList]
-      (leftFun: F, rightFun: FlatRight => J)
-      (implicit
-       fnHLister : FnToProduct.Aux[F,  LeftSides => J] ,
-       pp1       : Prepend.Aux[LeftSides, RightSide :: HNil, Out],
-       pp2       : Prepend.Aux[PreviousJoins, (LeftSides => J, FlatRight => J) :: HNil, NextJoins]): CompleteJoinHl[Out, NextJoins] = {
-      val leftHListFun: LeftSides => J = leftFun.toProduct
-      CompleteJoinHl[Out, NextJoins](pjs :+ ((leftHListFun, rightFun)))
-    }
+  class LeftOuterJoinableTo[L] {
+    def to[R]: IncompleteJoin[L, R, L, Option[R]] = new IncompleteJoin[L, R, L, Option[R]]
   }
 
-  case class CompleteJoinHl[Types <: HList, Joins <: HList](joins: Joins) {
-    def inner[B](implicit np: Prepend[Types, B :: HNil]) =
-      IncompleteJoinedHl[Types, B, B, np.Out, Joins](joins)
-
-    def left[B] (implicit np: Prepend[Types, Option[B] :: HNil]) =
-      IncompleteJoinedHl[Types, Option[B], B, np.Out, Joins](joins)
-
-    def src[TypesTuple <: Product]
-    (implicit tupler: shapeless.ops.hlist.Tupler.Aux[Types,TypesTuple]):CompleteJoinHlFeatureSource[Types, Joins, TypesTuple] =
-      CompleteJoinHlFeatureSource[Types, Joins, TypesTuple](this, None)
+  class JoinableTo[L] {
+    def inner[R]: IncompleteJoin[L, R, L, R]         = new IncompleteJoin[L, R, L, R]
+    def left[R]:  IncompleteJoin[L, R, L, Option[R]] = new IncompleteJoin[L, R, L, Option[R]]
   }
 
-  case class CompleteJoinHlFeatureSource[Types <: HList, Joins <: HList, TypesTuple <: Product](
-      join: CompleteJoinHl[Types, Joins],
-      filter: Option[TypesTuple => Boolean])
-     (implicit tupler: Tupler.Aux[Types, TypesTuple])
-        extends FeatureSource[TypesTuple, CompleteJoinHlFeatureSource[Types, Joins, TypesTuple]] {
-      def copyWithFilter(filter: Option[TypesTuple => Boolean]) = copy(filter = filter)
+  class IncompleteJoin[S1, S2, T1, T2] {
+    def on[J: Ordering](s1: T1 => J, s2: S2 => J): Joined2[S1, S2, J, T1, T2] = Joined2(s1, s2, None)
   }
 }

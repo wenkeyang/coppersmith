@@ -25,12 +25,17 @@ import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 object build extends Build {
   val maestroVersion = "2.20.0-20160520031836-e06bc75"
 
+  // Number of levels of joins supported
+  val maxGeneratedJoinSize = 7
+  lazy val joins = MultiwayJoinGenerator.generateJoinCode(maxGeneratedJoinSize)
+
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
     uniformPublicDependencySettings ++
     strictDependencySettings ++
     Seq(
-      concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),  // because thermometer tests cannot run in parallel
+      // because thermometer tests cannot run in parallel
+      concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
       scalacOptions += "-Xfatal-warnings",
       scalacOptions in (Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
       scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
@@ -64,6 +69,21 @@ object build extends Build {
           libraryDependencies ++= depend.testing(configuration = "test"),
           libraryDependencies ++= depend.omnia("maestro", maestroVersion)
       )
+   ++ Seq(
+      watchSources <++= baseDirectory map(path => (path / "../project/MultiwayJoinGenerator.scala").get),
+      sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
+        Seq(
+          ("GeneratedJoin.scala",      MultiwayJoinGenerator.generateJoined(joins)),
+          ("GeneratedBinder.scala",    MultiwayJoinGenerator.generateBinders(joins)),
+          ("GeneratedJoinTypes.scala", MultiwayJoinGenerator.generateJoinTypes(joins)),
+          ("GeneratedLift.scala",      MultiwayJoinGenerator.generateLift(joins))
+        ).map { case (fileName, content) =>
+          val genFile = outdir / s"$fileName"
+          IO.write(genFile, content)
+          genFile
+        }
+      }
+    )
   ).configs( IntegrationTest )
 
   lazy val scalding = Project(
@@ -74,10 +94,17 @@ object build extends Build {
         ++ uniform.project("coppersmith-scalding", "commbank.coppersmith.scalding")
         ++ uniformThriftSettings
         ++ Seq(
-        libraryDependencies ++= depend.hadoopClasspath,
-        libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
-        libraryDependencies ++= depend.parquet()
-      )
+          libraryDependencies ++= depend.hadoopClasspath,
+          libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
+          libraryDependencies ++= depend.parquet()
+        )
+        ++ Seq(
+          sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
+            val genFile = outdir / "GeneratedScaldingLift.scala"
+            IO.write(genFile, MultiwayJoinGenerator.generateLiftScalding(joins))
+            Seq(genFile)
+          }
+        )
   ).dependsOn(core % "compile->compile;test->test")
 
   lazy val examples = Project(
@@ -128,6 +155,13 @@ object build extends Build {
         ++ Seq(
           libraryDependencies ++= depend.testing(configuration = "test"),
           libraryDependencies ++= depend.omnia("maestro-test", maestroVersion)
+        )
+        ++ Seq(
+          sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
+            val genFile = outdir / "GeneratedMemoryLift.scala"
+            IO.write(genFile, MultiwayJoinGenerator.generateLiftMemory(joins))
+            Seq(genFile)
+          }
         )
   ).dependsOn(core)
 
