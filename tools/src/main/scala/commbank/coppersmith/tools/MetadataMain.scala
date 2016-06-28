@@ -32,26 +32,26 @@ object MetadataMain {
     }
 
     val metadataSets = ObjectFinder.findObjects[MetadataSet[_]](packagge, "commbank.coppersmith")
+
     val allConforms =
       ObjectFinder.findObjects[Conforms[_, _]](args(0), "commbank.coppersmith", "au.com.cba.omnia")
 
     // The repetition here is regrettable but getting the types without statically
     //knowing the formatter is really awkward
 
-    val output = format match {
+    val output: String = format match {
       case PsvFormat =>
         MetadataOutput.Psv.combiner(metadataSets.toList.flatMap { ms =>
           val metadataConformsSet = ms.metadata.map(m => (m, allConforms.find(c => conforms_?(c, m)))).toList
           MetadataOutput.metadataObjects(metadataConformsSet, MetadataOutput.Psv)
         })
       case JsonFormat =>
-        MetadataOutput.JsonObject.combiner(metadataSets.toList.flatMap { ms =>
+        val allObjects = metadataSets.toList.flatMap { ms =>
           val metadataConformsSet = ms.metadata.map(m => (m, allConforms.find(c => conforms_?(c, m)))).toList
           MetadataOutput.metadataObjects(metadataConformsSet, MetadataOutput.JsonObject)
-        })
+        }
+        if (allObjects.isEmpty) "" else MetadataOutput.JsonObject.combiner(allObjects)
     }
-
-    println(output)
-
+    print(output)
   }
 }
