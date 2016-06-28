@@ -17,7 +17,7 @@
 struct Movie {
   1 	: string  id
   2 	: string  title
-  3 	: string  release_date
+  3 	: optional string  release_date
   4 	: optional string  video_release_date
   5 	: optional string  imdb_url
   6 	: i32     unknown
