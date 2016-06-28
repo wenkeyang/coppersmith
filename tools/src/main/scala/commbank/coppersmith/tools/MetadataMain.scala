@@ -19,11 +19,15 @@ import commbank.coppersmith.Feature.Conforms, Conforms.conforms_?
 import commbank.coppersmith.tools.util.ObjectFinder
 
 object MetadataMain {
+  sealed trait FormatType
+  case object PsvFormat extends FormatType
+  case object JsonFormat extends FormatType
+
   def main(args:Array[String]) = {
     val (format, packagge) = args.take(2) match {
-      case Array("--psv", pkg)  => ( MetadataOutput.Psv, pkg)
-      case Array("--json", pkg) => ( MetadataOutput.JsonObject, pkg)
-      case Array(pkg)           => ( MetadataOutput.JsonObject, pkg)
+      case Array("--psv", pkg)  => ( PsvFormat, pkg)
+      case Array("--json", pkg) => (JsonFormat, pkg)
+      case Array(pkg)           => (JsonFormat, pkg)
       case _                    => println("Invalid input"); sys.exit(1)
     }
 
@@ -31,10 +35,23 @@ object MetadataMain {
     val allConforms =
       ObjectFinder.findObjects[Conforms[_, _]](args(0), "commbank.coppersmith", "au.com.cba.omnia")
 
-    metadataSets.foreach { ms =>
-      val metadataConformsSet = ms.metadata.map(m => (m, allConforms.find(c => conforms_?(c, m)))).toList
-      val outputString = MetadataOutput.metadataString(metadataConformsSet, format)
-      println(outputString)
+    // The repetition here is regrettable but getting the types without statically
+    //knowing the formatter is really awkward
+
+    val output = format match {
+      case PsvFormat =>
+        MetadataOutput.Psv.combiner(metadataSets.toList.flatMap { ms =>
+          val metadataConformsSet = ms.metadata.map(m => (m, allConforms.find(c => conforms_?(c, m)))).toList
+          MetadataOutput.metadataObjects(metadataConformsSet, MetadataOutput.Psv)
+        })
+      case JsonFormat =>
+        MetadataOutput.JsonObject.combiner(metadataSets.toList.flatMap { ms =>
+          val metadataConformsSet = ms.metadata.map(m => (m, allConforms.find(c => conforms_?(c, m)))).toList
+          MetadataOutput.metadataObjects(metadataConformsSet, MetadataOutput.JsonObject)
+        })
     }
+
+    println(output)
+
   }
 }

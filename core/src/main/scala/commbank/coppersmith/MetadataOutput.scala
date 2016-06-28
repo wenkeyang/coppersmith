@@ -78,10 +78,14 @@ object MetadataOutput {
     def metadata = mds.metadata
   }
 
+  def metadataObjects[S, O](metadata: List[(Metadata[S, Feature.Value], Option[Conforms[_, _]])], printer: MetadataPrinter[O]): List[O] = {
+    metadata.map(printer.fn.tupled)
+  }
+
   def metadataString[S, O](
     metadata: List[(Metadata[S, Feature.Value], Option[Conforms[_, _]])],
     printer: MetadataPrinter[O]
   ): String = {
-    printer.combiner(metadata.map(printer.fn.tupled))
+    printer.combiner(metadataObjects(metadata, printer))
   }
 }
