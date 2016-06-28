@@ -137,12 +137,12 @@ object MultiwayJoinGenerator {
       |  def innerJoinTo[S${level + 1}] =
       |    IncompleteJoin${level + 1}[
       |      ${nextSrcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}, S${level + 1}
-      |    ](${joinFunctions(level).map(_.name).mkString(", ")})
+      |    ](${joinFunctions(level).map(_.name).mkString(", ")}, filter)
       |  def inner[S${level + 1}] = innerJoinTo[S${level + 1}]
       |  def leftJoinTo[S${level + 1}] =
       |    IncompleteJoin${level + 1}[
       |      ${nextSrcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}, Option[S${level + 1}]
-      |    ](${joinFunctions(level).map(_.name).mkString(", ")})
+      |    ](${joinFunctions(level).map(_.name).mkString(", ")}, filter)
       |  def left[S${level + 1}] = leftJoinTo[S${level + 1}]""".stripMargin
         } else ""
       } + """
@@ -152,6 +152,7 @@ object MultiwayJoinGenerator {
 
   def genIncompleteJoin(level: Int, supportedDepth: Int): Option[String] = {
     if (level < supportedDepth) {
+      val srcTypeParam = joinedSourceParamsList(level).mkString("(", ", ", ")")
       val nextSrcTypeParams = sourceTypeParamsList(level + 1).mkString(", ")
       val joinOrderingTypeParams = joinTypeParamsList(level).map(_ + " : Ordering").mkString(", ")
       val nextJoinTypeParams = joinTypeParamsList(level + 1).mkString(", ")
@@ -162,15 +163,18 @@ object MultiwayJoinGenerator {
       val nextJoinFunctionsAndTypes = joinFunctions(level + 1, level + 1).map(jf =>
         jf.name + ": " + jf.typ
       ).mkString(",\n    ")
+      val tupledSourceNames = 1.to(level).map(l => s"s._${l}").mkString(", ")
 
       Some(
         s"""case class IncompleteJoin${level + 1}[${nextSrcTypeParams}, ${joinOrderingTypeParams}, ${joinedSrcParams}, T${level + 1}](
-        |  ${joinFunctionsAndTypes}
+        |  ${joinFunctionsAndTypes},
+        |  filter: Option[(${srcTypeParam}) => Boolean]
         |) {
         |  def on[J${level} : Ordering](
         |    ${nextJoinFunctionsAndTypes}
         |  ): Joined${level + 1}[${nextSrcTypeParams}, ${nextJoinTypeParams}, ${joinedSourceParamsList(level + 1).mkString(", ")}] =
-        |    Joined${level + 1}(${joinFunctions(level + 1).map(_.name).mkString(", ")}, None)
+        |    Joined${level + 1}(${joinFunctions(level + 1).map(_.name).mkString(", ")},
+        |           filter.map(f => s => f((${tupledSourceNames}))))
         |}""".stripMargin
       )
     } else None
