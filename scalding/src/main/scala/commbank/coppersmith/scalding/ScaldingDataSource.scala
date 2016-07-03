@@ -22,6 +22,8 @@ import scalaz.syntax.std.list.ToListOpsFromList
 
 import org.apache.hadoop.fs.Path
 
+import org.apache.commons.lang3.StringEscapeUtils
+
 import org.slf4j.LoggerFactory
 
 import au.com.cba.omnia.ebenezer.scrooge.ParquetScroogeSource
@@ -61,7 +63,7 @@ case class HiveTextSource[S <: ThriftStruct : Decode](
   val log = LoggerFactory.getLogger(getClass())
 
   def load = {
-    log.info("Loading from " + paths.mkString(","))
+    log.info(s"Loading '${StringEscapeUtils.escapeJava(delimiter)}' delimited text from " + paths.mkString(","))
     val decoder = implicitly[Decode[S]]
     val input: TextLineScheme = MultipleTextLineFiles(paths.map(_.toString): _*)
     input.map { raw =>
@@ -96,7 +98,7 @@ case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : Tup
   val log = LoggerFactory.getLogger(getClass())
 
   def load = {
-    log.info("Loading from " + paths.mkString(","))
+    log.info("Loading parquet from " + paths.mkString(","))
     ParquetScroogeSource[S](paths.map(_.toString): _*)
   }
 }
@@ -111,5 +113,10 @@ object HiveParquetSource {
 
 /** Akin to an SQL view, allow features to be derived from an arbitrary `TypedPipe`. */
 case class TypedPipeSource[S](pipe: TypedPipe[S]) extends ScaldingDataSource[S] {
-  def load = pipe
+  val log = LoggerFactory.getLogger(getClass())
+
+  def load = {
+    log.info(s"Loading from a TypedPipeSource")
+    pipe
+  }
 }
