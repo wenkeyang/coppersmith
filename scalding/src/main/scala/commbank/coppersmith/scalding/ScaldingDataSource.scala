@@ -33,6 +33,8 @@ import au.com.cba.omnia.maestro.core.codec.{DecodeOk, DecodeError, ParseError, N
 
 import commbank.coppersmith.DataSource
 
+import CoppersmithStats.fromTypedPipe
+
 /** Scalding data sources should extend this (rather than `DataSource` directly).
   * It provides some high level utility methods, such as filtering.
   */
@@ -72,7 +74,7 @@ case class HiveTextSource[S <: ThriftStruct : Decode](
       case DecodeOk(row)            => row
       case e @ DecodeError(_, _, _) =>
         throw new Exception("Cannot decode input to HiveTextSource: " + errorMessage(e))
-    }
+    }.withCounter("text.loaded")
   }
 
   def errorMessage(e: DecodeError[_]): String = e.reason match {
@@ -99,7 +101,8 @@ case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : Tup
 
   def load = {
     log.info("Loading parquet from " + paths.mkString(","))
-    ParquetScroogeSource[S](paths.map(_.toString): _*)
+    TypedPipe.from(ParquetScroogeSource[S](paths.map(_.toString): _*))
+      .withCounter("parquet.loaded")
   }
 }
 
@@ -118,5 +121,6 @@ case class TypedPipeSource[S](pipe: TypedPipe[S]) extends ScaldingDataSource[S] 
   def load = {
     log.info(s"Loading from a TypedPipeSource")
     pipe
+      .withCounter("typedpipe.loaded")
   }
 }
