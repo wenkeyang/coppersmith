@@ -61,10 +61,11 @@ trait SimpleFeatureJobOps {
 
   def generate(featureSetExecutions: FeatureSetExecutions): Execution[JobStatus] = {
     for {
-      cfg    <- Execution.getConfig
-      paths  <- generateFeatures(featureSetExecutions)
-      result <- FeatureSink.commit(paths)
-      status <- result.fold(writeErrorFailure(_), _ => Execution.from(JobFinished))
+      cfg               <- Execution.getConfig
+      (paths, counters) <- generateFeatures(featureSetExecutions).getCounters
+      _                 <- Execution.from(CoppersmithStats.log(counters))
+      result            <- FeatureSink.commit(paths)
+      status            <- result.fold(writeErrorFailure(_), _ => Execution.from(JobFinished))
     } yield status
   }
 

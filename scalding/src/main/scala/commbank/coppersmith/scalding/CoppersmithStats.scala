@@ -16,6 +16,7 @@ package commbank.coppersmith.scalding
 
 import com.twitter.scalding.typed.{TypedPipe, TypedPipeFactory}
 import com.twitter.scalding.TupleSetter.singleSetter
+import com.twitter.scalding.ExecutionCounters
 
 import cascading.tuple.Fields
 import cascading.pipe.Each
@@ -23,8 +24,15 @@ import cascading.operation.state.Counter
 
 object CoppersmithStats {
   val group = "Coppersmith"
+  val log = org.slf4j.LoggerFactory.getLogger(getClass())
 
   implicit def fromTypedPipe[T](typedPipe: TypedPipe[T]) = new CoppersmithStats(typedPipe)
+
+  /** Log (at INFO level) all coppersmith counters found in the passed [[com.twitter.scalding.ExecutionCounters]]. */
+  def log(counters: ExecutionCounters): Unit =
+    counters.keys.filter(_.group == group).foreach { key =>
+      log.info(f"${counters(key)}%10d  ${key.counter}")
+    }
 }
 
 class CoppersmithStats[T](typedPipe: TypedPipe[T]) extends {
