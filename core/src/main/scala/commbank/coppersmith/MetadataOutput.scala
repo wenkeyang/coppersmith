@@ -19,6 +19,7 @@ import Feature._
 import Metadata._
 
 import argonaut._, Argonaut._
+import commbank.coppersmith.Feature.Value._
 
 object MetadataOutput {
   case class MetadataPrinter[O] (
@@ -46,6 +47,22 @@ object MetadataOutput {
 
   private def genericValueTypeToString(v: ValueType) = v.toString.replace("Type", "").toLowerCase
 
+  def genericValueToJson(v: Value): Json = (v match {
+    case Integral(v)      => v.map(i => jString(i.toString))
+    case Decimal(v)       => v.map(bd => jString(bd.toString))
+    case FloatingPoint(v) => v.map(fp => jString(fp.toString))
+    case Str(v)           => v.map(jString)
+    case Date(v)          => v.map(d => jString(d.toString))
+    case Time(v)          => v.map(t => jString(t.toString))
+  }).getOrElse(jNull)
+
+  private def genericRangeToJson(r: Option[Value.Range[Value]]) = r match {
+    case Some(Value.MinMaxRange(min, max)) => Some(Json("min" -> genericValueToJson(min),
+                                                   "max" -> genericValueToJson(max)))
+    case Some(Value.SetRange(set))         => Some(jArrayElements(set.map(genericValueToJson).toList: _*))
+    case None                              => None
+  }
+
   val Psv: MetadataPrinter[String] = MetadataPrinter[String]((m, _) => {
       val valueType = psvValueTypeToString(m.valueType)
       val featureType = psvFeatureTypeToString(m.featureType)
@@ -54,7 +71,7 @@ object MetadataOutput {
 
 
   val JsonObject: MetadataPrinter[Json] = MetadataPrinter((md, oConforms) => {
-    Json(
+    val json = Json(
       "name" -> jString(md.name),
       "namespace" -> jString(md.namespace),
       "description" -> jString(md.description),
@@ -63,6 +80,10 @@ object MetadataOutput {
       "valueType" -> jString(genericValueTypeToString(md.valueType)),
       "typesConform" -> jBool(oConforms.isDefined)
     )
+    genericRangeToJson(md.valueRange) match {
+      case Some(r) => ("range" -> r) ->: json
+      case None    => json
+    }
   }, lst => jArrayElements(lst: _*).nospaces)
 
 
