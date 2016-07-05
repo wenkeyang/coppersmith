@@ -104,7 +104,7 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       case Some(MinMaxRange(min,max)) => /("range") /("min" -> expectedValue(min)) and
                                          /("range") /("max" -> expectedValue(max))
       case Some(SetRange(set))        => /("range").andHave(allOf(set.map(expectedValue).toList:_*))
-      case None                       => /("range").andHave(beJsonNull)
+      case None                       => /("range").negate
     }
 
     val oConforms = (fType, value) match {

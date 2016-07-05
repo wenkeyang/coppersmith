@@ -57,10 +57,10 @@ object MetadataOutput {
   }).getOrElse(jNull)
 
   private def genericRangeToJson(r: Option[Value.Range[Value]]) = r match {
-    case Some(Value.MinMaxRange(min, max)) => Json("min" -> genericValueToJson(min),
-                                                   "max" -> genericValueToJson(max))
-    case Some(Value.SetRange(set))         => jArrayElements(set.map(genericValueToJson).toList: _*)
-    case None                              => jNull
+    case Some(Value.MinMaxRange(min, max)) => Some(Json("min" -> genericValueToJson(min),
+                                                   "max" -> genericValueToJson(max)))
+    case Some(Value.SetRange(set))         => Some(jArrayElements(set.map(genericValueToJson).toList: _*))
+    case None                              => None
   }
 
   val Psv: MetadataPrinter[String] = MetadataPrinter[String]((m, _) => {
@@ -71,16 +71,19 @@ object MetadataOutput {
 
 
   val JsonObject: MetadataPrinter[Json] = MetadataPrinter((md, oConforms) => {
-    Json(
+    val json = Json(
       "name" -> jString(md.name),
       "namespace" -> jString(md.namespace),
       "description" -> jString(md.description),
       "source" -> jString(md.sourceType.toString),
       "featureType" -> jString(genericFeatureTypeToString(md.featureType)),
       "valueType" -> jString(genericValueTypeToString(md.valueType)),
-      "range" -> genericRangeToJson(md.valueRange),
       "typesConform" -> jBool(oConforms.isDefined)
     )
+    genericRangeToJson(md.valueRange) match {
+      case Some(r) => ("range" -> r) ->: json
+      case None    => json
+    }
   }, lst => jArrayElements(lst: _*).nospaces)
 
 
