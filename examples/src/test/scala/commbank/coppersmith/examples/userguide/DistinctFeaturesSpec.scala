@@ -26,26 +26,26 @@ import au.com.cba.omnia.maestro.api._, Maestro._
 
 import commbank.coppersmith.api.JobFinished
 import commbank.coppersmith.api._
-import commbank.coppersmith.examples.thrift.Movie
+import commbank.coppersmith.examples.thrift.User
 
-import UserGuideArbitraries.arbMovie
+import UserGuideArbitraries.arbUser
 
 object DistinctFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
   DistinctFeaturesJob must return expected values  $test  ${tag("slow")}
 """
-  def test = forAll { (movies: Seq[Movie]) => {
-    writeRecords[Movie](s"$dir/user/data/movies/data.txt", movies, "|")
-    val expectedLength = movies.groupBy(_.id).keys.size
+  def test = forAll { (users: Seq[User]) => {
+    writeRecords[User](s"$dir/user/data/users/data.txt", users, "|")
+    val expectedLength = users.groupBy(_.id).keys.size
 
     val job = for {
       // Clear previous test data
-      _      <- Execution.fromHdfs(Hdfs.delete(path(s"$dir/user/dev/ratings"), true))
-      result <- DistinctMovieFeaturesJob.job
+      _      <- Execution.fromHdfs(Hdfs.delete(path(s"$dir/user/dev/users"), true))
+      result <- DistinctUserFeaturesJob.job
     } yield result
 
     executesSuccessfully(job) must_== JobFinished
 
-    val outPath = s"$dir/user/dev/ratings/year=2015/month=01/day=01/*"
+    val outPath = s"$dir/user/dev/users/year=2015/month=01/day=01/*"
     expectations { context =>
       context.lines(new Path(outPath)).toSet.size must_== expectedLength
     }

@@ -16,7 +16,7 @@
 
 struct User {
   1  : string id
-  2  : string age
+  2  : i32    age
   3  : string gender
   4  : string occupation
   5  : string zipcode
