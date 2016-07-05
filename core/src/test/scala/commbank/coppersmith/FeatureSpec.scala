@@ -16,13 +16,12 @@ package commbank.coppersmith
 
 import commbank.coppersmith.util.{Timestamp, Datestamp}
 import org.joda.time.DateTime
-import org.scalacheck._, Arbitrary.arbitrary, Prop.forAll
+import org.scalacheck._, Prop.forAll
 
 import org.specs2._
 import org.specs2.execute._, Typecheck._
 import org.specs2.matcher.TypecheckMatchers._
 
-import scala.util.Try
 import scalaz.{Name => _, Value =>_, _}, Scalaz._
 import scalaz.scalacheck.ScalazArbitrary.NonEmptyListArbitrary
 
@@ -79,32 +78,7 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
     Widest Str wider than others $widestStr
 """
 
-  // Generates values of the same subtype, but arbitrarily chooses the subtype to generate
-  implicit def arbValues: Arbitrary[NonEmptyList[Value]] =
-    Arbitrary(
-      Gen.oneOf(
-        NonEmptyListArbitrary(Arbitrary(decimalValueGen)).arbitrary,
-        NonEmptyListArbitrary(Arbitrary(floatingPointValueGen)).arbitrary,
-        NonEmptyListArbitrary(Arbitrary(integralValueGen)).arbitrary,
-        NonEmptyListArbitrary(Arbitrary(strValueGen)).arbitrary,
-        NonEmptyListArbitrary(Arbitrary(dateValueGen)).arbitrary,
-        NonEmptyListArbitrary(Arbitrary(timeValueGen)).arbitrary
-      )
-    )
-
   implicit def arbStrs: Arbitrary[NonEmptyList[Str]] = NonEmptyListArbitrary(Arbitrary(strValueGen))
-
-  // Only for use with arbValues above - assumed values to be compared are of the same subtype
-  implicit val valueOrder: Order[Value] =
-    Order.order((a, b) => (a, b) match {
-      case (Decimal(d1), Decimal(d2)) => d1.cmp(d2)
-      case (FloatingPoint(d1), FloatingPoint(d2)) => d1.cmp(d2)
-      case (Integral(i1), Integral(i2)) => i1.cmp(i2)
-      case (Str(s1), Str(s2)) => s1.cmp(s2)
-      case (Date(d1), Date(d2)) => d1.cmp(d2)
-      case (Time(t1), Time(t2)) => t1.cmp(t2)
-      case _ => sys.error("Assumption failed: Expected same value types from arbValues")
-    })
 
   def containsSameMinMax = forAll { (value: Value) =>
     MinMaxRange(value, value).contains(value) must beTrue

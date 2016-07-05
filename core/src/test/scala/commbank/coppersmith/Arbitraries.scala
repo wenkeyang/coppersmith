@@ -16,6 +16,7 @@ package commbank.coppersmith
 
 import scala.util.Try
 
+import scalaz.scalacheck.ScalazArbitrary._
 import scalaz.{Value => _, _}, Scalaz.{option => _, _}
 import scalaz.scalacheck.ScalaCheckBinding._
 
@@ -80,6 +81,42 @@ object Arbitraries {
   implicit val dateValueGen: Gen[Date] = arbitrary[Option[Datestamp]].map(Date(_))
   implicit val timeValueGen: Gen[Time] = arbitrary[Option[Timestamp]].map(Time(_))
   implicit val arbValue: Arbitrary[Value] = Arbitrary(oneOf(integralValueGen, decimalValueGen, floatingPointValueGen, strValueGen, dateValueGen, timeValueGen))
+
+  // Generates values of the same subtype, but arbitrarily chooses the subtype to generate
+  implicit def arbValues: Arbitrary[NonEmptyList[Value]] =
+    Arbitrary(
+      oneOf(
+        NonEmptyListArbitrary(Arbitrary(decimalValueGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(floatingPointValueGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(integralValueGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(strValueGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(dateValueGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(timeValueGen)).arbitrary
+      )
+    )
+
+  // Only for use with arbValues above - assumed values to be compared are of the same subtype
+  implicit val valueOrder: Order[Value] =
+    Order.order((a, b) => (a, b) match {
+      case (Decimal(d1), Decimal(d2)) => d1.cmp(d2)
+      case (FloatingPoint(d1), FloatingPoint(d2)) => d1.cmp(d2)
+      case (Integral(i1), Integral(i2)) => i1.cmp(i2)
+      case (Str(s1), Str(s2)) => s1.cmp(s2)
+      case (Date(d1), Date(d2)) => d1.cmp(d2)
+      case (Time(t1), Time(t2)) => t1.cmp(t2)
+      case _ => sys.error("Assumption failed: Expected same value types from arbValues")
+    })
+
+  implicit val arbMinMaxRange: Arbitrary[MinMaxRange[Value]] = for {
+    vs <- arbValues
+  } yield MinMaxRange(vs.minimum1, vs.maximum1)
+
+  implicit val arbSetRange: Arbitrary[SetRange[Value]] = for {
+    vs <- arbValues
+  } yield SetRange(vs.toList)
+
+  implicit val arbRange: Arbitrary[Option[Range[Value]]] =
+    Arbitrary(Gen.option(oneOf(arbMinMaxRange.arbitrary, arbSetRange.arbitrary)))
 
   val arbTimeMillis: Gen[Long] = arbitrary[DateTime].map(_.getMillis)
 

@@ -14,22 +14,38 @@
 
 package commbank.coppersmith
 
+import argonaut.Argonaut._
+
+import org.scalacheck.{Arbitrary, Prop}, Arbitrary._, Prop._
+
+import org.specs2.matcher.{Matcher, JsonMatchers}
+import org.specs2.{ScalaCheck, Specification}
+
 import commbank.coppersmith.Feature.Type._
 import commbank.coppersmith.Feature.Value._
 import commbank.coppersmith.Feature._
 import commbank.coppersmith.test.thrift.Customer
-import org.scalacheck.Prop._
-import org.specs2.matcher.JsonMatchers
-import org.specs2.{ScalaCheck, Specification}
-
 
 import Arbitraries._
 
 object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatchers { def is = s2"""
+  GenericValueToString creates expected values $genericValueToString
   Psv creates expected metadata $psv
   Json creates expected metadata $json
   List produces valid json $listProducesValidJson
 """
+
+  def genericValueToString = forAll { (v: Value) => {
+    val expected = (v match {
+      case Integral(v)      => v.map(i  => jString(i.toString))
+      case Decimal(v)       => v.map(bd => jString(bd.toString))
+      case FloatingPoint(v) => v.map(fp => jString(fp.toString))
+      case Str(v)           => v.map(jString)
+      case Date(v)          => v.map(d  => jString(d.toString))
+      case Time(v)          => v.map(t  => jString(t.toString))
+    }).getOrElse(jNull)
+    MetadataOutput.genericValueToJson(v) must_== expected
+  }}
 
   def psv = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, value: Value) => {
     val (metadata, expectedValueType) = value match {
@@ -53,17 +69,44 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       s"${namespace.toLowerCase}.${name.toLowerCase}|$expectedValueType|$expectedFeatureType"
   }}
 
-  def json = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, value: Value) => {
-    val (metadata, expectedValueType) = value match {
-      case Integral(_)      => (Metadata[Customer, Integral]     (namespace, name, desc, fType), "integral")
-      case Decimal(_)       => (Metadata[Customer, Decimal]      (namespace, name, desc, fType), "decimal")
-      case FloatingPoint(_) => (Metadata[Customer, FloatingPoint](namespace, name, desc, fType), "floatingpoint")
-      case Str(_)           => (Metadata[Customer, Str]          (namespace, name, desc, fType), "string")
-      case Date(_)          => (Metadata[Customer, Date]         (namespace, name, desc, fType), "date")
-      case Time(_)          => (Metadata[Customer, Time]         (namespace, name, desc, fType), "time")
+  def typeMatches(v: Value, r: Option[Range[Value]]): Boolean = {
+    r match {
+      case Some(MinMaxRange(min, _)) if min.getClass == v.getClass => true
+      case Some(SetRange(vs)) if vs.nonEmpty && vs.head.getClass == v.getClass => true
+      case None => true
+      case _ => false
+    }
+  }
+
+  implicit val arbValueRange: Arbitrary[(Value, Option[Range[Value]])] = Arbitrary((for {
+    v <- arbitrary[Value]
+    r <- arbitrary[Option[Range[Value]]]
+  } yield (v, r)).retryUntil { case (v, r) => typeMatches(v, r) })
+
+  def json = forAll { (namespace: Namespace, name: Name, desc: Description, fType: Type, vr: (Value, Option[Range[Value]])) => {
+    val (value, range) = vr
+    val (metadata, expectedValueType) = vr match {
+      case (Integral(_), r)      => (Metadata[Customer, Integral]     (namespace, name, desc, fType, r.asInstanceOf[Option[Range[Integral]]]), "integral")
+      case (Decimal(_), r)       => (Metadata[Customer, Decimal]      (namespace, name, desc, fType, r.asInstanceOf[Option[Range[Decimal]]]), "decimal")
+      case (FloatingPoint(_), r) => (Metadata[Customer, FloatingPoint](namespace, name, desc, fType, r.asInstanceOf[Option[Range[FloatingPoint]]]), "floatingpoint")
+      case (Str(_), r)           => (Metadata[Customer, Str]          (namespace, name, desc, fType, r.asInstanceOf[Option[Range[Str]]]), "string")
+      case (Date(_), r)          => (Metadata[Customer, Date]         (namespace, name, desc, fType, r.asInstanceOf[Option[Range[Date]]]), "date")
+      case (Time(_), r)          => (Metadata[Customer, Time]         (namespace, name, desc, fType, r.asInstanceOf[Option[Range[Time]]]), "time")
     }
 
     val expectedFeatureType = fType.toString.toLowerCase
+
+    def expectedValue(v: Value): String = {
+      MetadataOutput.genericValueToJson(v).fold[String]("null", _.toString, _.toString, identity, _.toString, _.toString)
+    }
+
+    val matchExpectedRange: Matcher[String] = range match {
+      case Some(MinMaxRange(min,max)) => /("range") /("min" -> expectedValue(min)) and
+                                         /("range") /("max" -> expectedValue(max))
+      case Some(SetRange(set))        => /("range").andHave(allOf(set.map(expectedValue).toList:_*))
+      case None                       => /("range").andHave(beJsonNull)
+    }
+
     val oConforms = (fType, value) match {
       case (Nominal,    Str(_))      => Some(NominalStr)
       case (Ordinal,    Decimal(_))  => Some(OrdinalDecimal)
@@ -85,15 +128,16 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       jsonOutput must /("source" -> metadata.sourceType.toString),
       jsonOutput must /("featureType" -> expectedFeatureType),
       jsonOutput must /("valueType" -> expectedValueType),
-      jsonOutput must /("typesConform" -> expectedTypesConform)
+      jsonOutput must /("typesConform" -> expectedTypesConform),
+      jsonOutput must matchExpectedRange
     )
   }}
 
   def listProducesValidJson = {
     import MetadataOutput._
     val metadataList = List(
-      Metadata[Customer, Integral]("ns", "feature1", "feature1", Discrete),
-      Metadata[Customer, Str]("ns", "feature2", "feature2", Discrete)
+      Metadata[Customer, Integral]("ns", "feature1", "feature1", Discrete, Some(MinMaxRange(Integral(Some(1)), Integral(Some(2))))),
+      Metadata[Customer, Str]("ns", "feature2", "feature2", Discrete, Some(SetRange(List(Str(Some("small")), Str(Some("medium")), Str(Some("large"))))))
     )
 
     val generatedJson = JsonObject.combiner(metadataList.map(md => JsonObject.fn(md, None)))
