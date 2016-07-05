@@ -137,8 +137,8 @@ import commbank.coppersmith.api._
 import commbank.coppersmith.examples.thrift.User
 
 object UserFeatures extends BasicFeatureSet[User] {
-  val namespace              = "userguide.examples"
-  def entity(user: User)     = user.id
+  val namespace          = "userguide.examples"
+  def entity(user: User) = user.id
 
   val userAge = basicFeature[Integral](
     "USER_AGE", "Age of user in years", Continuous,
@@ -149,8 +149,8 @@ object UserFeatures extends BasicFeatureSet[User] {
 }
 ```
 
-Note that, as opposed to above, returning `None` as part of `basicFeature` will
-generate a feature with a value of `null`.
+Note that, as opposed to above, returning `None` from the function
+passed to `basicFeature` will generate a feature with a value of `null`.
 
 ### Execution: the `SimpleFeatureJob` class
 
@@ -392,11 +392,12 @@ object Implicits {
 
     def safeReleaseDate: Option[Datestamp] =
       movie.releaseDate.flatMap(parse(_).right.toOption)
-    def releaseYear:     Option[Int]      = safeReleaseDate.map(_.year)
-    def isComedy:        Boolean          = movie.comedy == 1
-    def isFantasy:       Boolean          = movie.fantasy == 1
-    def isAction:        Boolean          = movie.action == 1
-    def isScifi:         Boolean          = movie.scifi == 1
+
+    def releaseYear: Option[Int] = safeReleaseDate.map(_.year)
+    def isComedy:    Boolean     = movie.comedy == 1
+    def isFantasy:   Boolean     = movie.fantasy == 1
+    def isAction:    Boolean     = movie.action == 1
+    def isScifi:     Boolean     = movie.scifi == 1
 
     def ageAt(date: Datestamp): Option[Int] = safeReleaseDate.map(_.difference(date).years)
   }
@@ -956,8 +957,8 @@ import commbank.coppersmith.examples.thrift.Movie
 import Implicits.RichMovie
 
 object SourceViewFeatures extends FeatureSetWithTime[Movie] {
-  val namespace              = "userguide.examples"
-  def entity(movie: Movie)   = movie.id
+  val namespace            = "userguide.examples"
+  def entity(movie: Movie) = movie.id
 
   val source  = From[Movie]()
   val builder = source.featureSetBuilder(namespace, entity)
