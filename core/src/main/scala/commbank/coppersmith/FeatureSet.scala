@@ -50,15 +50,23 @@ trait MetadataSet[S] {
 abstract class PivotFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
   def entity(s: S): EntityId
 
-  def pivot[V <: Value : TypeTag, FV <% V](field: Field[S, FV], humanDescription: String, featureType: Type) =
-    Patterns.pivot(namespace, featureType, entity, field, humanDescription)
+  def pivot[V <: Value : TypeTag, FV <% V](field: Field[S, FV],
+                                           humanDescription: String,
+                                           featureType: Type,
+                                           range: Option[Value.Range[V]] = None) =
+    Patterns.pivot(namespace, featureType, entity, field, humanDescription, range)
 }
 
 abstract class BasicFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
   def entity(s: S): EntityId
 
-  def basicFeature[V <: Value : TypeTag](featureName: Name, humanDescription: String, featureType: Type, value: S => V) =
-    Patterns.general(namespace, featureName, humanDescription, featureType, entity, (s: S) => Some(value(s)))
+  def basicFeature[V <: Value : TypeTag](featureName: Name,
+                                         humanDescription: String,
+                                         featureType: Type,
+                                         value: S => V,
+                                         range: Option[Value.Range[V]] = None) =
+    Patterns.general(namespace, featureName, humanDescription, featureType, entity,
+      (s: S) => Some(value(s)), range)
 }
 
 abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends FeatureSetWithTime[S] {
@@ -69,8 +77,12 @@ abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends Featur
   def entity(s: S): EntityId
   def value(s: S):  V
 
-  def queryFeature(featureName: Name, humanDescription: String, filter: Filter) =
-    Patterns.general(namespace, featureName, humanDescription, featureType, entity, (s: S) => filter(s).option(value(s)))
+  def queryFeature(featureName: Name,
+                   humanDescription: String,
+                   filter: Filter,
+                   range: Option[Value.Range[V]] = None) =
+    Patterns.general(namespace, featureName, humanDescription, featureType, entity,
+      (s: S) => filter(s).option(value(s)), range)
 }
 
 import scalaz.syntax.foldable1.ToFoldable1Ops
@@ -84,13 +96,14 @@ case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
   description: Description,
   aggregator:  Aggregator[SV, U, Option[V]],
   view:        PartialFunction[S, SV],
-  featureType: Type
+  featureType: Type,
+  range:       Option[Value.Range[V]] = None
 ) {
   import AggregationFeature.AlgebirdSemigroup
   // Note: Implementation exists here to satisfty feature signature and enable unit testing.
   // Framework should take advantage of aggregators that can run natively on the underlying plumbing.
   def toFeature(namespace: Namespace) = new Feature[(EntityId, Iterable[S]), Value](
-    Metadata(namespace, name, description, featureType)
+    Metadata(namespace, name, description, featureType, range)
   ) {
     def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
       val (entity, source) = s

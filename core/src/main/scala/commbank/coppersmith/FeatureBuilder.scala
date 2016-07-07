@@ -82,9 +82,17 @@ case class FeatureSetBuilder[S, SV](
   def asFeature[FT <: Type, V <: Value](
     featureType: FT,
     name:        Name,
+    range:       Option[Value.Range[V]],
     desc:        Description
-  )(implicit svv: SV => V, ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]) =
-    apply[SV, V](identity(_)).asFeature(featureType, name, desc)
+  )(implicit svv: SV => V, ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
+    apply[SV, V](identity(_)).asFeature(featureType, name, range, desc)
+
+  def asFeature[FT <: Type, V <: Value](
+   featureType: FT,
+   name:        Name,
+   desc:        Description
+  )(implicit svv: SV => V, ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
+    asFeature(featureType, name, range = None, desc)
 }
 
 /**
@@ -104,14 +112,23 @@ case class FeatureBuilder[S, SV, FV <% V, V <: Value](
   def asFeature[T <: Type](
     featureType: T,
     name: Name,
+    range: Option[Value.Range[V]],
     desc: Description
-  )(implicit ev: Conforms[T, V], tts: TypeTag[S], ttv: TypeTag[V]) =
+  )(implicit ev: Conforms[T, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
     Patterns.general[S, V, FV](fsBuilder.namespace,
                                name,
                                desc,
                                featureType,
                                fsBuilder.entity,
-                               (s: S) => view.lift(s).map(value(_): V))
+                               (s: S) => view.lift(s).map(value(_): V),
+                               range)
+
+  def asFeature[T <: Type](
+    featureType: T,
+    name: Name,
+    desc: Description
+  )(implicit ev: Conforms[T, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
+    asFeature(featureType, name, range = None, desc)
 }
 
 /**
@@ -140,7 +157,15 @@ case class AggregationFeatureBuilder[S, SV, T, FV <% V, V <: Value](
   def asFeature[FT <: Type](
     featureType: FT,
     name: Name,
+    range: Option[Value.Range[V]],
     desc: Description
-  )(implicit ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]) =
-    AggregationFeature(name, desc, aggregator.andThenPresent(fvOpt => fvOpt.map(fv => fv: V)), view, featureType)
+  )(implicit ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]): AggregationFeature[S, SV, T, V] =
+    AggregationFeature(name, desc, aggregator.andThenPresent(fvOpt => fvOpt.map(fv => fv: V)), view, featureType, range)
+
+  def asFeature[FT <: Type](
+    featureType: FT,
+    name: Name,
+    desc: Description
+  )(implicit ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]): AggregationFeature[S, SV, T, V] =
+    asFeature(featureType, name, range = None, desc)
 }

@@ -160,7 +160,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def integralConversions = {
     val feature = Patterns.general[Customer, Value.Integral, Value.Integral](
-      "ns", "name", "Desc", Type.Nominal, _.id, c => Some(c.age)
+      "ns", "name", "Desc", Type.Nominal, _.id, c => Some(c.age), None
     )
     Seq(
       feature.metadata.featureType === Type.Nominal,
@@ -172,7 +172,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def decimalConversions = {
     val feature = Patterns.general[Customer, Value.Decimal, Value.Decimal](
-      "ns", "name", "Description", Type.Ordinal, _.id, c => Some(BigDecimal(c.age))
+      "ns", "name", "Description", Type.Ordinal, _.id, c => Some(BigDecimal(c.age)), None
     )
     Seq(
       feature.metadata.featureType === Type.Ordinal,
@@ -184,7 +184,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def floatingPointConversions = {
     val feature = Patterns.general[Customer, Value.FloatingPoint, Value.FloatingPoint](
-      "ns", "name", "Description", Type.Ordinal, _.id, c => Some(c.age.toDouble)
+      "ns", "name", "Description", Type.Ordinal, _.id, c => Some(c.age.toDouble), None
     )
     Seq(
       feature.metadata.featureType === Type.Ordinal,
@@ -196,7 +196,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def stringConversions = {
     val feature = Patterns.general[Customer, Value.Str, Value.Str](
-      "ns", "name", "Description", Type.Nominal, _.id, c => Some(c.name)
+      "ns", "name", "Description", Type.Nominal, _.id, c => Some(c.name), None
     )
 
     Seq(
@@ -207,7 +207,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def boolConversions = {
     val feature = Patterns.general[Customer, Value.Bool, Value.Bool](
-      "ns", "name", "Desc", Type.Nominal, _.id, c => Some(c.age > 20)
+      "ns", "name", "Desc", Type.Nominal, _.id, c => Some(c.age > 20), None
     )
 
     Seq(
@@ -218,7 +218,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def dateConversions = {
     val feature = Patterns.general[Customer, Value.Date, Value.Date](
-      "ns", "name", "Description", Type.Instant, _.id, c => Some(Datestamp.unsafeParse(new DateTime(c.time).toString("yyyy-MM-dd")))
+      "ns", "name", "Description", Type.Instant, _.id, c => Some(Datestamp.unsafeParse(new DateTime(c.time).toString("yyyy-MM-dd"))), None
     )
 
     Seq(
@@ -230,7 +230,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def timeConversions = {
     val feature = Patterns.general[Customer, Value.Time, Value.Time](
-      "ns", "name", "Description", Type.Instant, _.id, c => Some(Timestamp(c.time, Some((0,0))))
+      "ns", "name", "Description", Type.Instant, _.id, c => Some(Timestamp(c.time, Some((0,0)))), None
     )
 
     Seq(
