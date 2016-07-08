@@ -52,7 +52,7 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
                 humanDescription: String,
                 condition: Customer => Boolean,
                 range: Option[Range[FloatingPoint]]) = {
-      queryFeature(name, humanDescription, condition, range)
+      queryFeature(name, humanDescription, range)(condition)
     }
 
     type CustFeat = Feature[Customer, FloatingPoint]

@@ -98,7 +98,7 @@ object Feature {
     }
     object SetRange {
       // Should return Range[V] once V is made invariant on Range and contains is added back
-      def apply[V : Order](values: List[V]): SetRange[V] = SetRange(ListSet(values: _*))
+      def apply[V : Order](values: V*): SetRange[V] = SetRange(ListSet(values: _*))
     }
   }
 

@@ -118,7 +118,7 @@ object Arbitraries {
 
   implicit val arbSetRange: Arbitrary[SetRange[Value]] = for {
     vs <- arbValues
-  } yield SetRange(vs.toList)
+  } yield SetRange(vs.toList:_*)
 
   implicit val arbRange: Arbitrary[Option[Range[Value]]] =
     Arbitrary(Gen.option(oneOf(arbMinMaxRange.arbitrary, arbSetRange.arbitrary)))

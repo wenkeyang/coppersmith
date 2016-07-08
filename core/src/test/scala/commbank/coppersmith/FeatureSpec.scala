@@ -123,13 +123,13 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
 
   def rangeValueContained = forAll { (idx: Int, vals: NonEmptyList[Value]) =>
     val randIndex = math.abs(idx % vals.size)
-    SetRange(vals.list).contains(vals.list(randIndex)) must beTrue
+    SetRange(vals.list:_*).contains(vals.list(randIndex)) must beTrue
   }
 
   def nonRangeValuesExcluded = forAll { (vals: NonEmptyList[Value]) =>
     val excluded = vals.head
     val range = vals.tail.toSet - excluded
-    SetRange(range.toList).contains(excluded) must beFalse
+    SetRange(range.toList:_*).contains(excluded) must beFalse
   }
 
   def nonStrWidest = forAll { (vals: NonEmptyList[Value]) => !vals.head.isInstanceOf[Str] ==> {
@@ -141,7 +141,7 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
       case Str(Some(s)) => s.length
       case _ => 0
     }.maximum1
-    SetRange(vals.list).widestValueSize must beSome(widest)
+    SetRange(vals.list:_*).widestValueSize must beSome(widest)
   }}
 }
 

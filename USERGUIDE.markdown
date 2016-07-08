@@ -72,8 +72,9 @@ You can think of it as a function from `S` to `V`:
 A feature must also define some metadata, including:
 - a feature *namespace*,
 - a feature *name*,
-- a feature *description* and
-- a feature *featureType* (`Continuous`, `Discrete`, `Ordinal` or `Nominal`).
+- a feature *description*,
+- a feature *featureType* (`Continuous`, `Discrete`, `Ordinal` or `Nominal`) and optionally
+- a feature *range* (`MinMaxRange`, `SetRange`).
 
 Below is an example of a feature defined by extending the `Feature` class.
 If this looks complicated, don't worry!
@@ -94,7 +95,8 @@ object UserAge extends Feature[User, Integral](
   Metadata[User, Integral](namespace   = "userguide.examples",
                            name        = "USER_AGE",
                            description = "Age of user in years",
-                           featureType = Continuous)
+                           featureType = Continuous,
+                           valueRange  = Some(MinMaxRange[Integral](0, 130)))
 ) {
   def generate(user: User) =
     Some(FeatureValue(entity = user.id, name = "USER_AGE", value = user.age))
@@ -142,9 +144,8 @@ object UserFeatures extends BasicFeatureSet[User] {
   def entity(user: User) = user.id
 
   val userAge = basicFeature[Integral](
-    "USER_AGE", "Age of user in years", Continuous,
-    (user) => user.age
-  )
+    "USER_AGE", "Age of user in years", Continuous, Some(MinMaxRange[Integral](0, 130))
+  )((user) => user.age)
 
   val features = List(userAge)
 }
@@ -361,7 +362,8 @@ object FluentUserFeatures extends FeatureSetWithTime[User] {
   val select   = source.featureSetBuilder(namespace, entity)
 
   val userAge  = select(user => user.age)
-    .asFeature(Continuous, "USER_AGE", "Age of user in years")
+    .asFeature(Continuous, "USER_AGE", Some(MinMaxRange(0, 130)),
+      "Age of user in years")
 
   val userIsEngineer = select(user => user.occupation == "Engineer")
     .asFeature(Nominal, "USER_IS_ENGINEER", "Whether the user is an engineer")
@@ -478,7 +480,7 @@ object RatingFeatures extends AggregationFeatureSet[Rating] {
   val select = source.featureSetBuilder(namespace, entity)
 
   val avgRating = select(avg(_.rating))
-    .asFeature(Continuous, "MOVIE_AVG_RATING",
+    .asFeature(Continuous, "MOVIE_AVG_RATING", Some(MinMaxRange(0.0, 5.0)),
                "Average movie rating")
 
   import com.twitter.algebird.{Aggregator, Moments}
@@ -725,8 +727,8 @@ object MovieGenreFlags extends QueryFeatureSet[Movie, Str] {
 
   val source = From[Movie]()
 
-  val comedyMovie = queryFeature("MOVIE_IS_COMEDY", "'Y' if movie is comedy", _.isComedy)
-  val fantasyMovie = queryFeature("MOVIE_IS_ACTION", "'Y' if movie is action", _.isAction)
+  val comedyMovie = queryFeature("MOVIE_IS_COMEDY", "'Y' if movie is comedy", Some(SetRange("Y")))(_.isComedy)
+  val fantasyMovie = queryFeature("MOVIE_IS_ACTION", "'Y' if movie is action", Some(SetRange("Y")))(_.isAction)
 
   val features = List(comedyMovie, fantasyMovie)
 }

@@ -63,10 +63,16 @@ abstract class BasicFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
   def basicFeature[V <: Value : TypeTag](featureName: Name,
                                          humanDescription: String,
                                          featureType: Type,
-                                         value: S => V,
-                                         range: Option[Value.Range[V]] = None) =
+                                         range: Option[Value.Range[V]])(
+                                         value: S => V) =
     Patterns.general(namespace, featureName, humanDescription, featureType, entity,
       (s: S) => Some(value(s)), range)
+
+  def basicFeature[V <: Value : TypeTag](featureName: Name,
+                                         humanDescription: String,
+                                         featureType: Type)(
+                                         value: S => V): Feature[S, V] =
+    basicFeature(featureName, humanDescription, featureType, None)(value)
 }
 
 abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends FeatureSetWithTime[S] {
@@ -79,10 +85,15 @@ abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends Featur
 
   def queryFeature(featureName: Name,
                    humanDescription: String,
-                   filter: Filter,
-                   range: Option[Value.Range[V]] = None) =
+                   range: Option[Value.Range[V]])(
+                   filter: Filter) =
     Patterns.general(namespace, featureName, humanDescription, featureType, entity,
       (s: S) => filter(s).option(value(s)), range)
+
+  def queryFeature(featureName: Name,
+                   humanDescription: String)(
+                   filter: Filter): Feature[S, V] =
+    queryFeature(featureName, humanDescription, None)(filter)
 }
 
 import scalaz.syntax.foldable1.ToFoldable1Ops
