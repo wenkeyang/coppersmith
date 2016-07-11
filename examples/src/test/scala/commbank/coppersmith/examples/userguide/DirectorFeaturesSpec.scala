@@ -35,7 +35,7 @@ object DirectorFeaturesSpec extends ThermometerHiveSpec {
     implicit def arbSafeHiveTextString: Arbitrary[String] = Arbitrary(Gen.identifier)
 
     def movie(id: String, title: String) =
-      Movie(id, title, Some("Jan-01-1995"), None, None, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+      Movie(id, title, Some("Jan-01-1995"), None, None, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false)
 
     def rating(movie: String, rating: Int) =
       Gen.resultOf(Rating.apply _).sample.get.copy(movieId = movie, rating = rating)
