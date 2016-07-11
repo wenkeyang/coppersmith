@@ -89,8 +89,8 @@ class ScaldingSpec extends ThermometerSpec {
   }
 
   val customerPipe = IterablePipe(List(
-    Customer("1", "name1", 30, 2.0, None, 1L),
-    Customer("2", "name2", 40, 1.5, None, 1L)
+    Customer("1", "name1", 30, 2.0, None, 1L, true),
+    Customer("2", "name2", 40, 1.5, None, 1L, false)
   ))
 
   def liftFeature = {
