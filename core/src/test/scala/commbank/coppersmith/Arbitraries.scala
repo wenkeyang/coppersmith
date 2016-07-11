@@ -138,7 +138,8 @@ object Arbitraries {
        ageGen |@|
        arbitrary[Double] |@|
        arbitrary[Option[Double]] |@|
-       arbTimeMillis)(Customer.apply)
+       arbTimeMillis |@|
+       arbitrary[Boolean])(Customer.apply)
 
   implicit val arbCustomer: Arbitrary[Customer] = Arbitrary(customerGen(arbitrary[String]))
 
