@@ -59,6 +59,8 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
   def valuePipe(vs: NonEmptyList[FeatureValue[Value]], dateTime: DateTime) =
     TypedPipe.from(vs.list.map(v => v -> dateTime.getMillis))
 
+  // Clear previous data as scalacheck may randomly generate the same table path twice
+  // and thermometer will not create a new directory for each scalacheck run
   def clearData(sink: T) = {
     executesOk(Execution.fromHdfs(Hdfs.delete(path(s"${tablePath(sink)}"), true)))
   }
