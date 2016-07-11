@@ -222,7 +222,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     expected.contain(_.zip(===, ===, matchValue, ===))
 
   def matchValue(expected: Value): Matcher[Value] = expected match {
-    case Integral(_) | Str(_) | FloatingPoint(None) | Decimal(None) | Date(_) | Time(_) => be_===(expected)
+    case Integral(_) | Str(_) | FloatingPoint(None) | Decimal(None) | Bool(_) | Date(_) | Time(_) => be_===(expected)
     case FloatingPoint(Some(expectedDouble)) =>
       beCloseTo(expectedDouble +/- 0.000000000001) ^^ (
         (v: Value) => v match {

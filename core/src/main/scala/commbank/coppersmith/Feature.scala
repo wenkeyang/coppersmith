@@ -54,6 +54,7 @@ object Feature {
     case class Str(value: Option[String])           extends Value
     case class Date(value: Option[Datestamp])       extends Value
     case class Time(value: Option[Timestamp])       extends Value
+    case class Bool(value: Option[Boolean])         extends Value
 
     implicit def fromInt(i: Int):                         Integral      = Option(i)
     implicit def fromLong(l: Long):                       Integral      = Option(l)
@@ -62,6 +63,7 @@ object Feature {
     implicit def fromString(s: String):                   Str           = Option(s)
     implicit def fromDate(d: Datestamp):                  Date          = Option(d)
     implicit def fromTime(t: Timestamp):                  Time          = Option(t)
+    implicit def fromBoolean(b: Boolean):                 Bool          = Option(b)
     implicit def fromOInt(i: Option[Int]):                Integral      = Integral(i.map(_.toLong))
     implicit def fromOLong(l: Option[Long]):              Integral      = Integral(l)
     implicit def fromODouble(d: Option[Double]):          FloatingPoint = FloatingPoint(d)
@@ -69,6 +71,7 @@ object Feature {
     implicit def fromOString(s: Option[String]):          Str           = Str(s)
     implicit def fromODate(d: Option[Datestamp]):         Date          = Date(d)
     implicit def fromOTime(t: Option[Timestamp]):         Time          = Time(t)
+    implicit def fromOBoolean(b: Option[Boolean]):        Bool          = Bool(b)
 
     implicit val intOrder: Order[Integral]      = orderBy(_.value)
     implicit val decOrder: Order[Decimal]       = orderBy(_.value)
@@ -121,6 +124,8 @@ object Feature {
   implicit object InstantDate             extends Conforms[Type.Instant.type,    Value.Date]
   implicit object InstantTime             extends Conforms[Type.Instant.type,    Value.Time]
 
+  implicit object NominalBool             extends Conforms[Type.Nominal.type,    Value.Bool]
+
   object Conforms {
 
     def conforms_?[V <: Value : TypeTag](conforms: Conforms[_, _], metadata: Metadata[_, _]) = {
@@ -152,6 +157,7 @@ object Feature {
         case t if t =:= typeOf[Value.Decimal]       => ValueType.DecimalType
         case t if t =:= typeOf[Value.FloatingPoint] => ValueType.FloatingPointType
         case t if t =:= typeOf[Value.Str]           => ValueType.StringType
+        case t if t =:= typeOf[Value.Bool]          => ValueType.BoolType
         case t if t =:= typeOf[Value.Date]          => ValueType.DateType
         case t if t =:= typeOf[Value.Time]          => ValueType.TimeType
       }
@@ -162,6 +168,7 @@ object Feature {
       case object DecimalType       extends ValueType
       case object FloatingPointType extends ValueType
       case object StringType        extends ValueType
+      case object BoolType          extends ValueType
       case object DateType          extends ValueType
       case object TimeType          extends ValueType
     }
