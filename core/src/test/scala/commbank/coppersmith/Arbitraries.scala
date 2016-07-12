@@ -105,7 +105,7 @@ object Arbitraries {
       case (FloatingPoint(d1), FloatingPoint(d2)) => d1.cmp(d2)
       case (Integral(i1), Integral(i2)) => i1.cmp(i2)
       case (Str(s1), Str(s2)) => s1.cmp(s2)
-      case (Bool(b1), Bool(b2)) => b1 cmp b2
+      case (Bool(b1), Bool(b2)) => b1.cmp(b2)
       case (Date(d1), Date(d2)) => d1.cmp(d2)
       case (Time(t1), Time(t2)) => t1.cmp(t2)
       case _ => sys.error("Assumption failed: Expected same value types from arbValues")
