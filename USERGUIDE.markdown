@@ -36,6 +36,7 @@ In addition to this document, there is also a
     * [Generating values from job context](#generating-values-from-job-context)
     * [Alternate sinks](#alternate-sinks)
     * [Generating features from custom scalding code](#generating-features-from-custom-scalding-code)
+    * [Blank features](#blank-features)
     * [Testing](#testing)
 * [Try it yourself](#try-it-yourself)
     * [Setup](#setup)
@@ -1362,6 +1363,38 @@ object DirectorFeaturesJob extends SimpleFeatureJob {
   def job = generate(DirectorFeaturesConfig(_), DirectorFeatures)
 }
 ```
+
+### Blank Features
+
+Quite often, you may have an existing feature job implemented outside of
+Coppersmith. Examples include Hive or Scalding jobs, or even jobs implemented
+outside the Scala/Hadoop ecosystem. It is useful to describe the metadata of
+the generated features even if they are not themselves generated in coppersmith.
+
+For that, we introduce the concept of "blank" features: features which have
+coppersmith metadata but whose runtime logic is elsewhere. Below is an example
+of a Metadata set for blank features:
+
+```scala
+package commbank.coppersmith.examples.userguide
+
+import commbank.coppersmith.api._
+import commbank.coppersmith.examples.thrift._
+
+object BlankCustomerFeatureSet extends MetadataSet[Customer] {
+    val customerLoyalty = Metadata[Customer, Integral](
+      "userguide.examples",
+      "cust_loyalty",
+      "A measure of the customer's loyalty, provided by external system",
+      Discrete
+    )
+
+  def metadata = List(customerLoyalty)
+}
+```
+
+With blank features, the usual metadata artifacts are generated even though
+the logic of the feature is not expressed in coppersmith.
 
 
 ### Testing
