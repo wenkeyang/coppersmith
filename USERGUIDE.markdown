@@ -1372,7 +1372,7 @@ Coppersmith. Examples include Hive or Scalding jobs, or even jobs implemented
 outside the Scala/Hadoop ecosystem. It is useful to describe the metadata of
 the generated features even if they are not themselves generated in coppersmith.
 
-For that, we introduce the concept of "blank"  featires: features which have
+For that, we introduce the concept of "blank" features: features which have
 coppersmith metadata but whose runtime logic is elsewhere. Below is an example
 of a Metadata set for blank features:
 
