@@ -73,8 +73,17 @@ A feature must also define some metadata, including:
 - a feature *namespace*,
 - a feature *name*,
 - a feature *description*,
-- a feature *featureType* (`Continuous`, `Discrete`, `Ordinal` or `Nominal`) and optionally
+- a feature *featureType* (`Continuous`, `Discrete`, `Ordinal`, `Nominal` or `Instant`) and optionally
 - a feature *range* (`MinMaxRange`, `SetRange`).
+
+`featureType` | Permitted `Value` types | Examples
+--- | --- | ---
+`Continuous` (Numeric) | `Integral`<br />`Decimal`<br />`FloatingPoint` | Height in *mm* (e.g. `1822`)<br />Gross Domestic Product (`18460646000000.0`)<br />Area of house (`87.2`)
+`Discrete` (Numeric) | `Integral` | Number of visitors to a website (e.g. `35034859`)
+`Ordinal` (Categorical) | `Integral`<br />`Decimal`<br />`FloatingPoint` <br /> `Str`|Customer satisfaction (e.g. `1` to `10`)<br /> <br /> Movie rating (e.g. `1.0`,`4.0`,`4.5` etc.) <br /> Flood risk (e.g. `"Low"`, `"Moderate"`, `"High"`)
+`Nominal` (Categorical) | `Integral`<br />`Str`<br />`Bool` | Product ID (e.g. `22`, `31`, `50`)<br />Nationality (e.g. `"Australia"`, `"India"`, `"UK"`)<br />Joined in last 6 months? (`true` or `false`)
+`Instant` (DateTime) | `Date`<br />`Time` | Date of birth (`"yyyy-MM-dd"`)<br />Transaction time (`"yyyy-MM-dd'T'HH:mm:ss.SSSZZ"`)
+(See [variable descriptions](http://www.abs.gov.au/websitedbs/a3121120.nsf/home/statistical+language+-+what+are+variables) for further information.)
 
 Below is an example of a feature defined by extending the `Feature` class.
 If this looks complicated, don't worry!
@@ -364,11 +373,26 @@ object FluentUserFeatures extends FeatureSetWithTime[User] {
   val userAge  = select(user => user.age)
     .asFeature(Continuous, "USER_AGE", Some(MinMaxRange(0, 130)),
       "Age of user in years")
+    
+  val userAgeGroup = select(user => user.age match {
+    case x if x <= 14           => "Child"
+    case x if x > 14 && x <= 24 => "Youth"
+    case x if x > 24 && x <= 64 => "Adult"
+    case x if x > 64            => "Senior"
+  }).asFeature(Ordinal, "USER_AGE_GROUP", "Age group of user")
 
-  val userIsEngineer = select(user => user.occupation == "Engineer")
+  val userIsEngineer = select(user => user.occupation == "engineer")
     .asFeature(Nominal, "USER_IS_ENGINEER", "Whether the user is an engineer")
 
-  val features = List(userAge, userIsEngineer)
+  val occupationCode = select(user => user.occupation match {
+      case "engineer"      => 15
+      case "programmer"    => 28
+      case "scientist"     => 44
+      case "administrator" => 71
+      case _               => 0
+    }).asFeature(Nominal, "OCCUPATION_CODE", "Occupation code for user")
+
+  val features = List(userAge, userAgeGroup, userIsEngineer, occupationCode)
 }
 ```
 
@@ -626,7 +650,7 @@ object PopularRatingCountFeatures extends AggregationFeatureSet[Rating] {
   val select = source.featureSetBuilder(namespace, entity)
 
   val popularRatingCount = select(count(_.rating > 3)).having(_ > 10)
-    .asFeature(Continuous, "MOVIE_POPULAR_RATING_COUNT",
+    .asFeature(Discrete, "MOVIE_POPULAR_RATING_COUNT",
                "High rating count for movies that have more than 10 high ratings")
 
   val aggregationFeatures = List(popularRatingCount)
@@ -846,7 +870,7 @@ object LeftJoinFeatures extends AggregationFeatureSet[(Director, Option[Movie])]
 
   // Count the number of records where a matching movie was found
   val directorMovieCount = select(count(!_._2.isEmpty))
-    .asFeature(Continuous, "DIRECTOR_MOVIE_COUNT",
+    .asFeature(Discrete, "DIRECTOR_MOVIE_COUNT",
                "Count of movies directed")
 
   val aggregationFeatures = List(directorMovieCount)
@@ -1157,7 +1181,7 @@ object ContextFeatures extends FeatureSetWithTime[(Movie, DateTime)] {
 
   def movieAgeFeature =
     select(mdt => mdt._1.ageAt(Datestamp(mdt._2.getYear, mdt._2.getMonthOfYear, mdt._2.getDayOfMonth)))
-      .asFeature(Ordinal, "MOVIE_AGE", "Age of movie")
+      .asFeature(Continuous, "MOVIE_AGE", "Age of movie")
 
   val features = List(movieAgeFeature)
 }
