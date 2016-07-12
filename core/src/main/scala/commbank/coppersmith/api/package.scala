@@ -50,6 +50,7 @@ package object api extends GeneratedJoinTypeInstances with SourceBinderInstances
   type DataSource[S, P[_]] = commbank.coppersmith.DataSource[S, P]
   type FeatureValue[+V <: Value] = commbank.coppersmith.FeatureValue[V]
   type FeatureTime = commbank.coppersmith.Feature.FeatureTime
+  type Value = commbank.coppersmith.Feature.Value
 
   // Maestro dependencies below
   type JobStatus = au.com.cba.omnia.maestro.api.JobStatus

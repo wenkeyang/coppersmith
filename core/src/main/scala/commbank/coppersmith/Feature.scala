@@ -215,13 +215,13 @@ abstract class Feature[S, +V <: Value](val metadata: Metadata[S, V]) {
 }
 
 case class FeatureValue[+V <: Value](
-  entity:  EntityId,
-  name:    Name,
-  value:   V
+  entity: EntityId,
+  name:   Name,
+  value:  V
 )
 
 object FeatureValue {
-  implicit class AsEavt[V <: Value](fv: FeatureValue[V]) {
-    def asEavt(time: FeatureTime): (EntityId, Name, V, FeatureTime) = (fv.entity, fv.name, fv.value, time)
+  implicit class AsEavt(fv: FeatureValue[Value]) {
+    def asEavt(time: FeatureTime): (EntityId, Name, Value, FeatureTime) = (fv.entity, fv.name, fv.value, time)
   }
 }
