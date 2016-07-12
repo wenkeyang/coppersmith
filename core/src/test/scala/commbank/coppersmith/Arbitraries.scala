@@ -71,16 +71,16 @@ object Arbitraries {
     date <- arbLocalDate
   } yield Datestamp(date.getYear, date.getMonthOfYear, date.getDayOfMonth)
 
-  implicit val integralValueGen: Gen[Integral] = arbitrary[Option[Long]] map Integral
+  implicit val integralValueGen: Gen[Integral] = arbitrary[Option[Long]].map(Integral)
   implicit val decimalValueGen: Gen[Decimal] =
     arbitrary[Option[BigDecimal]].retryUntil(obd =>
       Try(obd.hashCode).isSuccess
-    ) map Decimal
-  implicit val floatingPointValueGen: Gen[FloatingPoint] = arbitrary[Option[Double]] map FloatingPoint
-  implicit val strValueGen: Gen[Str] = arbitrary[Option[String]] map Str
-  implicit val boolValueGen: Gen[Bool] = arbitrary[Option[Boolean]] map Bool
-  implicit val dateValueGen: Gen[Date] = arbitrary[Option[Datestamp]] map Date
-  implicit val timeValueGen: Gen[Time] = arbitrary[Option[Timestamp]] map Time
+    ).map(Decimal)
+  implicit val floatingPointValueGen: Gen[FloatingPoint] = arbitrary[Option[Double]].map(FloatingPoint)
+  implicit val strValueGen: Gen[Str] = arbitrary[Option[String]].map(Str)
+  implicit val boolValueGen: Gen[Bool] = arbitrary[Option[Boolean]].map(Bool)
+  implicit val dateValueGen: Gen[Date] = arbitrary[Option[Datestamp]].map(Date)
+  implicit val timeValueGen: Gen[Time] = arbitrary[Option[Timestamp]].map(Time)
 
   implicit val arbValue: Arbitrary[Value] = Arbitrary(oneOf(integralValueGen, decimalValueGen, floatingPointValueGen, strValueGen, boolValueGen, dateValueGen, timeValueGen))
 
