@@ -135,6 +135,17 @@ object Feature {
     }
   }
 
+  @implicitNotFound("The feature type for values of type ${V} need to be explicitly specified.")
+  sealed trait DefaultFeatureType[T <: Type, V <: Value] {
+    def defaultFeatureType: T
+    def conformanceEvidence: Conforms[T, V]
+  }
+
+  implicit object BoolDefaultFeatureType extends DefaultFeatureType[Type.Nominal.type, Value.Bool] {
+    override def defaultFeatureType = Type.Nominal
+    override def conformanceEvidence = NominalBool
+  }
+
   implicit class RichFeature[S : TypeTag, V <: Value : TypeTag](f: Feature[S, V]) {
     def as[T <: Feature.Type](t: T)(implicit ev: Conforms[T, V], neq: T =:!= Nothing) = {
       val oldMetadata = f.metadata

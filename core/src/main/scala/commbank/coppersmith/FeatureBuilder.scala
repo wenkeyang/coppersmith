@@ -21,7 +21,7 @@ import scalaz.syntax.std.option.ToOptionIdOps
 
 import com.twitter.algebird.Aggregator
 
-import Feature.{Conforms, Description, EntityId, Name, Namespace, Type, Value}
+import Feature.{Conforms, Description, EntityId, Name, Namespace, Type, Value, DefaultFeatureType}
 
 abstract class FeatureBuilderSource[S] {
   def featureSetBuilder(namespace: Namespace, entity: S => EntityId) =
@@ -100,6 +100,14 @@ case class FeatureBuilder[S, SV, FV <% V, V <: Value](
 ) {
   def andWhere(condition: SV => Boolean) = where(condition)
   def where(condition: SV => Boolean) = copy(view = view.andThenPartial { case s if condition(s) => s })
+
+  def asFeature[T <: Type](
+    name: Name,
+    desc: Description
+  )(implicit dft: DefaultFeatureType[T, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] = {
+    implicit val _ = dft.conformanceEvidence
+    asFeature(dft.defaultFeatureType, name, desc)
+  }
 
   def asFeature[T <: Type](
     featureType: T,
