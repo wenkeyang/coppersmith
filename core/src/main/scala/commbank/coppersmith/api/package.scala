@@ -37,6 +37,7 @@ package object api extends GeneratedJoinTypeInstances with SourceBinderInstances
   type AggregationFeatureSet[S] = commbank.coppersmith.AggregationFeatureSet[S]
   type Integral = commbank.coppersmith.Feature.Value.Integral
   type Str = commbank.coppersmith.Feature.Value.Str
+  type Bool = commbank.coppersmith.Feature.Value.Bool
   type Decimal = commbank.coppersmith.Feature.Value.Decimal
   type FloatingPoint = commbank.coppersmith.Feature.Value.FloatingPoint
   type Date = commbank.coppersmith.Feature.Value.Date
@@ -57,6 +58,7 @@ package object api extends GeneratedJoinTypeInstances with SourceBinderInstances
 
   val Integral = commbank.coppersmith.Feature.Value.Integral
   val Str = commbank.coppersmith.Feature.Value.Str
+  val Bool = commbank.coppersmith.Feature.Value.Bool
   val Decimal = commbank.coppersmith.Feature.Value.Decimal
   val FloatingPoint = commbank.coppersmith.Feature.Value.FloatingPoint
   val Date = commbank.coppersmith.Feature.Value.Date

@@ -99,8 +99,8 @@ class HiveTextSourceSpec extends ThermometerSpec { def is = s2"""
 
     // TODO: Use scalacheck instead of relying on these values being in sync with test files
     val expected = List(
-      Customer("active_id", "active_name", 19, 1.5, None, 12345),
-      Customer("inactive_id", "inactive_name", 21, 1.6, None, 54321)
+      Customer("active_id", "active_name", 19, 1.5, None, 12345, true),
+      Customer("inactive_id", "inactive_name", 21, 1.6, None, 54321, true)
     )
 
     withEnvironment(path(getClass.getResource("/hiveTextSource").toString)) {
@@ -113,8 +113,8 @@ class HiveTextSourceSpec extends ThermometerSpec { def is = s2"""
     val dataSource = HiveTextSource[Customer, String](path("multiplePartitions"), partitions)
 
     val expected = List(
-      Customer("active_id", "active_name", 19, 1.5, None, 12345),
-      Customer("inactive_id", "inactive_name", 21, 1.6, None, 54321)
+      Customer("active_id", "active_name", 19, 1.5, None, 12345, true),
+      Customer("inactive_id", "inactive_name", 21, 1.6, None, 54321, true)
     )
 
     withEnvironment(path(getClass.getResource("/hiveTextSource").toString)) {
@@ -127,7 +127,7 @@ class HiveTextSourceSpec extends ThermometerSpec { def is = s2"""
     val dataSource = HiveTextSource[Customer, Nothing](path("unpartitioned"), partitions)
 
     val expected = List(
-      Customer("unpart_id", "unpart_name", 19, 1.5, None, 12345)
+      Customer("unpart_id", "unpart_name", 19, 1.5, None, 12345, true)
     )
 
     withEnvironment(path(getClass.getResource("/hiveTextSource").toString)) {

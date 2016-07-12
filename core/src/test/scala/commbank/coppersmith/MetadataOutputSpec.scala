@@ -41,6 +41,7 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       case Decimal(v)       => v.map(bd => jString(bd.toString))
       case FloatingPoint(v) => v.map(fp => jString(fp.toString))
       case Str(v)           => v.map(jString)
+      case Bool(v)          => v.map(b  => jString(b.toString))
       case Date(v)          => v.map(d  => jString(d.toString))
       case Time(v)          => v.map(t  => jString(t.toString))
     }).getOrElse(jNull)
@@ -53,6 +54,7 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       case Decimal(_)       => (Metadata[Customer, Decimal]      (namespace, name, desc, fType), "bigdecimal")
       case FloatingPoint(_) => (Metadata[Customer, FloatingPoint](namespace, name, desc, fType), "double")
       case Str(_)           => (Metadata[Customer, Str]          (namespace, name, desc, fType), "string")
+      case Bool(_)          => (Metadata[Customer, Bool]         (namespace, name, desc, fType), "bool")
       case Date(_)          => (Metadata[Customer, Date]         (namespace, name, desc, fType), "date")
       case Time(_)          => (Metadata[Customer, Time]         (namespace, name, desc, fType), "datetime")
     }
@@ -90,6 +92,7 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       case (Decimal(_), r)       => (Metadata[Customer, Decimal]      (namespace, name, desc, fType, r.asInstanceOf[Option[Range[Decimal]]]), "decimal")
       case (FloatingPoint(_), r) => (Metadata[Customer, FloatingPoint](namespace, name, desc, fType, r.asInstanceOf[Option[Range[FloatingPoint]]]), "floatingpoint")
       case (Str(_), r)           => (Metadata[Customer, Str]          (namespace, name, desc, fType, r.asInstanceOf[Option[Range[Str]]]), "string")
+      case (Bool(_), r)          => (Metadata[Customer, Bool]         (namespace, name, desc, fType, r.asInstanceOf[Option[Range[Bool]]]), "bool")
       case (Date(_), r)          => (Metadata[Customer, Date]         (namespace, name, desc, fType, r.asInstanceOf[Option[Range[Date]]]), "date")
       case (Time(_), r)          => (Metadata[Customer, Time]         (namespace, name, desc, fType, r.asInstanceOf[Option[Range[Time]]]), "time")
     }

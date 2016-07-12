@@ -63,7 +63,10 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
                           case Some(score) => score
                         }.asFeature(Continuous, "altCredit", "Alternate Impl")
 
-    def features = List(age, tallAge, oldHeight, time, credit, altCredit)
+    val youngIsVerified: CF =
+      select(_.isVerified).where(_.age < 40).asFeature(Nominal, "youngIsVerified", "Young isVerified")
+
+    def features = List(age, tallAge, oldHeight, time, credit, altCredit, youngIsVerified)
   }
 
   def generateMetadata = {
@@ -71,29 +74,32 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
     import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      Metadata[Customer, Integral]     (namespace, "age",       "Age",            Ordinal),
-      Metadata[Customer, Integral]     (namespace, "tallAge",   "Tall Age",       Continuous),
-      Metadata[Customer, FloatingPoint](namespace, "oldHeight", "Old Height",     Continuous),
-      Metadata[Customer, Time]         (namespace, "time",      "Time",           Instant),
-      Metadata[Customer, FloatingPoint](namespace, "credit",    "Credit Score",   Continuous),
-      Metadata[Customer, FloatingPoint](namespace, "altCredit", "Alternate Impl", Continuous)
+      Metadata[Customer, Integral]     (namespace, "age",             "Age",              Ordinal),
+      Metadata[Customer, Integral]     (namespace, "tallAge",         "Tall Age",         Continuous),
+      Metadata[Customer, FloatingPoint](namespace, "oldHeight",       "Old Height",       Continuous),
+      Metadata[Customer, Time]         (namespace, "time",            "Time",             Instant),
+      Metadata[Customer, FloatingPoint](namespace, "credit",          "Credit Score",     Continuous),
+      Metadata[Customer, FloatingPoint](namespace, "altCredit",       "Alternate Impl",   Continuous),
+      Metadata[Customer, Bool]         (namespace, "youngIsVerified", "Young isVerified", Nominal)
     )
   }
 
   def generateFeatureValues = forAll { (c: Customer) => {
     val featureValues = CustomerFeatureSet.generate(c)
 
-    val expectTallAge   = c.height > 2.0
-    val expectOldHeight = c.age > 65
-    val expectCredit    = c.credit.isDefined
+    val expectTallAge    = c.height > 2.0
+    val expectOldHeight  = c.age > 65
+    val expectCredit     = c.credit.isDefined
+    val expectIsVerified = c.age < 40
 
     featureValues must_== List(
-                        Some(FeatureValue[Integral]     (c.id, "age",       c.age)),
-      expectTallAge.option(  FeatureValue[Integral]     (c.id, "tallAge",   c.age)),
-      expectOldHeight.option(FeatureValue[FloatingPoint](c.id, "oldHeight", c.height)),
-                        Some(FeatureValue[Time]         (c.id, "time",      Timestamp(c.time, None))),
-      expectCredit.option(   FeatureValue[FloatingPoint](c.id, "credit",    c.credit)),
-      expectCredit.option(   FeatureValue[FloatingPoint](c.id, "altCredit", c.credit))
+                         Some(FeatureValue[Integral]     (c.id, "age",             c.age)),
+      expectTallAge.option(   FeatureValue[Integral]     (c.id, "tallAge",         c.age)),
+      expectOldHeight.option( FeatureValue[FloatingPoint](c.id, "oldHeight",       c.height)),
+                         Some(FeatureValue[Time]         (c.id, "time",            Timestamp(c.time, None))),
+      expectCredit.option(    FeatureValue[FloatingPoint](c.id, "credit",          c.credit)),
+      expectCredit.option(    FeatureValue[FloatingPoint](c.id, "altCredit",       c.credit)),
+      expectIsVerified.option(FeatureValue[Bool]         (c.id, "youngIsVerified", c.isVerified))
     ).flatten
   }}
 }
@@ -222,7 +228,7 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     expected.contain(_.zip(===, ===, matchValue, ===))
 
   def matchValue(expected: Value): Matcher[Value] = expected match {
-    case Integral(_) | Str(_) | FloatingPoint(None) | Decimal(None) | Date(_) | Time(_) => be_===(expected)
+    case Integral(_) | Str(_) | FloatingPoint(None) | Decimal(None) | Bool(_) | Date(_) | Time(_) => be_===(expected)
     case FloatingPoint(Some(expectedDouble)) =>
       beCloseTo(expectedDouble +/- 0.000000000001) ^^ (
         (v: Value) => v match {

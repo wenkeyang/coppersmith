@@ -71,16 +71,18 @@ object Arbitraries {
     date <- arbLocalDate
   } yield Datestamp(date.getYear, date.getMonthOfYear, date.getDayOfMonth)
 
-  implicit val integralValueGen: Gen[Integral] = arbitrary[Option[Long]].map(Integral(_))
+  implicit val integralValueGen: Gen[Integral] = arbitrary[Option[Long]].map(Integral)
   implicit val decimalValueGen: Gen[Decimal] =
     arbitrary[Option[BigDecimal]].retryUntil(obd =>
-      Try(obd.hashCode()).isSuccess
-    ).map(Decimal(_))
-  implicit val floatingPointValueGen: Gen[FloatingPoint] = arbitrary[Option[Double]].map(FloatingPoint(_))
-  implicit val strValueGen: Gen[Str] = arbitrary[Option[String]].map(Str(_))
-  implicit val dateValueGen: Gen[Date] = arbitrary[Option[Datestamp]].map(Date(_))
-  implicit val timeValueGen: Gen[Time] = arbitrary[Option[Timestamp]].map(Time(_))
-  implicit val arbValue: Arbitrary[Value] = Arbitrary(oneOf(integralValueGen, decimalValueGen, floatingPointValueGen, strValueGen, dateValueGen, timeValueGen))
+      Try(obd.hashCode).isSuccess
+    ).map(Decimal)
+  implicit val floatingPointValueGen: Gen[FloatingPoint] = arbitrary[Option[Double]].map(FloatingPoint)
+  implicit val strValueGen: Gen[Str] = arbitrary[Option[String]].map(Str)
+  implicit val boolValueGen: Gen[Bool] = arbitrary[Option[Boolean]].map(Bool)
+  implicit val dateValueGen: Gen[Date] = arbitrary[Option[Datestamp]].map(Date)
+  implicit val timeValueGen: Gen[Time] = arbitrary[Option[Timestamp]].map(Time)
+
+  implicit val arbValue: Arbitrary[Value] = Arbitrary(oneOf(integralValueGen, decimalValueGen, floatingPointValueGen, strValueGen, boolValueGen, dateValueGen, timeValueGen))
 
   // Generates values of the same subtype, but arbitrarily chooses the subtype to generate
   implicit def arbValues: Arbitrary[NonEmptyList[Value]] =
@@ -90,6 +92,7 @@ object Arbitraries {
         NonEmptyListArbitrary(Arbitrary(floatingPointValueGen)).arbitrary,
         NonEmptyListArbitrary(Arbitrary(integralValueGen)).arbitrary,
         NonEmptyListArbitrary(Arbitrary(strValueGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(boolValueGen)).arbitrary,
         NonEmptyListArbitrary(Arbitrary(dateValueGen)).arbitrary,
         NonEmptyListArbitrary(Arbitrary(timeValueGen)).arbitrary
       )
@@ -102,6 +105,7 @@ object Arbitraries {
       case (FloatingPoint(d1), FloatingPoint(d2)) => d1.cmp(d2)
       case (Integral(i1), Integral(i2)) => i1.cmp(i2)
       case (Str(s1), Str(s2)) => s1.cmp(s2)
+      case (Bool(b1), Bool(b2)) => b1.cmp(b2)
       case (Date(d1), Date(d2)) => d1.cmp(d2)
       case (Time(t1), Time(t2)) => t1.cmp(t2)
       case _ => sys.error("Assumption failed: Expected same value types from arbValues")
@@ -134,7 +138,8 @@ object Arbitraries {
        ageGen |@|
        arbitrary[Double] |@|
        arbitrary[Option[Double]] |@|
-       arbTimeMillis)(Customer.apply)
+       arbTimeMillis |@|
+       arbitrary[Boolean])(Customer.apply)
 
   implicit val arbCustomer: Arbitrary[Customer] = Arbitrary(customerGen(arbitrary[String]))
 

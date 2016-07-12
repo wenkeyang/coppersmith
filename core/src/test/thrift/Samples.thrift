@@ -21,6 +21,7 @@ struct Customer {
   4 : required double height
   5 : optional double credit
   6 : required i64    time
+  7 : required bool   isVerified
 }
 
 // Type with some optional fields

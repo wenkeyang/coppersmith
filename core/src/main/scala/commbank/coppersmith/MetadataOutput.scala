@@ -35,6 +35,7 @@ object MetadataOutput {
     case ValueType.StringType        => "string"
     case ValueType.DateType          => "date"
     case ValueType.TimeType          => "datetime"
+    case ValueType.BoolType          => "bool"
   }
 
   private def psvFeatureTypeToString(f: Feature.Type) = f match {
@@ -54,6 +55,7 @@ object MetadataOutput {
     case Str(v)           => v.map(jString)
     case Date(v)          => v.map(d => jString(d.toString))
     case Time(v)          => v.map(t => jString(t.toString))
+    case Bool(v)          => v.map(b => jString(b.toString))
   }).getOrElse(jNull)
 
   private def genericRangeToJson(r: Option[Value.Range[Value]]) = r match {

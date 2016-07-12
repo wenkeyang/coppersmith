@@ -51,6 +51,8 @@ object MetadataSpec extends Specification with ScalaCheck { def is = s2"""
         Metadata[Customer, FloatingPoint](namespace, name, desc, fType).valueType must_== FloatingPointType
       case Str(_) =>
         Metadata[Customer, Str]          (namespace, name, desc, fType).valueType must_== StringType
+      case Bool(_) =>
+        Metadata[Customer, Bool]         (namespace, name, desc, fType).valueType must_== BoolType
       case Date(_) =>
         Metadata[Customer, Date]         (namespace, name, desc, fType).valueType must_== DateType
       case Time(_) =>
@@ -151,6 +153,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
     Decimal features convert to continuous and to categorical  $decimalConversions
     Floating point features convert to continuous and to categorical  $floatingPointConversions
     String features cannot convert to continuous  $stringConversions
+    Bool features only convert to nominal  $boolConversions
     Date features only convert to instant  $dateConversions
     Time features only convert to instant  $timeConversions
 """
@@ -195,16 +198,31 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
     val feature = Patterns.general[Customer, Value.Str, Value.Str](
       "ns", "name", "Description", Type.Nominal, _.id, c => Some(c.name)
     )
-    feature.metadata.featureType === Type.Nominal
-    typecheck("feature.as(Continuous)") must not succeed
+
+    Seq(
+      feature.metadata.featureType === Type.Nominal,
+      typecheck("feature.as(Continuous)") must not succeed
+    )
+  }
+
+  def boolConversions = {
+    val feature = Patterns.general[Customer, Value.Bool, Value.Bool](
+      "ns", "name", "Desc", Type.Nominal, _.id, c => Some(c.age > 20)
+    )
+
+    Seq(
+      feature.metadata.featureType === Type.Nominal,
+      typecheck("feature.as(Continuous)") must not succeed
+    )
   }
 
   def dateConversions = {
     val feature = Patterns.general[Customer, Value.Date, Value.Date](
       "ns", "name", "Description", Type.Instant, _.id, c => Some(Datestamp.unsafeParse(new DateTime(c.time).toString("yyyy-MM-dd")))
     )
-    feature.metadata.featureType === Type.Instant
+
     Seq(
+      feature.metadata.featureType === Type.Instant,
       typecheck("feature.as(Continuous)") must not succeed,
       typecheck("feature.as(Ordinal)") must not succeed
     )
@@ -214,8 +232,9 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
     val feature = Patterns.general[Customer, Value.Time, Value.Time](
       "ns", "name", "Description", Type.Instant, _.id, c => Some(Timestamp(c.time, Some((0,0))))
     )
-    feature.metadata.featureType === Type.Instant
+
     Seq(
+      feature.metadata.featureType === Type.Instant,
       typecheck("feature.as(Continuous)") must not succeed,
       typecheck("feature.as(Ordinal)") must not succeed
     )

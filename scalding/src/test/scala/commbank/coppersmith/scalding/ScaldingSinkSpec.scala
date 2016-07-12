@@ -260,11 +260,12 @@ class HiveParquetSinkSpec extends ScaldingSinkSpec[HiveParquetSink[Eavt, (String
     import Value._
     def encode(fvt: (FeatureValue[_], Long)): Eavt = fvt match {
       case (fv, time) =>
-        val featureValue = (fv.value match {
+        val featureValue = (fv.value.asInstanceOf[Value] match {
           case Integral(v) => v.map(_.toString)
           case Decimal(v) => v.map(_.toString)
           case FloatingPoint(v) => v.map(_.toString)
           case Str(v) => v
+          case Bool(v) => v.map(_.toString)
           case Date(v) => v.map(_.toString)
           case Time(v) => v.map(_.toString)
         }).getOrElse("NULL")
