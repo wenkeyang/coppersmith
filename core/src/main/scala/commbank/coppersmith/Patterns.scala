@@ -23,7 +23,7 @@ import Feature._
 object Patterns {
 
   // All features should be able to be defined in the following terms
-  def general[S : TypeTag, V <: Value : TypeTag, FV <% V](
+  def general[S : TypeTag, V <: Value : TypeTag](
     namespace: Namespace,
     name:      Name,
     desc:      Description,
@@ -45,5 +45,5 @@ object Patterns {
     field:     Field[S, FV],
     desc:      Description,
     range:     Option[Value.Range[V]]
-  ) = general[S, V, FV](namespace, field.name, desc, fType, entity, (s: S) => Option(field.get(s): V), range)
+  ) = general[S, V](namespace, field.name, desc, fType, entity, (s: S) => Option(field.get(s): V), range)
 }

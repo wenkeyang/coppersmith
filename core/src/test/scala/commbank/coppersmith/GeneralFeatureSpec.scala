@@ -81,7 +81,7 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     desc:      Description,
     fType:     Type,
     entity:    Customer => EntityId
-  ) = Patterns.general[Customer, V, V](namespace, name, desc, fType, entity, fValue, range)
+  ) = Patterns.general[Customer, V](namespace, name, desc, fType, entity, fValue, range)
 
   def metadataNamespace = forAll { (rfp: RangeFieldPair, filter: Boolean, namespace: Namespace) => {
     val feature = general(rfp, filter, namespace = namespace)
