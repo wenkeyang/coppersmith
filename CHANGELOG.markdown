@@ -1,6 +1,9 @@
 Change log
 ==========
 
+## 0.17.0
+First-class support for features with boolean outputs via the new `Feature.Value.Bool` type.
+
 ## 0.16.0
 Shapeless multi-way join support replaced with generated code solution
 for more consistency in defining and binding feature sources. Also
