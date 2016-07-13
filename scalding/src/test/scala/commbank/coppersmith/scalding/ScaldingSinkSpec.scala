@@ -59,10 +59,17 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
   def valuePipe(vs: NonEmptyList[FeatureValue[Value]], dateTime: DateTime) =
     TypedPipe.from(vs.list.map(v => v -> dateTime.getMillis))
 
+  // Clear previous data as scalacheck may randomly generate the same table path twice
+  // and thermometer will not create a new directory for each scalacheck run
+  def clearData(sink: T) = {
+    executesOk(Execution.fromHdfs(Hdfs.delete(path(s"${tablePath(sink)}"), true)))
+  }
+
   def featureValuesOnDiskMatch =
     forAll { (vs: NonEmptyList[FeatureValue[Value]], sinkAndTime: SinkAndTime) => {
       val (sink, dateTime) = sinkAndTime
       val expected = vs.map(v => eavtEnc.encode((v, dateTime.getMillis))).list
+      clearData(sink)
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
@@ -78,6 +85,7 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
               sinkAndTime: SinkAndTime) => {
       val (sink, dateTime) = sinkAndTime
       val expected = (vs1.list ++ vs2.list).map(v => eavtEnc.encode((v, dateTime.getMillis)))
+      clearData(sink)
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         // Suppress spurious AlreadyExistsException logging by framework when writing in parallel
@@ -105,6 +113,7 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
         val (year, month, day) = FixedSinkPartition.byDay(dateTime).partitionValue
         List(eavt.entity, eavt.attribute, hiveNull(eavt.value), eavt.time, year, month, day).mkString("\t")
       }).list.toSet
+      clearData(sink)
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         val query = s"""SELECT * FROM `${databaseName(sink)}.${tableName(sink)}`"""
@@ -119,6 +128,8 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
     forAll { (vs: NonEmptyList[FeatureValue[Value]], sinkAndTime: SinkAndTime) =>  {
       val (sink, dateTime) = sinkAndTime
       val (year, month, day) = FixedSinkPartition.byDay(dateTime).partitionValue
+      clearData(sink)
+
       withEnvironment(path(getClass.getResource("/").toString)) {
         val writeResult = executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
 
@@ -144,6 +155,8 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
     forAll { (vs: NonEmptyList[FeatureValue[Value]], sinkAndTime: SinkAndTime) =>  {
       val (sink, dateTime) = sinkAndTime
       val expected = vs.map(v => eavtEnc.encode((v, dateTime.getMillis))).list
+      clearData(sink)
+
       withEnvironment(path(getClass.getResource("/").toString)) {
         val writeResult = executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
 
@@ -171,6 +184,8 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
     forAll { (vs: NonEmptyList[FeatureValue[Value]], sinkAndTime: SinkAndTime) =>  {
       val (sink, dateTime) = sinkAndTime
       val expected = vs.map(v => eavtEnc.encode((v, dateTime.getMillis))).list
+      clearData(sink)
+
       withEnvironment(path(getClass.getResource("/").toString)) {
         val writeResult = executesSuccessfully(sink.write(valuePipe(vs, dateTime)))
 
