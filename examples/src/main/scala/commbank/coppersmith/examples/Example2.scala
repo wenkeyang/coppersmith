@@ -34,7 +34,9 @@ object Example2 {
     "description",
     Continuous,
     {case (c, a) => c._1},
-    {case (c,a)  => Some(a.balance)})
+    {case (c,a)  => Some(a.balance)},
+    None
+  )
 
   case class ExampleConfig(config:Config) {
     val args          = config.getArgs

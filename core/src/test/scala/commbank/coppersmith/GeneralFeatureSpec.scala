@@ -22,8 +22,6 @@ import org.scalacheck.Prop.forAll
 
 import org.specs2._
 
-import au.com.cba.omnia.maestro.api.{Field, Maestro}, Maestro.Fields
-
 import Feature._, Value._, Type._
 
 import Arbitraries._
@@ -35,84 +33,100 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
   General Features - Test individual feature components
   ===========
   Creating general feature metadata
-    must pass namespace through    $metadataNamespace
-    must pass name through         $metadataName
-    must pass description through  $metadataDescription
-    must pass feature type through $metadataFeatureType
+    must pass namespace through     $metadataNamespace
+    must pass name through          $metadataName
+    must pass description through   $metadataDescription
+    must pass feature type through  $metadataFeatureType
+    must pass range through         $metadataRange
 
   Generating general feature values
-    must use specified id as entity      $valueEntity
-    must use specified name as name      $valueName
-    must use value as defined            $valueValue
+    must use specified id as entity $valueEntity
+    must use specified name as name $valueName
+    must use value as defined       $valueValue
 """
 
   def general(
-    field:     Field[Customer, _],
+    rfp:       RangeFieldPair,
     filter:    Boolean,
-    namespace: Namespace             = "",
-    name:      Name                  = "",
-    desc:      Description           = "",
-    fType:     Type                  = Nominal,
-    entity:    Customer => EntityId  = _.id
+    namespace: Namespace            = "",
+    name:      Name                 = "",
+    desc:      Description          = "",
+    fType:     Type                 = Nominal,
+    entity:    Customer => EntityId = _.id
   ) = {
     val feature: (Namespace, Name, Description, Type, Customer => EntityId) => Feature[Customer, Value] =
-      field match {
-        case f if f == Fields[Customer].Name   => general[Str](fValue = c => filter.option(c.name))
-        case f if f == Fields[Customer].Age    => general[Integral](fValue = c => filter.option(c.age))
-        case f if f == Fields[Customer].Height => general[FloatingPoint](fValue = c => filter.option(c.height))
+      rfp match {
+        case StrRangeFieldPair(r, _) => general[Str](
+          fValue = c => filter.option(c.name),
+          range  = r
+        )
+        case IntegralRangeFieldPair(r, _) => general[Integral](
+          fValue = c => filter.option(c.age),
+          range  = r
+        )
+        case FloatingPointRangeFieldPair(r, _) => general[FloatingPoint](
+          fValue = c => filter.option(c.height),
+          range  = r
+        )
       }
     feature.apply(namespace, name, desc, fType, entity)
   }
 
   def general[V <: Value : TypeTag](
-    fValue: Customer => Option[V]
+    fValue: Customer => Option[V],
+    range:  Option[Feature.Value.Range[V]]
   )(
     namespace: Namespace,
     name:      Name,
     desc:      Description,
     fType:     Type,
     entity:    Customer => EntityId
-  ) = Patterns.general[Customer, V, V](namespace, name, desc, fType, entity, fValue)
+  ) = Patterns.general[Customer, V, V](namespace, name, desc, fType, entity, fValue, range)
 
-  def metadataNamespace = forAll { (field: Field[Customer, _], filter: Boolean, namespace: Namespace) => {
-    val feature = general(field, filter, namespace = namespace)
+  def metadataNamespace = forAll { (rfp: RangeFieldPair, filter: Boolean, namespace: Namespace) => {
+    val feature = general(rfp, filter, namespace = namespace)
     feature.metadata.namespace must_== namespace
   }}
 
-  def metadataName = forAll { (field: Field[Customer, _], filter: Boolean, name: Name) => {
-    val feature = general(field, filter, name = name)
+  def metadataName = forAll { (rfp: RangeFieldPair, filter: Boolean, name: Name) => {
+    val feature = general(rfp, filter, name = name)
     feature.metadata.name must_== name
   }}
 
-  def metadataDescription = forAll { (field: Field[Customer, _], filter: Boolean, desc: Description) => {
-    val feature = general(field, filter, desc = desc)
+  def metadataDescription = forAll { (rfp: RangeFieldPair, filter: Boolean, desc: Description) => {
+    val feature = general(rfp, filter, desc = desc)
     feature.metadata.description must_== desc
   }}
 
-  def metadataFeatureType = forAll { (field: Field[Customer, _], filter: Boolean, fType: Type) => {
-    val feature = general(field, filter, fType = fType)
+  def metadataFeatureType = forAll { (rfp: RangeFieldPair, filter: Boolean, fType: Type) => {
+    val feature = general(rfp, filter, fType = fType)
     feature.metadata.featureType must_== fType
   }}
 
-  def valueEntity = forAll { (field: Field[Customer, _], c: Customer) => {
-    val feature = general(field, true, entity = _.id)
+  def metadataRange = forAll { (rfp: RangeFieldPair, filter: Boolean) => {
+    val feature = general(rfp, filter)
+    feature.metadata.valueRange must_== rfp.range
+  }}
+
+  def valueEntity = forAll { (rfp: RangeFieldPair, c: Customer) => {
+    val feature = general(rfp, true, entity = _.id)
     feature.generate(c) must beSome.like { case v => v.entity must_== c.id }
   }}
 
   def valueName = forAll {
-    (field: Field[Customer, _], ns: Namespace, name: String, fType: Type, c: Customer) => {
-      val feature = general(field, true, name = name)
+    (rfp: RangeFieldPair, ns: Namespace, name: String, fType: Type, c: Customer) => {
+      val feature = general(rfp, true, name = name)
       feature.generate(c) must beSome.like { case v => v.name must_== name }
     }
   }
 
-  def valueValue = forAll { (field: Field[Customer, _], filter: Boolean, c: Customer) => {
-    val feature = general(field, filter)
+  def valueValue = forAll { (rfp: RangeFieldPair, filter: Boolean, c: Customer) => {
+    val feature = general(rfp, filter)
 
-    val expectedValue = field match {
-      case f if f == Fields[Customer].Name   => Str(Option(c.name))
-      case f if f == Fields[Customer].Age    => Integral(Option(c.age))
-      case f if f == Fields[Customer].Height => FloatingPoint(Option(c.height))
+    val expectedValue = rfp match {
+      case _: StrRangeFieldPair           => Str(Option(c.name))
+      case _: IntegralRangeFieldPair      => Integral(Option(c.age))
+      case _: FloatingPointRangeFieldPair => FloatingPoint(Option(c.height))
     }
 
     val featureValue = feature.generate(c)

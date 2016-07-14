@@ -48,14 +48,17 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     def entity(c: Customer) = c.id
     def value(c: Customer)  = c.height
 
-    def feature(name: String, humanDescription: String, condition: Customer => Boolean) = {
-      queryFeature(name, humanDescription, condition)
+    def feature(name: String,
+                humanDescription: String,
+                condition: Customer => Boolean,
+                range: Option[Range[FloatingPoint]]) = {
+      queryFeature(name, humanDescription, range)(condition)
     }
 
     type CustFeat = Feature[Customer, FloatingPoint]
-    val youngHeight: CustFeat = feature("youngHeight", "Young Height",  _.age < 18)
-    val midHeight:   CustFeat = feature("midHeight",   "Middle Height", c => Range(18 , 65).contains(c.age))
-    val oldHeight:   CustFeat = feature("oldHeight",   "Old Height",    _.age >= 65)
+    val youngHeight: CustFeat = feature("youngHeight", "Young Height",  _.age < 18, Some(MinMaxRange(0.0, 17.0)))
+    val midHeight:   CustFeat = feature("midHeight",   "Middle Height", c => Range(18 , 65).contains(c.age), Some(MinMaxRange(18.0, 64.0)))
+    val oldHeight:   CustFeat = feature("oldHeight",   "Old Height",    _.age >= 65, Some(MinMaxRange(65.0, 130.0)))
 
     def features = List(youngHeight, midHeight, oldHeight)
   }
@@ -65,9 +68,9 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      Metadata[Customer, FloatingPoint](namespace, "youngHeight", "Young Height",  Continuous),
-      Metadata[Customer, FloatingPoint](namespace, "midHeight",   "Middle Height", Continuous),
-      Metadata[Customer, FloatingPoint](namespace, "oldHeight",   "Old Height",    Continuous)
+      Metadata[Customer, FloatingPoint](namespace, "youngHeight", "Young Height",  Continuous, Some(MinMaxRange[FloatingPoint](0.0, 17.0))),
+      Metadata[Customer, FloatingPoint](namespace, "midHeight",   "Middle Height", Continuous, Some(MinMaxRange[FloatingPoint](18.0, 64.0))),
+      Metadata[Customer, FloatingPoint](namespace, "oldHeight",   "Old Height",    Continuous, Some(MinMaxRange[FloatingPoint](65.0, 130.0)))
     )
   }
 

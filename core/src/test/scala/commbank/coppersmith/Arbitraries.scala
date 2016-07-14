@@ -14,6 +14,7 @@
 
 package commbank.coppersmith
 
+import scala.reflect._
 import scala.util.Try
 
 import scalaz.scalacheck.ScalazArbitrary._
@@ -117,10 +118,64 @@ object Arbitraries {
 
   implicit val arbSetRange: Arbitrary[SetRange[Value]] = for {
     vs <- arbValues
-  } yield SetRange(vs.toList)
+  } yield SetRange(vs.toList:_*)
 
   implicit val arbRange: Arbitrary[Option[Range[Value]]] =
     Arbitrary(Gen.option(oneOf(arbMinMaxRange.arbitrary, arbSetRange.arbitrary)))
+
+  def typeMatches(c: Class[_], r: Option[Range[Value]]): Boolean = {
+    r match {
+      case Some(MinMaxRange(min, _)) if min.getClass == c => true
+      case Some(SetRange(vs)) if vs.isEmpty || vs.head.getClass == c => true
+      case None => true
+      case _ => false
+    }
+  }
+
+  def arbRangeOf[V <: Value : ClassTag]: Arbitrary[Option[Range[V]]] =
+    Arbitrary(arbRange.arbitrary.retryUntil(typeMatches(classTag[V].runtimeClass, _))
+      .map(_.asInstanceOf[Option[Range[V]]]))
+
+  implicit val arbStrRange: Arbitrary[Option[Range[Str]]] = arbRangeOf[Str]
+  implicit val arbIntegralRange: Arbitrary[Option[Range[Integral]]] = arbRangeOf[Integral]
+  implicit val arbFloatingPointRange: Arbitrary[Option[Range[FloatingPoint]]] = arbRangeOf[FloatingPoint]
+  implicit val arbDecimalRange: Arbitrary[Option[Range[Decimal]]] = arbRangeOf[Decimal]
+  implicit val arbDateRange: Arbitrary[Option[Range[Date]]] = arbRangeOf[Date]
+  implicit val arbTimeRange: Arbitrary[Option[Range[Time]]] = arbRangeOf[Time]
+
+  sealed trait RangeFieldPair {
+    def range: Option[Range[Value]]
+    def field: Field[Customer, _]
+  }
+  case class StrRangeFieldPair(range: Option[Range[Str]],
+                               field: Field[Customer, String]) extends RangeFieldPair
+  case class IntegralRangeFieldPair(range: Option[Range[Integral]],
+                                    field: Field[Customer, Int]) extends RangeFieldPair
+  case class FloatingPointRangeFieldPair(range: Option[Range[FloatingPoint]],
+                                         field: Field[Customer, Double]) extends RangeFieldPair
+
+  implicit val arbStrRangeFieldPair: Arbitrary[StrRangeFieldPair] = for {
+    r <- arbStrRange
+    f = Fields[Customer].Name
+  } yield StrRangeFieldPair(r, f)
+
+  implicit val arbIntegralRangeFieldPair: Arbitrary[IntegralRangeFieldPair] = for {
+    r <- arbIntegralRange
+    f = Fields[Customer].Age
+  } yield IntegralRangeFieldPair(r, f)
+
+  implicit val arbFloatingPointRangeFieldPair: Arbitrary[FloatingPointRangeFieldPair] = for {
+    r <- arbFloatingPointRange
+    f = Fields[Customer].Height
+  } yield FloatingPointRangeFieldPair(r, f)
+
+  implicit val arbRangeFieldPair: Arbitrary[RangeFieldPair] = {
+    Arbitrary(Gen.oneOf(
+      arbStrRangeFieldPair.arbitrary,
+      arbIntegralRangeFieldPair.arbitrary,
+      arbFloatingPointRangeFieldPair.arbitrary
+    ))
+  }
 
   val arbTimeMillis: Gen[Long] = arbitrary[DateTime].map(_.getMillis)
 

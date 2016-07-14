@@ -139,8 +139,8 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
   def listProducesValidJson = {
     import MetadataOutput._
     val metadataList = List(
-      Metadata[Customer, Integral]("ns", "feature1", "feature1", Discrete, Some(MinMaxRange(Integral(Some(1)), Integral(Some(2))))),
-      Metadata[Customer, Str]("ns", "feature2", "feature2", Discrete, Some(SetRange(List(Str(Some("small")), Str(Some("medium")), Str(Some("large"))))))
+      Metadata[Customer, Integral]("ns", "feature1", "feature1", Discrete, Some(MinMaxRange[Integral](1, 2))),
+      Metadata[Customer, Str]("ns", "feature2", "feature2", Discrete, Some(SetRange[Str]("small", "medium", "large")))
     )
 
     val generatedJson = JsonObject.combiner(metadataList.map(md => JsonObject.fn(md, None)))

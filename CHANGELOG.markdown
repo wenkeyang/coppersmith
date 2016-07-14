@@ -1,6 +1,23 @@
 Change log
 ==========
 
+## 0.18.0
+Range metadata arguments added to Feature building classes, allowing ranges
+to be easily specified in Feature Sets.
+
+### Upgrading
+ - Calls to `Patterns.general` and `Patterns.pivot` must include an
+   `Option[Range[V]]` as the last argument
+ - Calls to `SetRange(List[V])` must be changed to `SetRange(V*)`
+ - Change
+   `QueryFeature(featureName, humanDescriptionfilter)`
+   to
+   `QueryFeature(featureName, humanDescription)(filter)`
+   and
+   `basicFeature[V <: Value : TypeTag](featureName, humanDescription, featureType, value)`
+   to
+   `basicFeature[V <: Value : TypeTag](featureName, humanDescription, featureType)(value)`
+
 ## 0.17.0
 First-class support for features with boolean outputs via the new `Feature.Value.Bool` type.
 

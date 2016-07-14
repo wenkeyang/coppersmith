@@ -123,13 +123,13 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
 
   def rangeValueContained = forAll { (idx: Int, vals: NonEmptyList[Value]) =>
     val randIndex = math.abs(idx % vals.size)
-    SetRange(vals.list).contains(vals.list(randIndex)) must beTrue
+    SetRange(vals.list:_*).contains(vals.list(randIndex)) must beTrue
   }
 
   def nonRangeValuesExcluded = forAll { (vals: NonEmptyList[Value]) =>
     val excluded = vals.head
     val range = vals.tail.toSet - excluded
-    SetRange(range.toList).contains(excluded) must beFalse
+    SetRange(range.toList:_*).contains(excluded) must beFalse
   }
 
   def nonStrWidest = forAll { (vals: NonEmptyList[Value]) => !vals.head.isInstanceOf[Str] ==> {
@@ -141,7 +141,7 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
       case Str(Some(s)) => s.length
       case _ => 0
     }.maximum1
-    SetRange(vals.list).widestValueSize must beSome(widest)
+    SetRange(vals.list:_*).widestValueSize must beSome(widest)
   }}
 }
 
@@ -160,7 +160,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def integralConversions = {
     val feature = Patterns.general[Customer, Value.Integral, Value.Integral](
-      "ns", "name", "Desc", Type.Nominal, _.id, c => Some(c.age)
+      "ns", "name", "Desc", Type.Nominal, _.id, c => Some(c.age), None
     )
     Seq(
       feature.metadata.featureType === Type.Nominal,
@@ -172,7 +172,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def decimalConversions = {
     val feature = Patterns.general[Customer, Value.Decimal, Value.Decimal](
-      "ns", "name", "Description", Type.Ordinal, _.id, c => Some(BigDecimal(c.age))
+      "ns", "name", "Description", Type.Ordinal, _.id, c => Some(BigDecimal(c.age)), None
     )
     Seq(
       feature.metadata.featureType === Type.Ordinal,
@@ -184,7 +184,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def floatingPointConversions = {
     val feature = Patterns.general[Customer, Value.FloatingPoint, Value.FloatingPoint](
-      "ns", "name", "Description", Type.Ordinal, _.id, c => Some(c.age.toDouble)
+      "ns", "name", "Description", Type.Ordinal, _.id, c => Some(c.age.toDouble), None
     )
     Seq(
       feature.metadata.featureType === Type.Ordinal,
@@ -196,7 +196,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def stringConversions = {
     val feature = Patterns.general[Customer, Value.Str, Value.Str](
-      "ns", "name", "Description", Type.Nominal, _.id, c => Some(c.name)
+      "ns", "name", "Description", Type.Nominal, _.id, c => Some(c.name), None
     )
 
     Seq(
@@ -207,7 +207,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def boolConversions = {
     val feature = Patterns.general[Customer, Value.Bool, Value.Bool](
-      "ns", "name", "Desc", Type.Nominal, _.id, c => Some(c.age > 20)
+      "ns", "name", "Desc", Type.Nominal, _.id, c => Some(c.age > 20), None
     )
 
     Seq(
@@ -218,7 +218,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def dateConversions = {
     val feature = Patterns.general[Customer, Value.Date, Value.Date](
-      "ns", "name", "Description", Type.Instant, _.id, c => Some(Datestamp.unsafeParse(new DateTime(c.time).toString("yyyy-MM-dd")))
+      "ns", "name", "Description", Type.Instant, _.id, c => Some(Datestamp.unsafeParse(new DateTime(c.time).toString("yyyy-MM-dd"))), None
     )
 
     Seq(
@@ -230,7 +230,7 @@ object FeatureTypeConversionsSpec extends Specification with ScalaCheck {
 
   def timeConversions = {
     val feature = Patterns.general[Customer, Value.Time, Value.Time](
-      "ns", "name", "Description", Type.Instant, _.id, c => Some(Timestamp(c.time, Some((0,0))))
+      "ns", "name", "Description", Type.Instant, _.id, c => Some(Timestamp(c.time, Some((0,0)))), None
     )
 
     Seq(
