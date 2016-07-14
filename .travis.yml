@@ -6,18 +6,18 @@ cache:
   - "$HOME/.ivy2"
   - "$HOME/.m2"
 install:
-- git clone https://omnia-bamboo:$OMNIA_CI_PASSWORD@github.com/CommBank/ci.git
+- curl https://commbank.artifactoryonline.com/commbank/binaries/ci/ci-3.0.5-20160711053738-5db7c93.tar.gz  | tar xz
 - chmod ugo+x ci/*
-- ci/sbt-setup.sh
-- ci/sbt-setup-version.sh
+- ci/sbt-ci-setup-version.sh
 script:
 - sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci '; test; package'
-- ci/sbt-deploy-to.sh ext-releases-local
-- ci/ci-nonrelease.bsh sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci core/publishLocal scalding/publishLocal tools/publishLocal
+- ci/sbt-ci-deploy.sh maven http://commbank.artifactoryonline.com/commbank/ ext-releases-local
+- ci/ci-nonrelease.sh sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci core/publishLocal scalding/publishLocal tools/publishLocal
 - sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci 'plugin/scripted'
-- ci/sbt-deploy-ivy-to.sh ext-releases-local-ivy plugin
+- ci/sbt-ci-deploy.sh ivy http://commbank.artifactoryonline.com/commbank/ ext-releases-local-ivy plugin
 after_script:
 - rm -rf ci
 env:
   global:
-    secure: UJaCUJstKXJkjEL57o3hbteQQKWwBocsmYaWdvyc1HX7KG1tPDZ43HyYidUkBaEOEpzORamxak0Kx5RM+ndsMYdlzvuavNVY0iGQVtlt/dsHqIKATOk0elCqDuRE6jSYS2/dwLmRNoT7/qdyX2QjSt7qCejUhReSXf8QcPTKbeE4x8uM/ebhpjYqY+kfu/RNg7rZ3ku0Wi2+0yG2AICd5efkdWT+FLiobnyzOsuZPp2pVcWYYVrjLzlyhJD/Yfw8+GBLpkTmfEjTdBPLFTZW09zDKYfiemrJLwxAnJ+skM/ztYP2O5/3oSdy8H/OMUS/pFl6YEHIdyZjU3JORDeIoOq6DohALGfshS4jb8KVUuLSO59OWlBWVoZrQc2v5Ntju8xiA+q+ec/RS4TMs1QVDc1yL3xc5gXJuqbRtCEvrscr/ZilkmoZrSwd1dPySznUZ0gjytDHuoxOj+u/2EP6Ils0PX7tJHKz2Qx5l3ouw35NiMMvZhkxCiCG/BTEyGkGZ6OeJCUmALEc5dteNHNTFhlWyISCjOwC9ehzQIZs0mBCXmYRmgKL8k2Shzf1T1W0vhmUQ048j6/RaUF387iohf2tSfJJh+fcaWHH0n1XSVRaaaggoCvuP3exILZ77IIRELG4utip56OuCjK2HGi0O9K/KIlVqwnrvVieXCjnuVo=
+  - secure: Nytq9WalikIc2IrWZCAjfaEWA6YpE6zyJu3BIyOtTavO893b2pW00P7zqM14eZ/079TwgLRi91cEkmFdwceAggcy/yqA9dcyam29esO31Qh+TWUL1kF9EEnWMx6HBDLxq0NgKgsxAIcH1DbbtpnRQ2xCffmXA3Z8Mt1z5nzlKULHaKd5gMeT90BW/bxDbENsPKpgHri6rxiKYe12r0Ms+5ujtuC2hrLUAsdnb67lWuYWtcXYD+hpLzakXGX6hQiDUZjo75N8NnEVuji0vw3L1K1LLw1suyym4aIBPWDA130GTnnh1H63rr2VqFPDaCzx9TfudBRr1NZeJ/PEg24sffEykZebYSsmIfSM9DyEQQSAm6UwxrAknfhkSJ9uJ2I2PEUs8MWhM3vP9HXJDRVnxrafz/eKQ0o6PU2KtDA/3B2lXAPpromn+zUOWLsrRAyINOW7BmV3EBJ+qUiP+h7twphltk0zrocfyMUn/B6LOfQeVjw/iN9viXhvSDCqCUdNSFVThQST2K9fyQXJfPDB3D57zyuRL91dvOfCx9u68GbFjUWzIaZQsHGPlgWEIjj+Lhj5gvVELuYHmV340W46A/pHLhuqBqIXzlquzaniJdGx0dNUG4g5nHKdtPrFwAwlfGjfC7KKG4bcX8noDqrxzQKrMT4QPRY/LHtZdf+r5d0=
+  - secure: DCSwHPNNXA2v8CNaX2nUaVdFrFeR64bx3VygiqKbrD/39Skvn21pj8TgKmvLo7TFR/vDBtSJqhHaXngyMrW0wK274OfDyZk+3G/atflk3j9CSkGEtZKV7jFYnVhBZtJeDUvYtEbfSABR3eo11oklOLbIJafqxjS7E5XNaoaZ6JlSChH0+rh0B4yYTLB3lHz+UCQALrHEAYoUfROzJWUXBHvixfzPSqcS8UEQg/n7fi1nGN0U/EKPzSQecozak5z+bSa+htTVXk4WsK0XEYuOlyxKOcq7RhKqjIYKExlTBo9OmimsxYGd8yPleoH/gUwy8KpUAQsZJm8amYwTn88bYqnOPNssyKwKFzO/BpGFEzVR60sTVE3GEDEuOzlMFw4HhbaT5yIRPetVHhyjpYzBDOicmS+n7tiTwxTOsCzSLtKe9eUjQhSknsiobcig4koP1pkI7Ie55b2B8p+nW9nIB0iZJKRFceDGNFwuttY0HVNsw5pwrf6/jschvL579KU/T796Mb9maOn/nfThSJ+OdimjjlEfE5E0fAq2tyDH2cONIdTbUNK2zgRudx2m/8NvHUr+ejqU0XE7Huinl+i+obqvgFmS5s28phGhyjnTvjUMyuFkfrCV1Wj4RcbKiNt6ubpJEOHtnAXdznOxqMOBE9ktAVRfMQjOG+mPzszNu7g=
