@@ -54,9 +54,14 @@ Add the coppersmith plugin to your SBT configuration. That is, inside
 
     addSbtPlugin("au.com.cba.omnia" %% "coppersmith-plugin" % "<coppersmith-version>")
 
+, and inside `build.sbt`,
+
+    libraryDependencies ++= Seq("au.com.cba.omnia" %% "coppersmith-core"     % "<coppersmith-version>",
+                                "au.com.cba.omnia" %% "coppersmith-scalding" % "<coppersmith-version>",
+                                "au.com.cba.omnia" %% "coppersmith-tools"    % "<coppersmith-version>")
+
 , where `<coppersmith-version>` is replaced with the version number of
-coppersmith you want to use. The plugin adds the appropriate coppersmith versions
-to your build and enables the publishing of feature metadata.
+coppersmith you want to use. The plugin enables the publishing of feature metadata.
 
 
 ### The `Feature` class
