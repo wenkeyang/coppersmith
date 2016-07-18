@@ -1,6 +1,17 @@
 Change log
 ==========
 
+## 0.19.0
+Change type used in feature sink codec from `FeatureValue[_]` to
+`FeatureValue[Value]`. In practice this shouldn't affect users of
+coppersmith, except where values are being non-exhaustively matched on
+(which could occur with the introduction of the `Bool` type in
+`0.17.0`, and the `Date` and `Time` types in `0.15.0`).
+
+### Upgrading
+ - If code produces `match may not be exhaustive` warnings at
+   compile-time, add missing cases.
+
 ## 0.18.0
 Range metadata arguments added to Feature building classes, allowing ranges
 to be easily specified in Feature Sets.

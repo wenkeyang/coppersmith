@@ -27,9 +27,9 @@ object EavtText {
   )
 
   implicit object EavtEnc extends FeatureValueEnc[Eavt] {
-    def encode(fvt: (FeatureValue[_], FeatureTime)): Eavt = fvt match {
+    def encode(fvt: (FeatureValue[Value], FeatureTime)): Eavt = fvt match {
       case (fv, time) =>
-        val featureValue = (fv.value.asInstanceOf[Value] match {  // asInstanceOf enforces exhaustiveness.
+        val featureValue = (fv.value match {
           case Integral(v) => v.map(_.toString)
           case Decimal(v) => v.map(_.toString)
           case FloatingPoint(v) => v.map(_.toString)

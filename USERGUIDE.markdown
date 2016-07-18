@@ -1226,13 +1226,14 @@ import commbank.coppersmith.examples.thrift.{FeatureEavt, User}
 
 case class AlternativeSinkUserFeaturesConfig(conf: Config) extends FeatureJobConfig[User] {
   implicit object FeatureEavtEnc extends FeatureValueEnc[FeatureEavt] {
-    def encode(fvt: (FeatureValue[_], FeatureTime)): FeatureEavt = fvt match {
+    def encode(fvt: (FeatureValue[Value], FeatureTime)): FeatureEavt = fvt match {
       case (fv, time) =>
         val featureValue = (fv.value match {
           case Integral(v)      => v.map(_.toString)
           case Decimal(v)       => v.map(_.toString)
           case FloatingPoint(v) => v.map(_.toString)
           case Str(v)           => v
+          case Bool(v)          => v.map(_.toString)
           case Date(v)          => v.map(_.toString)
           case Time(v)          => v.map(_.toString)
         }).getOrElse(HiveTextSink.NullValue)

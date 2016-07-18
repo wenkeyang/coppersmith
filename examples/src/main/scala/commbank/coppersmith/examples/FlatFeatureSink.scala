@@ -19,20 +19,24 @@ import org.apache.hadoop.fs.Path
 import com.twitter.scalding.typed.TypedPipe
 import com.twitter.scalding.TypedTsv
 
-import commbank.coppersmith.Feature.FeatureTime
-import commbank.coppersmith.Feature.Value.{Decimal, Integral, Str}
+import commbank.coppersmith.Feature.{FeatureTime, Value}
+import commbank.coppersmith.Feature.Value._
 import commbank.coppersmith.FeatureValue
 import commbank.coppersmith.scalding.FeatureSink, FeatureSink.WriteResult
 
 case class FlatFeatureSink(output: String) extends FeatureSink {
   def path = new Path(output)
-  override def write(features: TypedPipe[(FeatureValue[_], FeatureTime)]): WriteResult = {
+  override def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)]): WriteResult = {
 
     val featurePipe = features.map { case (fv, t) =>
       val featureValue = (fv.value match {
-        case Integral(v) => v.map(_.toString)
-        case Decimal(v)  => v.map(_.toString)
-        case Str(v)      => v
+        case Integral(v)      => v.map(_.toString)
+        case Decimal(v)       => v.map(_.toString)
+        case FloatingPoint(v) => v.map(_.toString)
+        case Str(v)           => v
+        case Bool(v)          => v.map(_.toString)
+        case Date(v)          => v.map(_.toString)
+        case Time(v)          => v.map(_.toString)
       }).getOrElse("")
       s"${fv.entity}|${fv.name}|${featureValue}"
     }

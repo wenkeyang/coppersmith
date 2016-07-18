@@ -31,7 +31,7 @@ case class HiveParquetSink[T <: ThriftStruct : Manifest : FeatureValueEnc, P : T
   table:         HiveTable[T, (P, T)],
   partitionPath: Path
 ) extends FeatureSink {
-  def write(features: TypedPipe[(FeatureValue[_], FeatureTime)]): FeatureSink.WriteResult = {
+  def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)]): FeatureSink.WriteResult = {
     FeatureSink.isCommitted(partitionPath).flatMap(committed =>
       if (committed) {
         Execution.from(Left(AttemptedWriteToCommitted(partitionPath)))
