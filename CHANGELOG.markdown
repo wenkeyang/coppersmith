@@ -1,6 +1,20 @@
 Change log
 ==========
 
+## 0.20.0
+Use the version of shapeless specified by uniform, instead of requiring
+shapeless version `2.2.5`. This is potentially a breaking change for users
+who previously found they needed to add a dependency override to their own
+sbt configuration in order to avoid a `ClassNotFoundException` at runtime.
+
+### Upgrading
+  - Remove the following line, if it appears in your sbt configuration
+    (e.g. `build.sbt` or `project/build.scala`):
+
+```
+dependencyOverrides += "com.chuusai" %% "shapeless" % "2.2.5"
+```
+
 ## 0.19.0
 Change type used in feature sink codec from `FeatureValue[_]` to
 `FeatureValue[Value]`. In practice this shouldn't affect users of

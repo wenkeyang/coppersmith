@@ -39,8 +39,7 @@ object build extends Build {
       scalacOptions += "-Xfatal-warnings",
       scalacOptions in (Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
       scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
-      scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value,
-      dependencyOverrides += "com.chuusai" %% "shapeless" % "2.2.5" //until maestro is updated
+      scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value
     )
 
   lazy val all = Project(
