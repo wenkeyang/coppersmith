@@ -109,6 +109,7 @@ object Feature {
     def valueTag: TypeTag[V] = implicitly
   }
   implicit object NominalStr              extends Conforms[Type.Nominal.type,    Value.Str]
+  implicit object OrdinalStr              extends Conforms[Type.Ordinal.type,    Value.Str]
 
   implicit object OrdinalDecimal          extends Conforms[Type.Ordinal.type,    Value.Decimal]
   implicit object ContinuousDecimal       extends Conforms[Type.Continuous.type, Value.Decimal]
@@ -116,9 +117,9 @@ object Feature {
   implicit object OrdinalFloatingPoint    extends Conforms[Type.Ordinal.type,    Value.FloatingPoint]
   implicit object ContinuousFloatingPoint extends Conforms[Type.Continuous.type, Value.FloatingPoint]
 
+  implicit object NominalIntegral         extends Conforms[Type.Nominal.type,    Value.Integral]
   implicit object OrdinalIntegral         extends Conforms[Type.Ordinal.type,    Value.Integral]
   implicit object ContinuousIntegral      extends Conforms[Type.Continuous.type, Value.Integral]
-
   implicit object DiscreteIntegral        extends Conforms[Type.Discrete.type,   Value.Integral]
 
   implicit object InstantDate             extends Conforms[Type.Instant.type,    Value.Date]
