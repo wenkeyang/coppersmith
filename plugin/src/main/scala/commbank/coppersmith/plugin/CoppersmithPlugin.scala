@@ -27,11 +27,6 @@ object CoppersmithPlugin extends AutoPlugin {
   import autoImport._
 
   lazy val baseMetadataSettings: Seq[sbt.Def.Setting[_]] = Seq(
-    libraryDependencies ++= Seq(
-      "au.com.cba.omnia" %% "coppersmith-core" %     VersionInfo.version,
-      "au.com.cba.omnia" %% "coppersmith-scalding" % VersionInfo.version,
-      "au.com.cba.omnia" %% "coppersmith-tools" %    VersionInfo.version
-    ),
     scalaVersion := "2.11.8"
   ) ++ Seq(
     artifacts += Artifact(name.value, "metadata", "json"),
@@ -49,6 +44,15 @@ object CoppersmithPlugin extends AutoPlugin {
         version,
         streams
       ).map { (deps, cp, tgt, v, strms) =>
+        val artifacts = for {
+          af       <- cp
+          artifact <- af.get(artifact.key)
+        } yield artifact.name
+
+        if (!(Set("coppersmith-core_2.11", "coppersmith-scalding_2.11", "coppersmith-tools_2.11") forall (artifacts contains)))
+          sys.error("The Coppersmith plugin requires coppersmith-core, coppersmith-scalding and coppersmith-tools. " +
+            "Please add these as dependencies in your build.sbt.")
+
         val classpathString = cp.files.mkString(":")
         val res = Process(
           Seq("java", "-cp", classpathString, "commbank.coppersmith.tools.MetadataMain", "--json", "")

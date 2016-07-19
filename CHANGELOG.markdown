@@ -1,6 +1,14 @@
 Change log
 ==========
 
+## 0.21.0
+The coppersmith plugin no longer pulls in coppersmith dependencies, so
+that dependency clashes are easier to manage.
+
+### Upgrading
+  - Add `coppersmith-core`, `coppersmith-scalding` and `coppersmith-tools`
+    dependencies to `build.sbt` (see [user guide](USERGUIDE.markdown) for more details).
+
 ## 0.20.0
 Use the version of shapeless specified by uniform, instead of requiring
 shapeless version `2.2.5`. This is potentially a breaking change for users

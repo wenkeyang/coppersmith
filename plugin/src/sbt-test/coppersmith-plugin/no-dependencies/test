@@ -1,0 +1,4 @@
+> plugins
+-> metadata:export
+-$ exists target/coppersmith-features-0.1-DEMO.json
+-> publishLocal

@@ -25,5 +25,8 @@ resolvers ++= Seq(
     if(pluginVersion == null)
       throw new RuntimeException("""|The system property 'plugin.version' is not defined.
                                     |Specify this property using the scriptedLaunchOpts -D.""".stripMargin)
-    else libraryDependencies += "au.com.cba.omnia" %% "coppersmith-scalding" % pluginVersion
+    else libraryDependencies ++= Seq("au.com.cba.omnia" %% "coppersmith-core"     % pluginVersion,
+                                     "au.com.cba.omnia" %% "coppersmith-scalding" % pluginVersion,
+                                     "au.com.cba.omnia" %% "coppersmith-tools"    % pluginVersion
+    )
   }
