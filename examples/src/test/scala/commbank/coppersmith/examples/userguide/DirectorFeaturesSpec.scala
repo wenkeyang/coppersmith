@@ -15,12 +15,14 @@
 package commbank.coppersmith.examples.userguide
 
 import org.apache.hadoop.fs.Path
-import org.scalacheck.{Gen, Arbitrary}
+
+import org.scalacheck.{Gen, Arbitrary}, Arbitrary._
 
 import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
 import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.examples.thrift.{Rating, Movie}
+import UserGuideArbitraries.{arbMovie, arbRating}
 
 object DirectorFeaturesSpec extends ThermometerHiveSpec {
   def is =
@@ -35,10 +37,10 @@ object DirectorFeaturesSpec extends ThermometerHiveSpec {
     implicit def arbSafeHiveTextString: Arbitrary[String] = Arbitrary(Gen.identifier)
 
     def movie(id: String, title: String) =
-      Movie(id, title, Some("Jan-01-1995"), None, None, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false)
+      arbitrary[Movie].sample.get.copy(id = id, title = title)
 
     def rating(movie: String, rating: Int) =
-      Gen.resultOf(Rating.apply _).sample.get.copy(movieId = movie, rating = rating)
+      arbitrary[Rating].sample.get.copy(movieId = movie, rating = rating)
 
     writeRecords[Movie](s"$dir/user/data/movies/data.txt", Seq(
       movie("1", "Air Bud (1997)"),

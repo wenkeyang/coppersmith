@@ -38,7 +38,7 @@ object UserGuideArbitraries {
       releaseDate      <- arbitrary[Option[Date]].map(_.map(formatDate))
       videoReleaseDate <- arbitrary[Option[Date]].map(_.map(formatDate))
       url              <- arbitrary[Option[String]]
-      genres           <- Gen.containerOfN[List, Boolean](19, arbitrary[Boolean])
+      genres           <- Gen.containerOfN[List, Int](19, Gen.chooseNum(0, 1))  // each genre flag is either 0 or 1
       g                 = genres.iterator  // simple (albeit mutable) access to genre flags,
                                            // less error-prone than explicit indexing by number
     } yield Movie(

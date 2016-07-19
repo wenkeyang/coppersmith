@@ -15,12 +15,13 @@
 package commbank.coppersmith.examples.userguide
 
 import org.apache.hadoop.fs.Path
-import org.scalacheck.{Arbitrary, Gen}
+import org.scalacheck.{Arbitrary, Gen}, Arbitrary._
 
 import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
 import commbank.coppersmith.examples.thrift.Rating
 import commbank.coppersmith.api._, Coppersmith._
+import UserGuideArbitraries.arbRating
 
 object RatingFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
   RatingFeaturesJob must return expected values  $test  ${tag("slow")}
@@ -32,7 +33,7 @@ object RatingFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
     implicit def arbSafeHiveTextString: Arbitrary[String] = Arbitrary(Gen.identifier)
 
     def rating(movie: String, rating: Int) =
-      Gen.resultOf(Rating.apply _).sample.get.copy(movieId = movie, rating = rating)
+      arbitrary[Rating].sample.get.copy(movieId = movie, rating = rating)
 
     writeRecords[Rating](s"$dir/user/data/ratings/data.txt", Seq(
       rating("1", 3),
