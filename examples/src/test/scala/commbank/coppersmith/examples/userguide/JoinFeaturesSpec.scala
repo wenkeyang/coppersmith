@@ -34,15 +34,15 @@ object JoinFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
   def testV2 = test(ComedyJoinFeaturesJob, "COMEDY_MOVIE_AVG_RATING_V2")
 
   def test(job: SimpleFeatureJob, featureName: String) = {
-    def movie(id: String, isComedy: Boolean) =
-      arbitrary[Movie].sample.get.copy(id = id, isComedy = isComedy)
+    def movie(id: String, isComedy: Int) =
+      arbitrary[Movie].sample.get.copy(id = id, comedy = isComedy)
 
     def rating(movie: String, rating: Int) =
       arbitrary[Rating].sample.get.copy(movieId = movie, rating = rating)
 
     writeRecords[Movie](s"$dir/user/data/movies/data.txt", "|", Seq(
-      movie("1", false),  // non-comedy
-      movie("2", true)    // comedy
+      movie("1", 0),  // non-comedy
+      movie("2", 1)    // comedy
     ))
 
     writeRecords[Rating](s"$dir/user/data/ratings/data.txt", "\t", Seq(

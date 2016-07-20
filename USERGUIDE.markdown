@@ -429,6 +429,10 @@ object Implicits {
       movie.releaseDate.flatMap(parse(_).right.toOption)
 
     def releaseYear: Option[Int] = safeReleaseDate.map(_.year)
+    def isAction:    Boolean     = movie.action == 1
+    def isComedy:    Boolean     = movie.comedy == 1
+    def isFantasy:   Boolean     = movie.fantasy == 1
+    def isScifi:     Boolean     = movie.scifi == 1
 
     def ageAt(date: Datestamp): Option[Int] = safeReleaseDate.map(_.difference(date).years)
   }
@@ -461,12 +465,12 @@ object MoviePivotFeatures extends PivotFeatureSet[Movie] {
 
   val source = From[Movie]()
 
-  val title:       Feature[Movie, Str]  = pivot(Fields[Movie].Title,       "Movie title",        Nominal)
-  val imdbUrl:     Feature[Movie, Str]  = pivot(Fields[Movie].ImdbUrl,     "Movie IMDb URL",     Nominal)
-  val releaseDate: Feature[Movie, Str]  = pivot(Fields[Movie].ReleaseDate, "Movie release date", Nominal)
-  val isAction:    Feature[Movie, Bool] = pivot(Fields[Movie].IsAction,    "Movie is action",    Nominal)
+  val title:       Feature[Movie, Str]      = pivot(Fields[Movie].Title,       "Movie title",        Nominal)
+  val imdbUrl:     Feature[Movie, Str]      = pivot(Fields[Movie].ImdbUrl,     "Movie IMDb URL",     Nominal)
+  val releaseDate: Feature[Movie, Str]      = pivot(Fields[Movie].ReleaseDate, "Movie release date", Nominal)
+  val action:      Feature[Movie, Integral] = pivot(Fields[Movie].Action,      "Movie is action",    Discrete, Some(SetRange[Integral](0, 1)))
 
-  def features = List(title, imdbUrl, releaseDate, isAction)
+  def features = List(title, imdbUrl, releaseDate, action)
 }
 ```
 
