@@ -61,11 +61,10 @@ trait SimpleFeatureJobOps {
 
   def generate(featureSetExecutions: FeatureSetExecutions): Execution[JobStatus] = {
     for {
-      cfg               <- Execution.getConfig
-      (paths, counters) <- generateFeatures(featureSetExecutions).getCounters
-      _                 <- Execution.from(CoppersmithStats.log(counters))
-      result            <- FeatureSink.commit(paths)
-      status            <- result.fold(writeErrorFailure(_), _ => Execution.from(JobFinished))
+      cfg    <- Execution.getConfig
+      paths  <- generateFeatures(featureSetExecutions)
+      result <- FeatureSink.commit(paths)
+      status <- result.fold(writeErrorFailure(_), _ => Execution.from(JobFinished))
     } yield status
   }
 
@@ -122,7 +121,7 @@ trait FeatureSetExecution {
   def features: Either[FeatureSet[Source], AggregationFeatureSet[Source]]
 
   import FeatureSetExecution.{generateFeatures, generateOneToMany, generateAggregate}
-  def generate(): Execution[Set[Path]] = features.fold(
+  def generate(): Execution[Set[Path]] = CoppersmithStats.executeAndLogCounters(
     regFeatures => generateFeatures[Source](config, generateOneToMany(regFeatures)_, regFeatures),
     aggFeatures => generateFeatures[Source](config, generateAggregate(aggFeatures)_, aggFeatures)
   )

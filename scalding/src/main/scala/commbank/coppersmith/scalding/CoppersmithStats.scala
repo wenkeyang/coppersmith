@@ -14,9 +14,11 @@
 
 package commbank.coppersmith.scalding
 
+import scala.util.{Try, Success, Failure}
+
 import com.twitter.scalding.typed.{TypedPipe, TypedPipeFactory}
 import com.twitter.scalding.TupleSetter.singleSetter
-import com.twitter.scalding.ExecutionCounters
+import com.twitter.scalding.{Execution, ExecutionCounters}
 
 import cascading.tuple.Fields
 import cascading.pipe.Each
@@ -28,14 +30,33 @@ object CoppersmithStats {
 
   implicit def fromTypedPipe[T](typedPipe: TypedPipe[T]) = new CoppersmithStats(typedPipe)
 
+  /** Run the [[com.twitter.scalding.Execution]], logging coppersmith counters after completion. */
+  def executeAndLogCounters[T](exec: Execution[T]): Execution[T] = {
+    val tryExecution: Execution[Try[T]] =
+      exec.map{ Success(_) }.recoverWith{ case throwable: Throwable => Execution.from[Try[T]](Failure(throwable)) }
+
+    for {
+      (result, counters) <- tryExecution.getCounters
+      _                  <- Execution.from(logCounters(counters))
+    } yield result.get  // any exception caught by the above recoverWith is rethrown here
+  }
+
   /** Log (at INFO level) all coppersmith counters found in the passed [[com.twitter.scalding.ExecutionCounters]]. */
-  def log(counters: ExecutionCounters): Unit =
-    counters.keys.filter(_.group == group).foreach { key =>
-      log.info(f"${counters(key)}%10d  ${key.counter}")
+  def logCounters(counters: ExecutionCounters): Unit = {
+    val coppersmithKeys = counters.keys.filter(_.group == group)
+    if (coppersmithKeys.isEmpty) {
+      log.info("Coppersmith counters: NONE (this may be due to a failed execution)")
     }
+    else {
+      log.info("Coppersmith counters:")
+      coppersmithKeys.foreach { key => log.info(f"${counters(key)}%10d  ${key.counter}") }
+    }
+  }
 }
 
 class CoppersmithStats[T](typedPipe: TypedPipe[T]) extends {
+  /** Calling this on any [[com.twitter.scalding.typed.TypedPipe]] will cause a counter with the given name
+    * to be incremented for every tuple that is read from the pipe. */
   def withCounter(name: String) = TypedPipeFactory({ (fd, mode) =>
     // The logic to drop down to cascading duplicates the (unfortunately private) method TypedPipe.onRawSingle
     val oldPipe = typedPipe.toPipe(new Fields(java.lang.Integer.valueOf(0)))(fd, mode, singleSetter)
