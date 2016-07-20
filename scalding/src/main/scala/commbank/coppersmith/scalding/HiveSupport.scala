@@ -31,6 +31,7 @@ import au.com.cba.omnia.maestro.scalding.ConfHelper.createUniqueFilenames
 
 import Partitions.PathComponents
 import FeatureSink.{AttemptedWriteToCommitted, WriteResult}
+import CoppersmithStats.fromTypedPipe
 
 // Maestro's HiveTable currently assumes the underlying format to be Parquet. This code generalises
 // code from different feature gen projects, which supports storing the final EAVT records as text.
@@ -64,7 +65,7 @@ object HiveSupport {
     import conf.partition
     val partitioned: TypedPipe[(P, String)] = pipe.map(v =>
       partition.extract(v) -> serialise[T](v, conf.delimiter, "\\N")(conf.dcs)
-    )
+    ).withCounter("text.written")
 
     // Use an intermediate temporary directory to write pipe in order to avoid race condition that
     // occurs when two parallel executions are writing to the same sink in two different Cascading
