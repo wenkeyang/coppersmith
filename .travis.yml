@@ -12,10 +12,10 @@ install:
 - ci/sbt-ci-setup-version.sh
 script:
 - sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci '; test; package'
-- ci/sbt-ci-deploy.sh maven http://commbank.artifactoryonline.com/commbank/ ext-releases-local
+- ci/sbt-ci-deploy.sh maven http://commbank.artifactoryonline.com/commbank ext-releases-local
 - ci/ci-nonrelease.sh sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci core/publishLocal scalding/publishLocal tools/publishLocal
 - sbt -Dsbt.global.base=$TRAVIS_BUILD_DIR/ci 'plugin/scripted'
-- ci/sbt-ci-deploy.sh ivy http://commbank.artifactoryonline.com/commbank/ ext-releases-local-ivy plugin
+- ci/sbt-ci-deploy.sh ivy http://commbank.artifactoryonline.com/commbank ext-releases-local-ivy plugin
 after_script:
 - rm -rf ci
 env:
