@@ -105,8 +105,8 @@ object Feature {
   // Legal type/value combinations
   @implicitNotFound("Features with value type ${V} cannot be ${T}")
   abstract class Conforms[T <: Type : TypeTag, V <: Value : TypeTag] {
-    def typeTag:  TypeTag[T] = implicitly
-    def valueTag: TypeTag[V] = implicitly
+    def typeTag: TypeTag[T] = implicitly
+    def valueType: Metadata.ValueType = Metadata.valueType[V]
   }
   implicit object NominalStr              extends Conforms[Type.Nominal.type,    Value.Str]
   implicit object OrdinalStr              extends Conforms[Type.Ordinal.type,    Value.Str]
@@ -129,10 +129,10 @@ object Feature {
 
   object Conforms {
 
-    def conforms_?[V <: Value : TypeTag](conforms: Conforms[_, _], metadata: Metadata[_, _]) = {
+    def conforms_?(conforms: Conforms[_, _], metadata: Metadata[_, _]) = {
       def getClazz(tag: TypeTag[_]) = tag.mirror.runtimeClass(tag.tpe.typeSymbol.asClass)
       metadata.featureType.getClass == getClazz(conforms.typeTag) &&
-        metadata.valueType == Metadata.valueType[V]
+        metadata.valueType == conforms.valueType
     }
   }
 
