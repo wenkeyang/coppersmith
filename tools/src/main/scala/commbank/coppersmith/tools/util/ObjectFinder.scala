@@ -14,20 +14,25 @@
 
 package commbank.coppersmith.tools.util
 
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
-
-import scala.collection.convert.WrapAsScala
+import scala.collection.convert.decorateAsScala.collectionAsScalaIterableConverter
 import scala.reflect.ClassTag
+
 import scalaz.Scalaz._
+
+import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 
 object ObjectFinder {
   def findObjects[T : ClassTag](packages: String*): Set[T] = {
-    val ct = implicitly[ClassTag[T]]
-    val classNames: List[String] = WrapAsScala.collectionAsScalaIterable(
-        new FastClasspathScanner(packages: _*).scan().getNamesOfClassesImplementing(ct.runtimeClass.getName)
-    ).toList
+    val cls = implicitly[ClassTag[T]].runtimeClass
+    val scanner = new FastClasspathScanner(packages: _*).scan()
+    val classNames: Iterable[String] =
+      if (cls.isInterface) {
+        scanner.getNamesOfClassesImplementing(cls).asScala
+      } else {
+        scanner.getNamesOfSubclassesOf(cls).asScala
+      }
 
-    val objectInstances: List[T] = classNames.flatMap { cn =>
+    val objectInstances: Iterable[T] = classNames.flatMap { cn =>
       val objClass = Class.forName(cn)
       val fields = objClass.getDeclaredFields
       fields.find(_.getName === "MODULE$") >>= { f => Option(f.get(null).asInstanceOf[T]) }
