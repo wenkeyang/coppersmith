@@ -15,43 +15,52 @@
 import org.specs2.Specification
 
 package commbank.coppersmith.tools.util {
-  trait T
-  trait U
+  trait TT
+  trait UT
+  class TC
+  class UC
 
-  object A extends T
-  object B extends T
-  object C extends U
+  object A extends TC with TT
+  object B extends TC with TT
+  object C extends UC with UT
 
-  trait P[A]
-  trait Q[A] extends P[A]
-  object D extends P[Int]
-  object E extends Q[String]
+  trait PT[A]
+  trait QT[A] extends PT[A]
+  class PC[A]
+  class QC[A] extends PC[A]
+  object D extends PC[Int] with PT[Int]
+  object E extends QC[String] with QT[String]
 
   object F extends someothersillypackage.Outside
 
-  trait V
+  trait VT
+  class VC
   object Outer {
-    object Nested extends V
+    object Nested extends VC with VT
   }
 
   object ObjectFinderSpec extends Specification {
     def is =
       s2"""
         Object finder
-          Can find objects of a given trait $findObjects
-          Can find objects of a given parameterised trait $findObjectsParam
-          Can find objects of a trait from another package $findObjectsTraitOtherPackage
+          Can find objects of a given type $findObjects
+          Can find objects of a given parameterised type $findObjectsParam
+          Can find objects of a type from another package $findObjectsTraitOtherPackage
           Can find nested objects $findNestedObjects
       """
 
     def findObjects = Seq(
-      ObjectFinder.findObjects[T]("commbank.coppersmith.tools.util") === Set(A, B),
-      ObjectFinder.findObjects[U]("commbank.coppersmith.tools.util", "scala") === Set(C)
+      ObjectFinder.findObjects[TT]("commbank.coppersmith.tools.util") === Set(A, B),
+      ObjectFinder.findObjects[TC]("commbank.coppersmith.tools.util") === Set(A, B),
+      ObjectFinder.findObjects[UT]("commbank.coppersmith.tools.util", "scala") === Set(C),
+      ObjectFinder.findObjects[UC]("commbank.coppersmith.tools.util", "scala") === Set(C)
     )
 
     def findObjectsParam = Seq(
-      ObjectFinder.findObjects[Q[_]]("commbank.coppersmith.tools.util") === Set(E),
-      ObjectFinder.findObjects[P[_]]("commbank.coppersmith.tools.util") === Set(D, E)
+      ObjectFinder.findObjects[QT[_]]("commbank.coppersmith.tools.util") === Set(E),
+      ObjectFinder.findObjects[QC[_]]("commbank.coppersmith.tools.util") === Set(E),
+      ObjectFinder.findObjects[PT[_]]("commbank.coppersmith.tools.util") === Set(D, E),
+      ObjectFinder.findObjects[PC[_]]("commbank.coppersmith.tools.util") === Set(D, E)
     )
 
     def findObjectsTraitOtherPackage = Seq(
@@ -64,9 +73,10 @@ package commbank.coppersmith.tools.util {
       ) === Set(F)
     )
 
-    def findNestedObjects = {
-      ObjectFinder.findObjects[V]("commbank.coppersmith.tools.util") === Set(Outer.Nested)
-    }
+    def findNestedObjects = Seq(
+      ObjectFinder.findObjects[VT]("commbank.coppersmith.tools.util") === Set(Outer.Nested),
+      ObjectFinder.findObjects[VC]("commbank.coppersmith.tools.util") === Set(Outer.Nested)
+    )
   }
 }
 
