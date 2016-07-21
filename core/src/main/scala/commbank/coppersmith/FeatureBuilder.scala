@@ -115,13 +115,13 @@ case class FeatureBuilder[S, SV, FV <% V, V <: Value](
     range: Option[Value.Range[V]],
     desc: Description
   )(implicit ev: Conforms[T, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
-    Patterns.general[S, V, FV](fsBuilder.namespace,
-                               name,
-                               desc,
-                               featureType,
-                               fsBuilder.entity,
-                               (s: S) => view.lift(s).map(value(_): V),
-                               range)
+    Patterns.general[S, V](fsBuilder.namespace,
+                           name,
+                           desc,
+                           featureType,
+                           fsBuilder.entity,
+                           (s: S) => view.lift(s).map(value(_): V),
+                           range)
 
   def asFeature[T <: Type](
     featureType: T,
