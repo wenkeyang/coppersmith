@@ -200,7 +200,7 @@ case class Datestamp(year: Int, month: Int, day: Int) {
       DatePeriod(p.getYears, p.getMonths, p.getDays)
   }
 
-  override def toString: String = {
+  def toIso8601ExtendedFormatString: String = {
     f"$year%04d-$month%02d-$day%02d"
   }
 }
@@ -218,9 +218,8 @@ case class Timestamp(millis: Long, offset: Offset) {
     new DateTime(millis, tz)
   }
 
-  override def toString: String = {
+  def toRfc3339String: String = {
     val offsetStr = offset.map { case ((h, m)) => f"$h%+03d:$m%02d" }.getOrElse("-00:00")
     f"${toDateTime.toString("yyyy-MM-dd'T'HH:mm:ss.SSS")}$offsetStr"
   }
 }
-

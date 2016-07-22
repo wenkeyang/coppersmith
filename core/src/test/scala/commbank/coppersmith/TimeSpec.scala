@@ -170,14 +170,14 @@ object TimeSpec extends Specification with ScalaCheck { def is = s2"""
   }}
 
   def printDate = forAll { (date: Datestamp) => {
-    val dateStr  = date.toString
+    val dateStr  = date.toIso8601ExtendedFormatString
     val dateTime = DateTimeFormat.forPattern("yyyy-MM-dd").parseLocalDate(dateStr)
 
     dateTime must_== new LocalDate(date.year, date.month, date.day)
   }}
 
   def printTime = forAll { (time: Timestamp) => {
-    val timeStr  = time.toString
+    val timeStr  = time.toRfc3339String
     val dateTime = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
       .withOffsetParsed().parseDateTime(timeStr)
     val (h, m)   = time.offset.getOrElse((0,0))

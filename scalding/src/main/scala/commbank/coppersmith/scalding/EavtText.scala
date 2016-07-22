@@ -35,8 +35,8 @@ object EavtText {
           case FloatingPoint(v) => v.map(_.toString)
           case Str(v) => v
           case Bool(v) => v.map(_.toString)
-          case Date(v) => v.map(_.toString)
-          case Time(v) => v.map(_.toString)
+          case Date(v) => v.map(_.toIso8601ExtendedFormatString)
+          case Time(v) => v.map(_.toRfc3339String)
         }).getOrElse(HiveTextSink.NullValue)
 
         val featureTime = new DateTime(time).toString("yyyy-MM-dd")
