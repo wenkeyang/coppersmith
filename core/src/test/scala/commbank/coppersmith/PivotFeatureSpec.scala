@@ -46,14 +46,14 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     def entity(c: Customer) = c.id
     override def time(c: Customer, ctx: FeatureContext)   = c.time
 
-    val name:   Feature[Customer, Str]           = pivot(Fields[Customer].Name,   "Customer name",   Nominal)
+    val nameF:   Feature[Customer, Str]           = pivot(Fields[Customer].Name,   "Customer name",   Nominal)
     val age:    Feature[Customer, Integral]      = pivot(Fields[Customer].Age,    "Customer age",    Nominal,
       Some(MinMaxRange(0, 130)))
     val height: Feature[Customer, FloatingPoint] = pivot(Fields[Customer].Height, "Customer height", Continuous,
       Some(MinMaxRange(40.0, 300.0)))
     val credit: Feature[Customer, FloatingPoint] = pivot(Fields[Customer].Credit, "Customer credit", Continuous)
 
-    def features = List(name, age, height, credit)
+    def features = List(nameF, age, height, credit)
   }
 
   def generateMetadata = {
@@ -75,7 +75,7 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     val featureValues = CustomerFeatureSet.generate(c)
 
     featureValues must_== List(
-      FeatureValue[Str]          (c.id, CustomerFeatureSet.name.metadata.name,   c.name),
+      FeatureValue[Str]          (c.id, CustomerFeatureSet.nameF.metadata.name,   c.name),
       FeatureValue[Integral]     (c.id, CustomerFeatureSet.age.metadata.name,    c.age),
       FeatureValue[FloatingPoint](c.id, CustomerFeatureSet.height.metadata.name, c.height),
       FeatureValue[FloatingPoint](c.id, CustomerFeatureSet.credit.metadata.name, c.credit)

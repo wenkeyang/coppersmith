@@ -23,6 +23,8 @@ import au.com.cba.omnia.maestro.api.Field
 import Feature._
 
 trait FeatureSet[S] extends MetadataSet[S] {
+  def name: String = getClass.getSimpleName
+
   def namespace: Feature.Namespace
 
   def features: Iterable[Feature[S, Value]]
@@ -44,6 +46,8 @@ trait FeatureSetWithTime[S] extends FeatureSet[S] {
 }
 
 trait MetadataSet[S] {
+  def name: String
+
   def metadata: Iterable[Metadata[S, Value]]
 }
 

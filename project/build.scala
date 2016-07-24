@@ -181,18 +181,18 @@ object build extends Build {
       Defaults.coreDefaultSettings
         ++ uniformDependencySettings
         ++ uniform.project("coppersmith-tools", "commbank.coppersmith.tools")
-        ++ Seq(libraryDependencies ++= Seq(
+        ++ Seq(
+            libraryDependencies ++= Seq(
              "io.github.lukehutch" % "fast-classpath-scanner" % "1.9.7",
              "org.specs2"         %% "specs2-matcher-extra"   % versions.specs % "test"
-           )
-        )
-        ++ Seq(
+           ) ++ depend.testing(configuration = "test"),
           fork in Test := true,
+          resources in Test += file("tools/METADATA_JSON.markdown"),
           javaOptions in Test += {
             val files: Seq[File] = (fullClasspath in Compile).value.files
             val sbtClasspath: String = files.map(x => x.getAbsolutePath).mkString(":")
             s"-Dsbt-classpath=$sbtClasspath"
           }
         )
-  ).dependsOn(core)
+  ).dependsOn(core % "compile->compile;test->test")
 }

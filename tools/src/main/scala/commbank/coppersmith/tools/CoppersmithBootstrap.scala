@@ -165,6 +165,8 @@ import commbank.coppersmith.MetadataOutput
 trait $sourceType
 
 object ${sourceType}FeatureSet extends MetadataSet[$sourceType] {
+  val name = "${sourceType}FeatureSet"
+
 ${metadata.map{ case (ns, name, vType, fType, desc, range) =>
     s"""  val ${camelCase(name)} = FeatureStub[$sourceType, $vType].asFeatureMetadata(
     $fType, "$ns", "$name",

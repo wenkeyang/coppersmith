@@ -1418,6 +1418,8 @@ import commbank.coppersmith.api._
 import commbank.coppersmith.examples.thrift._
 
 object BlankCustomerFeatureSet extends MetadataSet[Customer] {
+    def name = "BlankCustomerFeatureSet"
+
     val customerLoyalty = Metadata[Customer, Integral](
       "userguide.examples",
       "cust_loyalty",

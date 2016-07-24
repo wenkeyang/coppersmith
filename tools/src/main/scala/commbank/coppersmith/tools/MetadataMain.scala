@@ -15,26 +15,48 @@
 package commbank.coppersmith.tools
 
 import commbank.coppersmith.{MetadataOutput, MetadataSet}
-import commbank.coppersmith.Feature.Conforms, Conforms.conforms_?
+import commbank.coppersmith.Feature.{Value, Type, Conforms}, Conforms.conforms_?
 import commbank.coppersmith.tools.util.ObjectFinder
 
 object MetadataMain {
+  sealed trait FormatType
+  case object PsvFormat extends FormatType
+  case object JsonFormat extends FormatType
+
   def main(args:Array[String]) = {
-    val (format, packagge) = args.take(2) match {
-      case Array("--psv", pkg)  => ( MetadataOutput.Psv, pkg)
-      case Array("--json", pkg) => ( MetadataOutput.JsonObject, pkg)
-      case Array(pkg)           => ( MetadataOutput.JsonObject, pkg)
-      case _                    => println("Invalid input"); sys.exit(1)
+    val (format, packagge, version) = args.take(2) match {
+      case Array("--psv", pkg)                  => ( PsvFormat, pkg, 0)
+      case Array("--json", pkg)                 => (JsonFormat, pkg, 0)
+      case Array("--json", "--version", v, pkg) => (JsonFormat, pkg, v.toInt)
+      case Array("--version", v, pkg)           => (JsonFormat, pkg, v.toInt)
+      case Array(pkg)                           => (JsonFormat, pkg, 0)
+      case _                                    => println("Invalid input"); sys.exit(1)
     }
 
-    val metadataSets = ObjectFinder.findObjects[MetadataSet[_]](packagge, "commbank.coppersmith")
+    val metadataSets = ObjectFinder.findObjects[MetadataSet[Any]](packagge, "commbank.coppersmith").toList
+
     val allConforms =
-      ObjectFinder.findObjects[Conforms[_, _]](args(0), "commbank.coppersmith", "au.com.cba.omnia")
+      ObjectFinder.findObjects[Conforms[Type, Value]](args(0), "commbank.coppersmith", "au.com.cba.omnia")
 
-    metadataSets.foreach { ms =>
-      val metadataConformsSet = ms.metadata.map(m => (m, allConforms.find(c => conforms_?(c, m)))).toList
-      val outputString = MetadataOutput.metadataString(metadataConformsSet, format)
-      println(outputString)
+    // The repetition here is regrettable but getting the types without statically
+    // knowing the formatter is really awkward
+
+    val output: String = format match {
+      case PsvFormat =>
+        MetadataOutput.Psv.stringify(MetadataOutput.Psv.doOutput(metadataSets, allConforms))
+      case JsonFormat =>
+        if (!metadataSets.isEmpty) {
+          if (version == 0) {
+            MetadataOutput.Json0.stringify(MetadataOutput.Json0.doOutput(metadataSets, allConforms))
+          } else if (version == 1) {
+            MetadataOutput.Json1.stringify(MetadataOutput.Json0.doOutput(metadataSets, allConforms))
+          } else {
+            sys.error("Invalid JSON version received")
+          }
+        } else {
+          ""
+        }
     }
+    print(output)
   }
 }
