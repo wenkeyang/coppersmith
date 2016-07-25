@@ -21,6 +21,7 @@ import au.com.cba.omnia.uniform.core.version.UniqueVersionPlugin._
 import au.com.cba.omnia.uniform.dependency.UniformDependencyPlugin._
 import au.com.cba.omnia.uniform.thrift.UniformThriftPlugin._
 import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
+import org.scalafmt.sbt.ScalaFmtPlugin.autoImport._
 
 object build extends Build {
   val maestroVersion = "2.20.0-20160520031836-e06bc75"
@@ -39,7 +40,8 @@ object build extends Build {
       scalacOptions += "-Xfatal-warnings",
       scalacOptions in (Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
       scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
-      scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value
+      scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value,
+      scalafmtConfig := Some(file(".scalafmt"))
     )
 
   lazy val all = Project(
