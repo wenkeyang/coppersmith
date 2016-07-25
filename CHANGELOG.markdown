@@ -1,6 +1,15 @@
 Change log
 ==========
 
+## 0.22.0
+`Time.parseFormatWithOffset` is now `Time.parseFormatWithTimezone` and
+`Time.unsafeParseFormatWithOffset` is now `Time.unsafeParseFormatWithTimezone`
+to allow specification of timezone identifiers (e.g. Australia/Sydney)
+
+### Upgrading
+  - Change instances of `Time.parseFormatWithOffset` to `Time.parseFormatWithTimezone`
+    and `Time.unsafeParseFormatWithOffset` to `Time.unsafeParseFormatWithTimezone`
+
 ## 0.21.0
 The coppersmith plugin no longer pulls in coppersmith dependencies, so
 that dependency clashes are easier to manage.

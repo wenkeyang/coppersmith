@@ -16,15 +16,17 @@ package commbank.coppersmith
 
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
-import org.joda.time.{Period, DateTimeZone, LocalDate, DateTime}
+import scala.collection.JavaConversions._
+
+import org.joda.time.{DateTime, DateTimeZone, LocalDate, Period}
 import org.joda.time.format.DateTimeFormat
 
 import org.specs2.{ScalaCheck, Specification}
 
-import org.scalacheck.Prop._
+import org.scalacheck.{Arbitrary, Gen, Prop}, Prop._
 
 import commbank.coppersmith.Arbitraries._
-import commbank.coppersmith.util.{DatePeriod, Timestamp, Datestamp}
+import commbank.coppersmith.util.{DatePeriod, Datestamp, Timestamp}, Timestamp.{Offset, Timezone}
 
 object TimeSpec extends Specification with ScalaCheck { def is = s2"""
   Parse valid date string $parseDate
@@ -64,7 +66,11 @@ object TimeSpec extends Specification with ScalaCheck { def is = s2"""
     )
   }}
 
-  def parseValidTime = forAll { (dateTime: DateTime) => {
+  implicit def arbTimezone: Arbitrary[Timezone] = {
+    Arbitrary(Gen.option(Gen.oneOf(DateTimeZone.getAvailableIDs.toList)))
+  }
+
+  def parseValidTime = forAll { (dateTime: DateTime, tz: Timezone) => {
     def testParse(dt: DateTime, format: String, p: (String) => Timestamp, e: (DateTime) => Timestamp) = {
       val s = dt.toString(format)
       val t = p(s)
@@ -77,6 +83,17 @@ object TimeSpec extends Specification with ScalaCheck { def is = s2"""
     }
     def toUTC(dt: DateTime): DateTime = {
       dt.withZoneRetainFields(DateTimeZone.UTC)
+    }
+    def toTZ(dt: DateTime, tz: Timezone): DateTime = {
+      val dtz = tz.map(DateTimeZone.forID).getOrElse(DateTimeZone.UTC)
+      dt.withZoneRetainFields(dtz)
+    }
+    def toOffset(dt: DateTime, tz: Timezone): Offset = {
+      tz map { tzID =>
+        val offsetL = DateTimeZone.forID(tzID).getOffset(dt)
+        (MILLISECONDS.toHours(offsetL).toInt,
+          Math.abs(MILLISECONDS.toMinutes(offsetL).toInt % 60))
+      }
     }
     Seq(
       testParse(dateTime,
@@ -125,9 +142,12 @@ object TimeSpec extends Specification with ScalaCheck { def is = s2"""
         dt => Timestamp(dt.getMillis, parseOffset(dt))
       ),
       testParse(dateTime,
-        "yyyy-dd-MM'T'HH:mm:ss.SSSZZ",
-        Timestamp.parseFormatWithOffset("yyyy-dd-MM'T'HH:mm:ss.SSSZZ")(_, None).right.get,
-        dt => Timestamp(toUTC(dt).getMillis, None)
+        "yyyy-dd-MM'T'HH:mm:ss.SSS",
+        Timestamp.parseFormatWithTimezone("yyyy-dd-MM'T'HH:mm:ss.SSS", tz)(_).right.get,
+        dt => {
+          val dtWithTimezone = toTZ(dt, tz)
+          Timestamp(dtWithTimezone.getMillis, toOffset(dtWithTimezone, tz))
+        }
      ),
       testParse(dateTime,
         "yyyy-dd-MM'T'HH:mm:ss.SSSZZ",
@@ -136,13 +156,16 @@ object TimeSpec extends Specification with ScalaCheck { def is = s2"""
       ),
       testParse(dateTime,
         "yyyy-dd-MM'T'HH:mm:ss.SSSZZ",
-        Timestamp.unsafeParseFormatWithOffset("yyyy-dd-MM'T'HH:mm:ss.SSSZZ")(_, None),
-        dt => Timestamp(toUTC(dt).getMillis, None)
+        Timestamp.unsafeParseFormatWithTimezone("yyyy-dd-MM'T'HH:mm:ss.SSSZZ", tz)(_),
+        dt => {
+          val dtWithTimezone = toTZ(dt, tz)
+          Timestamp(dtWithTimezone.getMillis, toOffset(dtWithTimezone, tz))
+        }
       )
     )
   }}
 
-  def parseInvalidTime = forAll { (dateTime: DateTime) => {
+  def parseInvalidTime = forAll { (dateTime: DateTime, tz: Timezone) => {
     val invalidTimeStr = dateTime.toString("dd-MM-yyyy'T'HH:mm:ss.SSSZZ")
     val pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZZ"
     val noTzPattern = "yyyy-MM-dd'T'HH:mm:ss.SSS"
@@ -153,14 +176,14 @@ object TimeSpec extends Specification with ScalaCheck { def is = s2"""
       Timestamp.parseWithMillis(invalidTimeStr).left.get                      must_== expected,
       Timestamp.parseWithoutMillis(invalidTimeStr).left.get                   must_== noMillisExpected,
       Timestamp.parseFormat(pattern)(invalidTimeStr).left.get                 must_== expected,
-      Timestamp.parseFormatWithOffset(pattern)(invalidTimeStr, None).left.get must_== expected,
+      Timestamp.parseFormatWithTimezone(pattern, tz)(invalidTimeStr).left.get must_== expected,
       Timestamp.unsafeParseWithMillis(invalidTimeStr)
         must throwA(new RuntimeException(s"Unable to parse time: $expected")),
       Timestamp.unsafeParseWithoutMillis(invalidTimeStr)
         must throwA(new RuntimeException(s"Unable to parse time: $noMillisExpected")),
       Timestamp.unsafeParseFormat(pattern)(invalidTimeStr)
         must throwA(new RuntimeException(s"Unable to parse time: $expected")),
-      Timestamp.unsafeParseFormatWithOffset(pattern)(invalidTimeStr, None)
+      Timestamp.unsafeParseFormatWithTimezone(pattern, tz)(invalidTimeStr)
         must throwA(new RuntimeException(s"Unable to parse time: $expected")),
 
       Timestamp.parseFormat(noTzPattern)

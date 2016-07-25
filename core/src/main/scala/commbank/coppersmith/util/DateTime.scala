@@ -54,12 +54,13 @@ object Datestamp {
 }
 
 object Timestamp {
-  type Offset = Option[(Int, Int)]
+  type Offset   = Option[(Int, Int)]
+  type Timezone = Option[String]
 
-  val parseWithMillisDefault          = parseFormatWithOffset("yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
-  val parseWithoutMillisDefault       = parseFormatWithOffset("yyyy-MM-dd'T'HH:mm:ssZZ")
-  val unsafeParseWithMillisDefault    = unsafeParseFormatWithOffset("yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
-  val unsafeParseWithoutMillisDefault = unsafeParseFormatWithOffset("yyyy-MM-dd'T'HH:mm:ssZZ")
+  val parseWithMillisDefault          = parseFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
+  val parseWithoutMillisDefault       = parseFormat("yyyy-MM-dd'T'HH:mm:ssZZ")
+  val unsafeParseWithMillisDefault    = unsafeParseFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZ")
+  val unsafeParseWithoutMillisDefault = unsafeParseFormat("yyyy-MM-dd'T'HH:mm:ssZZ")
 
   /**
     * Parses a timestamp in RFC3339 format with millisecond precision.
@@ -68,7 +69,8 @@ object Timestamp {
     * @return Either the parsed timestamp, or the time arg and pattern used if parsing fails
     */
   def parseWithMillis(time: String): Either[(String, String), Timestamp] =
-    parseWithMillisDefault(time, parseOffset(time))
+    // Overwrite offset to properly parse unknown timezone (-00:00)
+    parseWithMillisDefault(time).right.map(_.copy(offset = parseOffset(time)))
 
   /**
     * Parses a timestamp in RFC3339 format with millisecond precision. An exception is thrown if
@@ -78,7 +80,7 @@ object Timestamp {
     * @return The parsed timestamp
     */
   def unsafeParseWithMillis(time: String): Timestamp =
-    unsafeParseWithMillisDefault(time, parseOffset(time))
+    unsafeParseWithMillisDefault(time).copy(offset = parseOffset(time))
 
   /**
     * Parses a timestamp in RFC3339 format without millisecond precision.
@@ -87,7 +89,7 @@ object Timestamp {
     * @return Either the parsed Timestamp, or the time arg and pattern used if parsing fails
     */
   def parseWithoutMillis(time: String): Either[(String, String), Timestamp] =
-    parseWithoutMillisDefault(time, parseOffset(time))
+    parseWithoutMillisDefault(time).right.map(_.copy(offset = parseOffset(time)))
 
   /**
     * Parses a timestamp in RFC3339 format without millisecond precision. An exception is thrown if
@@ -97,7 +99,7 @@ object Timestamp {
     * @return The parsed Timestamp
     */
   def unsafeParseWithoutMillis(time: String): Timestamp =
-    unsafeParseWithoutMillisDefault(time, parseOffset(time))
+    unsafeParseWithoutMillisDefault(time).copy(offset = parseOffset(time))
 
   /**
     * Creates a parse function for a pattern. Note: The pattern must parse timezone information.
@@ -138,37 +140,45 @@ object Timestamp {
   }
 
   /**
-    * Creates a parse function for a pattern. The function should be used to provide offset
-    * information missing from the timestamp, or to overwrite offset information.
-    * Note: The time will not be adjusted to the new offset, the existing offset will be replaced.
+    * Creates a parse function for a pattern and a timezone. The function should be used to provide timezone
+    * information missing from the timestamp, or to overwrite timezone information.
+    * Note: The time fields will not be adjusted to the new timezone, the existing timezone will simply be replaced.
     *
     * @param pattern The pattern to use to parse
-    * @return A function from a time string and offset to either the parsed Timestamp,
+    * @param timezone The timezone to set
+    * @return A function from a time string to either the parsed Timestamp,
     *         or the time arg and pattern used if parsing fails
     */
-  def parseFormatWithOffset(pattern: String): (String, Offset) => Either[(String, String), Timestamp] = {
+  def parseFormatWithTimezone(pattern: String, timezone: Timezone): (String) => Either[(String, String), Timestamp] = {
     val fmt = DateTimeFormat.forPattern(pattern)
-    (time, offset) => {
-      val (h, m)  = offset.getOrElse((0, 0))
-      val tz      = DateTimeZone.forOffsetHoursMinutes(h, m)
+    val tz  = timezone.map(DateTimeZone.forID)
+    (time) => {
       // Without withOffsetParsed the timezone fields are moved to system timezone
-      val triedDT = Try(fmt.withOffsetParsed().parseDateTime(time).withZoneRetainFields(tz))
+      val triedDT = Try(fmt.withOffsetParsed().parseDateTime(time)
+        .withZoneRetainFields(tz.getOrElse(DateTimeZone.UTC)))
 
-      Either.cond(triedDT.isSuccess, Timestamp(triedDT.get.getMillis, offset), (time, pattern))
+      triedDT.map { dt =>
+        val offset = tz.map { zone =>
+          (MILLISECONDS.toHours(zone.getOffset(dt)).toInt,
+            Math.abs(MILLISECONDS.toMinutes(zone.getOffset(dt)).toInt % 60))
+        }
+        Right(Timestamp(triedDT.get.getMillis, offset))
+      } getOrElse Left((time, pattern))
     }
   }
 
   /**
-    * Creates an unsafe parse function for a pattern. The function should be used to provide offset
-    * information missing from the timestamp, or to overwrite offset information.
-    * Note: The time will not be adjusted to the new offset, the existing offset will be replaced.
+    * Creates an unsafe parse function for a pattern and a timezone. The function should be used to provide timezone
+    * information missing from the timestamp, or to overwrite timezone information.
+    * Note: The time fields will not be adjusted to the new timezone, the existing timezone will simply be replaced.
     *
     * @param pattern The pattern to use to parse
-    * @return An unsafe function from a time string to a parsed Timestamp
+    * @param timezone The timezone to set
+    * @return An unsafe function from a time string and a timezone to a parsed Timestamp
     */
-  def unsafeParseFormatWithOffset(pattern: String): (String, Offset) => Timestamp = {
-    val f = parseFormatWithOffset(pattern)
-    (s, o) => f(s, o).right.getOrElse(sys.error(s"Unable to parse time: ${f(s, o).left.get}"))
+  def unsafeParseFormatWithTimezone(pattern: String, timezone: Timezone): (String) => Timestamp = {
+    val f = parseFormatWithTimezone(pattern, timezone)
+    (s) => f(s).right.getOrElse(sys.error(s"Unable to parse time: ${f(s).left.get}"))
   }
 
   private def parseOffset(time: String): Option[(Int, Int)] = {
