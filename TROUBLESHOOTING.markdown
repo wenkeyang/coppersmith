@@ -92,6 +92,7 @@ log4j.rootLogger=ERROR,stdout
 
 log4j.logger.commbank.coppersmith.scalding.HiveTextSource=INFO
 log4j.logger.commbank.coppersmith.scalding.HiveParquetSource=INFO
+log4j.logger.commbank.coppersmith.scalding.CoppersmithStats=INFO
 
 log4j.appender.stdout=org.apache.log4j.ConsoleAppender
 log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
