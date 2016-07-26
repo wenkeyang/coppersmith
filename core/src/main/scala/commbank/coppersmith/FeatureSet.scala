@@ -113,10 +113,10 @@ case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
   import AggregationFeature.AlgebirdSemigroup
   // Note: Implementation exists here to satisfty feature signature and enable unit testing.
   // Framework should take advantage of aggregators that can run natively on the underlying plumbing.
-  def toFeature(namespace: Namespace) = new Feature[(EntityId, Iterable[S]), Value](
+  def toFeature(namespace: Namespace) = new Feature[(EntityId, Iterable[S]), V](
     Metadata(namespace, name, description, featureType, range)
   ) {
-    def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
+    def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[V]] = {
       val (entity, source) = s
       val sourceView = source.toList.collect(view).toNel
       sourceView.flatMap(nonEmptySource => {
