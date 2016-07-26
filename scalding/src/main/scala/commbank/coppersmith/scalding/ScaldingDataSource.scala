@@ -46,11 +46,11 @@ trait ScaldingDataSource[S] extends DataSource[S, TypedPipe] {
     * especially when the data source will be joined to another,
     * since the filter will be applied before rather than after the join.
     */
-  def where(condition: S => Boolean) = TypedPipeSource(load.filter(condition))
+  def where(condition: S => Boolean) = TypedPipeSource(load.filter(condition).withCounter("where"))
 
-  def distinct(implicit ord: Ordering[_ >: S]) = TypedPipeSource(load.distinct)
+  def distinct(implicit ord: Ordering[_ >: S]) = TypedPipeSource(load.distinct.withCounter("distinct"))
 
-  def distinctBy[O : Ordering](fn: S => O) = TypedPipeSource(load.distinctBy(fn))
+  def distinctBy[O : Ordering](fn: S => O) = TypedPipeSource(load.distinctBy(fn).withCounter("distinctBy"))
 }
 
 case class DataSourceView[T, S](underlying: DataSource[T, TypedPipe])(implicit tToS: T => S)
