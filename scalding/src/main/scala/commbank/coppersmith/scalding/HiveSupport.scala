@@ -65,7 +65,7 @@ object HiveSupport {
     import conf.partition
     val partitioned: TypedPipe[(P, String)] = pipe.map(v =>
       partition.extract(v) -> serialise[T](v, conf.delimiter, "\\N")(conf.dcs)
-    ).withCounter("text.written")
+    ).withCounter("write.text")
 
     // Use an intermediate temporary directory to write pipe in order to avoid race condition that
     // occurs when two parallel executions are writing to the same sink in two different Cascading
