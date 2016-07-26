@@ -28,6 +28,10 @@ object CoppersmithStats {
   val group = "Coppersmith"
   val log = org.slf4j.LoggerFactory.getLogger(getClass())
 
+  // Prepending a unique ID to each counter name prevents name clashes, and provides a somewhat sensible ordering.
+  // Even if we create a million counters per second, it will take 290,000+ years to overflow a Long.
+  val nextId = new java.util.concurrent.atomic.AtomicLong(1)
+
   implicit def fromTypedPipe[T](typedPipe: TypedPipe[T]) = new CoppersmithStats(typedPipe)
 
   /** Run the [[com.twitter.scalding.Execution]], logging coppersmith counters after completion. */
@@ -49,7 +53,12 @@ object CoppersmithStats {
     }
     else {
       log.info("Coppersmith counters:")
-      coppersmithKeys.foreach { key => log.info(f"${counters(key)}%10d  ${key.counter}") }
+      coppersmithKeys.map { key =>
+        val parts = key.counter.split(raw"\.", 2)
+        (parts(0).toLong, parts(1), key)
+      }.toList.sortBy(_._1).foreach { case (id, name, key) =>
+	log.info(f"    ${name}%-30s ${counters(key)}%10d")
+      }
     }
   }
 }
@@ -60,7 +69,8 @@ class CoppersmithStats[T](typedPipe: TypedPipe[T]) extends {
   def withCounter(name: String) = TypedPipeFactory({ (fd, mode) =>
     // The logic to drop down to cascading duplicates the (unfortunately private) method TypedPipe.onRawSingle
     val oldPipe = typedPipe.toPipe(new Fields(java.lang.Integer.valueOf(0)))(fd, mode, singleSetter)
-    val newPipe = new Each(oldPipe, new Counter(CoppersmithStats.group, name))
+    val id = CoppersmithStats.nextId.getAndIncrement()
+    val newPipe = new Each(oldPipe, new Counter(CoppersmithStats.group, s"$id.$name"))
     TypedPipe.fromSingleField[T](newPipe)(fd, mode)
   })
 }
