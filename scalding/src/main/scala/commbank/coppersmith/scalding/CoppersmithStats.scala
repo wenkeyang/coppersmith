@@ -26,7 +26,9 @@ import cascading.operation.state.Counter
 
 object CoppersmithStats {
   val group = "Coppersmith"
-  val log = org.slf4j.LoggerFactory.getLogger(getClass())
+
+  // Don't use getLogger(getClass()) pattern, as the class name is ugly ("$" suffix for companion object)
+  val log = org.slf4j.LoggerFactory.getLogger("commbank.coppersmith.scalding.CoppersmithStats")
 
   // Prepending a unique ID to each counter name prevents name clashes, and provides a somewhat sensible ordering.
   // Even if we create a million counters per second, it will take 290,000+ years to overflow a Long.
