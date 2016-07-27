@@ -86,29 +86,35 @@ Coppersmith produces diagnostic logging that can help identify these problems.
 Firstly, both the `HiveTextSource` and `HiveParquetSource`
 implementations will log the absolute path from which data is loaded, e.g.:
 
-> `INFO  commbank.coppersmith.scalding.HiveParquetSource  - Loading '|' delimited text from /path/to/data`
+```
+INFO  commbank.coppersmith.scalding.HiveParquetSource  - Loading '|' delimited text from /path/to/data
+```
 
 Secondly, the "Coppersmith counters" logged at the end of the job
 show the number of records read from each data source, and also the
 number of rows remaining after joining each table.
 For example, the `DirectorsFeaturesJob` from the user guide logs:
 
-> `INFO scalding.CoppersmithStats$: Coppersmith counters:`
-> `INFO scalding.CoppersmithStats$:     load.typedpipe                    2465882`
-> `INFO scalding.CoppersmithStats$:     load.text                            1682`
-> `INFO scalding.CoppersmithStats$:     join.level1                          1023`
-> `INFO scalding.CoppersmithStats$:     load.text                          100000`
-> `INFO scalding.CoppersmithStats$:     join.level2                         67145`
-> `INFO scalding.CoppersmithStats$:     write.text                            732`
+```
+INFO commbank.coppersmith.scalding.CoppersmithStats: Coppersmith counters:
+INFO commbank.coppersmith.scalding.CoppersmithStats:     load.typedpipe                    2465882
+INFO commbank.coppersmith.scalding.CoppersmithStats:     load.text                            1682
+INFO commbank.coppersmith.scalding.CoppersmithStats:     join.level1                          1023
+INFO commbank.coppersmith.scalding.CoppersmithStats:     load.text                          100000
+INFO commbank.coppersmith.scalding.CoppersmithStats:     join.level2                         67145
+INFO commbank.coppersmith.scalding.CoppersmithStats:     write.text                            732
+```
 
 Just be aware that counters with zero counts are *omitted* from the log.
 So, if you are joining three tables (as above), but only see this:
 
-> `INFO scalding.CoppersmithStats$: Coppersmith counters:`
-> `INFO scalding.CoppersmithStats$:     load.typedpipe                    2465882`
-> `INFO scalding.CoppersmithStats$:     load.text                            1682`
-> `INFO scalding.CoppersmithStats$:     join.level1                          1023`
-> `INFO scalding.CoppersmithStats$:     load.text                          100000`
+```
+INFO commbank.coppersmith.scalding.CoppersmithStats: Coppersmith counters:
+INFO commbank.coppersmith.scalding.CoppersmithStats:     load.typedpipe                    2465882
+INFO commbank.coppersmith.scalding.CoppersmithStats:     load.text                            1682
+INFO commbank.coppersmith.scalding.CoppersmithStats:     join.level1                          1023
+INFO commbank.coppersmith.scalding.CoppersmithStats:     load.text                          100000
+```
 
 Then it could indicate that `join.level2` is zero,
 i.e. no records remain after joining the third table.
