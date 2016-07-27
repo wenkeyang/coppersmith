@@ -24,7 +24,7 @@ import Feature.Value
 // ContextFeatureSource.bindWithContext is unable to derive implicit Functor instance,
 // and needs to access it via the Lift instance instead.
 abstract class Lift[P[_]](implicit val functor: Functor[P]) extends GeneratedLift[P] {
-  def lift[S, V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[V]]
+  def lift[S, V <: Value](f: Feature[S, V])(s: P[S]): P[FeatureValue[V]]
 
   def lift[S](fs: FeatureSet[S])(s: P[S]): P[FeatureValue[_]]
 
@@ -36,7 +36,7 @@ abstract class Lift[P[_]](implicit val functor: Functor[P]) extends GeneratedLif
     joined: Joined2[A, B, J, A, Option[B]]
   )(a: P[A], b: P[B]): P[(A, Option[B])] = liftJoinLeft(joined)(a, b) // From GenereatedLift
 
-  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, P]](
+  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[_, S, U, P]](
     underlying: U,
     binder:     B,
     filter:     Option[S => Boolean]

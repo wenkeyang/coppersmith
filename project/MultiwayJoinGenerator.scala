@@ -226,7 +226,7 @@ object MultiwayJoinGenerator {
     s"""case class Joined${level}Binder[${srcTypeParams}, ${joinOrderingTypeParams}, ${joinedSrcParams}, P[_] : Lift](
       |  ${sources}
       |)(implicit jt: Join${level}Type[${srcTypeParams}, ${joinedSrcParams}, P])
-      |     extends SourceBinder[(${joinedSrcParams}), ${joinedType}, P] {
+      |     extends SourceBinder[($srcTypeParams), (${joinedSrcParams}), ${joinedType}, P] {
       |  def bind(j: ${joinedType}): P[(${joinedSrcParams})] =
       |    jt.lift(j)(${sourceNames})
       |}""".stripMargin

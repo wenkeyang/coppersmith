@@ -32,6 +32,7 @@ package object api extends GeneratedJoinTypeInstances with SourceBinderInstances
   type AbstractFeatureSet[S] = commbank.coppersmith.AbstractFeatureSet[S]
   type Feature[S, +V <: Value] = commbank.coppersmith.Feature[S, V]
   type FeatureSet[S] = commbank.coppersmith.FeatureSet[S]
+  type FeatureSource[S, FS <: FeatureSource[S, FS]] = commbank.coppersmith.FeatureSource[S, FS]
   @deprecated("Use FeatureSet", "0.22.0")
   type FeatureSetWithTime[S] = commbank.coppersmith.FeatureSet[S]
   type MetadataSet[S] = commbank.coppersmith.MetadataSet[S]
@@ -52,6 +53,7 @@ package object api extends GeneratedJoinTypeInstances with SourceBinderInstances
   type DataSource[S, P[_]] = commbank.coppersmith.DataSource[S, P]
   type FeatureValue[+V <: Value] = commbank.coppersmith.FeatureValue[V]
   type FeatureTime = commbank.coppersmith.Feature.FeatureTime
+  type SourceBinder[DS, S, U, P[_]] = commbank.coppersmith.SourceBinder[DS, S, U, P]
   type Value = commbank.coppersmith.Feature.Value
 
   // Maestro dependencies below

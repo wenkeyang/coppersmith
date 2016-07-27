@@ -32,7 +32,7 @@ trait ScaldingLift extends Lift[TypedPipe] with GeneratedScaldingLift {
     s.flatMap(s => fs.generate(s))
   }
 
-  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, TypedPipe]](
+  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[_, S, U, TypedPipe]](
     underlying: U,
     binder:     B,
     filter:     Option[S => Boolean]

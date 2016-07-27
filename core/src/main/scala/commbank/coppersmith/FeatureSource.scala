@@ -24,7 +24,7 @@ abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => 
 
   def copyWithFilter(filter: Option[S => Boolean]): FS
 
-  def bind[P[_] : Lift](binder: SourceBinder[S, FS, P]): BoundFeatureSource[S, P] = {
+  def bind[P[_] : Lift](binder: SourceBinder[_, S, FS, P]): BoundFeatureSource[S, P] = {
     implicitly[Lift[P]].liftBinder(self, binder, filter)
   }
 
@@ -38,7 +38,7 @@ case class ContextFeatureSource[S, C, FS <: FeatureSource[S, FS]](
   filter:     Option[((S, C)) => Boolean] = None
 ) {
   def bindWithContext[P[_] : Lift](
-    binder: SourceBinder[S, FS, P],
+    binder: SourceBinder[_, S, FS, P],
     ctx:    C
   ): BoundFeatureSource[(S, C), P] = {
     new BoundFeatureSource[(S, C), P] {
@@ -58,7 +58,19 @@ abstract class BoundFeatureSource[S, P[_] : Lift] {
   def load: P[S]
 }
 
-trait SourceBinder[S, U, P[_]] {
+/**
+  * Binds a concrete set of DataSource instances to an abstract FeatureSource.
+  *
+  * @tparam DS The tuple of concrete types representing the raw data sources being bound
+  *            eg, (User, Rating)
+  * @tparam S  The tuple of abstract source types, including shape given by join where relevant
+  *            eg, (User, Option[Rating])
+  * @tparam U  The abstract FeatureSource to bind
+  *            eg, Joined2[User, Rating, UserId, User, Option[Rating]]
+  * @tparam P  The type of "pipe" used by the selected framework
+  *            eg TypedPipe for scalding
+  */
+trait SourceBinder[DS, S, U, P[_]] {
   def bind(underlying: U): P[S]
 }
 
@@ -80,6 +92,6 @@ trait SourceBinderInstances extends GeneratedBindings with GeneratedJoinTypeInst
   ) = joinMulti[L, R, J, L, Option[R], P](leftSrc, rightSrc) // From GeneratedBindings
 }
 
-case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, From[S], P] {
+case class FromBinder[S, P[_]](src: DataSource[S, P]) extends SourceBinder[S, S, From[S], P] {
   def bind(from: From[S]): P[S] = src.load
 }

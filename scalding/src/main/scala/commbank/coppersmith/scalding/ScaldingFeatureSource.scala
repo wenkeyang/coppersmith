@@ -20,7 +20,7 @@ import commbank.coppersmith.{BoundFeatureSource, FeatureSource, SourceBinder}
 
 case class ScaldingBoundFeatureSource[S, U <: FeatureSource[S, U]](
   underlying: U,
-  binder: SourceBinder[S, U, TypedPipe],
+  binder: SourceBinder[_, S, U, TypedPipe],
   filter: Option[S => Boolean]
 ) extends BoundFeatureSource[S, TypedPipe] {
   def load: TypedPipe[S] = {

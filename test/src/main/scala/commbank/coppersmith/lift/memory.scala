@@ -29,7 +29,7 @@ trait MemoryLift extends Lift[List] with GeneratedMemoryLift {
     s.flatMap(s => fs.generate(s))
   }
 
-  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, List]](
+  def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[_, S, U, List]](
     underlying: U,
     binder:     B,
     filter:     Option[S => Boolean]
@@ -83,7 +83,7 @@ import memory.framework
 
 case class MemoryBoundFeatureSource[S, U <: FeatureSource[S, U]](
   underlying: U,
-  binder:     SourceBinder[S, U, List],
+  binder:     SourceBinder[_, S, U, List],
   filter:     Option[S => Boolean]
 ) extends BoundFeatureSource[S, List] {
   def load: List[S] = {
