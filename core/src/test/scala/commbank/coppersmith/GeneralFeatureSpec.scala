@@ -22,6 +22,8 @@ import org.scalacheck.Prop.forAll
 
 import org.specs2._
 
+import org.joda.time.Interval
+
 import Feature._, Value._, Type._
 
 import Arbitraries._
@@ -33,11 +35,12 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
   General Features - Test individual feature components
   ===========
   Creating general feature metadata
-    must pass namespace through     $metadataNamespace
-    must pass name through          $metadataName
-    must pass description through   $metadataDescription
-    must pass feature type through  $metadataFeatureType
-    must pass range through         $metadataRange
+    must pass namespace through        $metadataNamespace
+    must pass name through             $metadataName
+    must pass description through      $metadataDescription
+    must pass feature type through     $metadataFeatureType
+    must pass range through            $metadataRange
+    must pass validityInterval through $validityInterval
 
   Generating general feature values
     must use specified id as entity $valueEntity
@@ -52,9 +55,10 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     name:      Name                 = "",
     desc:      Description          = "",
     fType:     Type                 = Nominal,
-    entity:    Customer => EntityId = _.id
+    entity:    Customer => EntityId = _.id,
+    validity:  Option[Interval]     = None
   ) = {
-    val feature: (Namespace, Name, Description, Type, Customer => EntityId) => Feature[Customer, Value] =
+    val feature: (Namespace, Name, Description, Type, Customer => EntityId, Option[Interval]) => Feature[Customer, Value] =
       rfp match {
         case StrRangeFieldPair(r, _) => general[Str](
           fValue = c => filter.option(c.name),
@@ -69,7 +73,7 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
           range  = r
         )
       }
-    feature.apply(namespace, name, desc, fType, entity)
+    feature.apply(namespace, name, desc, fType, entity, validity)
   }
 
   def general[V <: Value : TypeTag](
@@ -80,8 +84,9 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     name:      Name,
     desc:      Description,
     fType:     Type,
-    entity:    Customer => EntityId
-  ) = Patterns.general[Customer, V](namespace, name, desc, fType, entity, fValue, range)
+    entity:    Customer => EntityId,
+    validity:  Option[Interval]
+  ) = Patterns.general[Customer, V](namespace, name, desc, fType, entity, fValue, range, validity)
 
   def metadataNamespace = forAll { (rfp: RangeFieldPair, filter: Boolean, namespace: Namespace) => {
     val feature = general(rfp, filter, namespace = namespace)
@@ -106,6 +111,11 @@ object GeneralFeatureSpec extends Specification with ScalaCheck { def is = s2"""
   def metadataRange = forAll { (rfp: RangeFieldPair, filter: Boolean) => {
     val feature = general(rfp, filter)
     feature.metadata.valueRange must_== rfp.range
+  }}
+
+  def validityInterval = forAll { (rfp: RangeFieldPair, filter: Boolean, validityInterval: Option[Interval]) => {
+    val feature = general(rfp, filter, validity = validityInterval)
+    feature.metadata.validityInterval must_== validityInterval
   }}
 
   def valueEntity = forAll { (rfp: RangeFieldPair, c: Customer) => {

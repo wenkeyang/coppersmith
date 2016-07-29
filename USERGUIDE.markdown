@@ -105,12 +105,17 @@ package commbank.coppersmith.examples.userguide
 import commbank.coppersmith.api._
 import commbank.coppersmith.examples.thrift.User
 
+import org.joda.time.Interval
+
+import System.{currentTimeMillis => now}
+
 object UserAge extends Feature[User, Integral](
-  Metadata[User, Integral](namespace   = "userguide.examples",
-                           name        = "USER_AGE",
-                           description = "Age of user in years",
-                           featureType = Continuous,
-                           valueRange  = Some(MinMaxRange[Integral](0, 130)))
+  Metadata[User, Integral](namespace        = "userguide.examples",
+                           name             = "USER_AGE",
+                           description      = "Age of user in years",
+                           featureType      = Continuous,
+                           valueRange       = Some(MinMaxRange[Integral](0, 130)),
+                           validityInterval = Some(new Interval(now, now + 365 * 24 * 3600 * 1000)))
 ) {
   def generate(user: User) =
     Some(FeatureValue(entity = user.id, name = "USER_AGE", value = user.age))
@@ -158,7 +163,7 @@ object UserFeatures extends BasicFeatureSet[User] {
   def entity(user: User) = user.id
 
   val userAge = basicFeature[Integral](
-    "USER_AGE", "Age of user in years", Continuous, Some(MinMaxRange[Integral](0, 130))
+    "USER_AGE", "Age of user in years", Continuous, Some(MinMaxRange[Integral](0, 130)), None
   )((user) => user.age)
 
   val features = List(userAge)
@@ -376,7 +381,7 @@ object FluentUserFeatures extends FeatureSetWithTime[User] {
   val select   = source.featureSetBuilder(namespace, entity)
 
   val userAge  = select(user => user.age)
-    .asFeature(Continuous, "USER_AGE", Some(MinMaxRange(0, 130)),
+    .asFeature(Continuous, "USER_AGE", Some(MinMaxRange(0, 130)), None,
       "Age of user in years")
     
   val userAgeGroup = select(user => user.age match {
@@ -513,7 +518,7 @@ object RatingFeatures extends AggregationFeatureSet[Rating] {
   val select = source.featureSetBuilder(namespace, entity)
 
   val avgRating = select(avg(_.rating))
-    .asFeature(Continuous, "MOVIE_AVG_RATING", Some(MinMaxRange(0.0, 5.0)),
+    .asFeature(Continuous, "MOVIE_AVG_RATING", Some(MinMaxRange(0.0, 5.0)), None,
                "Average movie rating")
 
   import com.twitter.algebird.{Aggregator, Moments}
@@ -760,8 +765,8 @@ object MovieGenreFlags extends QueryFeatureSet[Movie, Str] {
 
   val source = From[Movie]()
 
-  val comedyMovie = queryFeature("MOVIE_IS_COMEDY", "'Y' if movie is comedy", Some(SetRange("Y")))(_.isComedy)
-  val fantasyMovie = queryFeature("MOVIE_IS_ACTION", "'Y' if movie is action", Some(SetRange("Y")))(_.isAction)
+  val comedyMovie = queryFeature("MOVIE_IS_COMEDY", "'Y' if movie is comedy", Some(SetRange("Y")), None)(_.isComedy)
+  val fantasyMovie = queryFeature("MOVIE_IS_ACTION", "'Y' if movie is action", Some(SetRange("Y")), None)(_.isAction)
 
   val features = List(comedyMovie, fantasyMovie)
 }

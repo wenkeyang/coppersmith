@@ -22,6 +22,8 @@ import org.scalacheck.Prop.forAll
 
 import org.specs2._
 
+import org.joda.time.Interval
+
 import Feature._, Value._
 
 import Arbitraries._
@@ -51,14 +53,15 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     def feature(name: String,
                 humanDescription: String,
                 condition: Customer => Boolean,
-                range: Option[Range[FloatingPoint]]) = {
-      queryFeature(name, humanDescription, range)(condition)
+                range: Option[Range[FloatingPoint]],
+                validityInterval: Option[Interval]) = {
+      queryFeature(name, humanDescription, range, validityInterval)(condition)
     }
 
     type CustFeat = Feature[Customer, FloatingPoint]
-    val youngHeight: CustFeat = feature("youngHeight", "Young Height",  _.age < 18, Some(MinMaxRange(0.0, 17.0)))
-    val midHeight:   CustFeat = feature("midHeight",   "Middle Height", c => Range(18 , 65).contains(c.age), Some(MinMaxRange(18.0, 64.0)))
-    val oldHeight:   CustFeat = feature("oldHeight",   "Old Height",    _.age >= 65, Some(MinMaxRange(65.0, 130.0)))
+    val youngHeight: CustFeat = feature("youngHeight", "Young Height",  _.age < 18, Some(MinMaxRange(0.0, 17.0)), Some(new Interval(100, 1000)))
+    val midHeight:   CustFeat = feature("midHeight",   "Middle Height", c => Range(18 , 65).contains(c.age), Some(MinMaxRange(18.0, 64.0)), None)
+    val oldHeight:   CustFeat = feature("oldHeight",   "Old Height",    _.age >= 65, Some(MinMaxRange(65.0, 130.0)), None)
 
     def features = List(youngHeight, midHeight, oldHeight)
   }
@@ -68,7 +71,7 @@ object QueryFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     import CustomerFeatureSet.namespace
 
     metadata must_== List(
-      Metadata[Customer, FloatingPoint](namespace, "youngHeight", "Young Height",  Continuous, Some(MinMaxRange[FloatingPoint](0.0, 17.0))),
+      Metadata[Customer, FloatingPoint](namespace, "youngHeight", "Young Height",  Continuous, Some(MinMaxRange[FloatingPoint](0.0, 17.0)), Some(new Interval(100, 1000))),
       Metadata[Customer, FloatingPoint](namespace, "midHeight",   "Middle Height", Continuous, Some(MinMaxRange[FloatingPoint](18.0, 64.0))),
       Metadata[Customer, FloatingPoint](namespace, "oldHeight",   "Old Height",    Continuous, Some(MinMaxRange[FloatingPoint](65.0, 130.0)))
     )

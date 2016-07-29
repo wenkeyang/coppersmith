@@ -18,6 +18,8 @@ import scala.annotation.implicitNotFound
 import scala.collection.immutable.ListSet
 import scala.reflect.runtime.universe.{TypeTag, Type => ScalaType, typeOf}
 
+import org.joda.time.Interval
+
 import scalaz.{Name => _, Value => _, _}, Scalaz._, Order.orderBy
 
 import shapeless.=:!=
@@ -183,13 +185,14 @@ object Feature {
     }
 
     def apply[S : TypeTag, V <: Value : TypeTag](
-      namespace:   Namespace,
-      name:        Name,
-      description: Description,
-      featureType: Type,
-      valueRange:  Option[Value.Range[V]] = None
+      namespace:        Namespace,
+      name:             Name,
+      description:      Description,
+      featureType:      Type,
+      valueRange:       Option[Value.Range[V]] = None,
+      validityInterval: Option[Interval] = None
     )(implicit neq: V =:!= Nothing): Metadata[S, V] = {
-      Metadata[S, V](namespace, name, description, featureType, valueType[V], valueRange, TypeInfo.apply[S])
+      Metadata[S, V](namespace, name, description, featureType, valueType[V], valueRange, validityInterval, TypeInfo.apply[S])
     }
   }
 
@@ -199,13 +202,14 @@ object Feature {
   // TagType instances, as the latter can cause serialisation regressions in some
   // cases where the metadata is closed over.
   case class Metadata[S, +V <: Value] private(
-    namespace:   Namespace,
-    name:        Name,
-    description: Description,
-    featureType: Feature.Type,
-    valueType:   ValueType,
-    valueRange:  Option[Value.Range[V]],
-    sourceType:  TypeInfo
+    namespace:        Namespace,
+    name:             Name,
+    description:      Description,
+    featureType:      Feature.Type,
+    valueType:        ValueType,
+    valueRange:       Option[Value.Range[V]],
+    validityInterval: Option[Interval],
+    sourceType:       TypeInfo
   )
 }
 

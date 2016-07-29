@@ -35,6 +35,7 @@ object Example2 {
     Continuous,
     {case (c, a) => c._1},
     {case (c,a)  => Some(a.balance)},
+    None,
     None
   )
 

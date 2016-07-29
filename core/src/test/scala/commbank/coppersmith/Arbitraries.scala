@@ -23,7 +23,7 @@ import scalaz.scalacheck.ScalaCheckBinding._
 
 import org.scalacheck.{Arbitrary, Gen}, Arbitrary._, Gen._
 
-import org.joda.time.{DateTimeZone, LocalDate, DateTime}
+import org.joda.time.{DateTimeZone, LocalDate, DateTime, Interval}
 
 import au.com.cba.omnia.maestro.api.{Field, Maestro}, Maestro.Fields
 
@@ -52,6 +52,14 @@ object Arbitraries {
     zh  <- chooseNum(-23, 23)
     zm  <- chooseNum(0, 59)
   } yield new DateTime(y, m, d, h, min, s, ms, DateTimeZone.forOffsetHoursMinutes(zh, zm)))
+
+  implicit val arbInterval: Arbitrary[Interval] = for {
+    a <- arbDateTime
+    b <- arbDateTime
+  } yield {
+    val (earlier, later) = if(a isBefore b) (a, b) else (b, a)
+    new Interval(earlier, later)
+  }
 
   implicit val arbTimestamp: Arbitrary[Timestamp] = {
     import java.util.concurrent.TimeUnit.MILLISECONDS

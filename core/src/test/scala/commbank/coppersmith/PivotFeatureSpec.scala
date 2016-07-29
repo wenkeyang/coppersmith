@@ -18,6 +18,8 @@ import org.scalacheck.Prop.forAll
 
 import org.specs2._
 
+import org.joda.time.Interval
+
 import au.com.cba.omnia.maestro.api.Maestro.Fields
 
 import Feature._, Value._
@@ -46,7 +48,7 @@ object PivotFeatureSetSpec extends Specification with ScalaCheck { def is = s2""
     def entity(c: Customer) = c.id
     override def time(c: Customer, ctx: FeatureContext)   = c.time
 
-    val nameF:   Feature[Customer, Str]           = pivot(Fields[Customer].Name,   "Customer name",   Nominal)
+    val nameF:   Feature[Customer, Str]          = pivot(Fields[Customer].Name,   "Customer name",   Nominal)
     val age:    Feature[Customer, Integral]      = pivot(Fields[Customer].Age,    "Customer age",    Nominal,
       Some(MinMaxRange(0, 130)))
     val height: Feature[Customer, FloatingPoint] = pivot(Fields[Customer].Height, "Customer height", Continuous,
@@ -104,51 +106,52 @@ object PivotFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     desc: Description,
     ft:   Type,
     e:    Customer => EntityId,
-    rfp:  RangeFieldPair
+    rfp:  RangeFieldPair,
+    vi:   Option[Interval]
   ) = {
     // Work around fact that Patterns.pivot requires field's value type,
     // which we don't get from fields arbitrary
     rfp match {
       case StrRangeFieldPair(r, f) =>
-        Patterns.pivot[Customer, Str, String](ns, ft, e, f, desc, r)
+        Patterns.pivot[Customer, Str, String](ns, ft, e, f, desc, r, vi)
       case IntegralRangeFieldPair(r, f) =>
-        Patterns.pivot[Customer, Integral, Int](ns, ft, e, f, desc, r)
+        Patterns.pivot[Customer, Integral, Int](ns, ft, e, f, desc, r, vi)
       case FloatingPointRangeFieldPair(r, f) =>
-        Patterns.pivot[Customer, FloatingPoint, Double](ns, ft, e, f, desc, r)
+        Patterns.pivot[Customer, FloatingPoint, Double](ns, ft, e, f, desc, r, vi)
     }
   }
 
   def metadataNamespace = forAll {
-    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair) => {
-      val feature = pivot(namespace, desc, fType, _.id, rfp)
+    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair, vi: Option[Interval]) => {
+      val feature = pivot(namespace, desc, fType, _.id, rfp, vi)
       feature.metadata.namespace must_== namespace
     }
   }
 
   def metadataName = forAll {
-    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair) => {
-      val feature = pivot(namespace, desc, fType, _.id, rfp)
+    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair, vi: Option[Interval]) => {
+      val feature = pivot(namespace, desc, fType, _.id, rfp, vi)
       feature.metadata.name must_== rfp.field.name
     }
   }
 
   def metadataDescription = forAll {
-    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair) => {
-      val feature = pivot(namespace, desc, fType, _.id, rfp)
+    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair, vi: Option[Interval]) => {
+      val feature = pivot(namespace, desc, fType, _.id, rfp, vi)
       feature.metadata.description must_== desc
     }
   }
 
   def metadataFeatureType = forAll {
-    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair) => {
-      val feature = pivot(namespace, desc, fType, _.id, rfp)
+    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair, vi: Option[Interval]) => {
+      val feature = pivot(namespace, desc, fType, _.id, rfp, vi)
       feature.metadata.featureType must_== fType
     }
   }
 
   def metadataValueType = forAll {
-    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair) => {
-      val feature = pivot(namespace, desc, fType, _.id, rfp)
+    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair, vi: Option[Interval]) => {
+      val feature = pivot(namespace, desc, fType, _.id, rfp, vi)
 
       val expectedValueType = rfp match {
         case _: StrRangeFieldPair           => StringType
@@ -159,23 +162,30 @@ object PivotFeatureSpec extends Specification with ScalaCheck { def is = s2"""
     }
   }
 
+  def metadataValidityInterval = forAll {
+    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair, vi: Option[Interval]) => {
+      val feature = pivot(namespace, desc, fType, _.id, rfp, vi)
+      feature.metadata.validityInterval must_== vi
+    }
+  }
+
   def valueEntity = forAll {
-    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair, c: Customer) => {
-      val feature = pivot(namespace, desc, fType, _.id, rfp)
+    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair, c: Customer, vi: Option[Interval]) => {
+      val feature = pivot(namespace, desc, fType, _.id, rfp, vi)
       feature.generate(c) must beSome.like { case v => v.entity must_== c.id }
     }
   }
 
   def valueName = forAll {
-    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair, c: Customer) => {
-      val feature = pivot(namespace, desc, fType, _.id, rfp)
+    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair, c: Customer, vi: Option[Interval]) => {
+      val feature = pivot(namespace, desc, fType, _.id, rfp, vi)
       feature.generate(c) must beSome.like { case v => v.name must_== rfp.field.name }
     }
   }
 
   def valueValue = forAll {
-    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair, c: Customer) => {
-      val feature = pivot(namespace, desc, fType, _.id, rfp)
+    (namespace: Namespace, desc: Description, fType: Type, rfp: RangeFieldPair, c: Customer, vi: Option[Interval]) => {
+      val feature = pivot(namespace, desc, fType, _.id, rfp, vi)
 
       val expectedValue = rfp match {
         case _: StrRangeFieldPair           => Str(Option(c.name))

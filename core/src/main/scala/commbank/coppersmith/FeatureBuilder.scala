@@ -16,6 +16,8 @@ package commbank.coppersmith
 
 import scala.reflect.runtime.universe.TypeTag
 
+import org.joda.time.Interval
+
 import scalaz.syntax.std.boolean.ToBooleanOpsFromBoolean
 import scalaz.syntax.std.option.ToOptionIdOps
 
@@ -80,19 +82,20 @@ case class FeatureSetBuilder[S, SV](
   // Allows feature to be built directly from map or collect without having to specify
   // select(identity(_))
   def asFeature[FT <: Type, V <: Value](
-    featureType: FT,
-    name:        Name,
-    range:       Option[Value.Range[V]],
-    desc:        Description
+    featureType:      FT,
+    name:             Name,
+    range:            Option[Value.Range[V]],
+    validityInterval: Option[Interval],
+    desc:             Description
   )(implicit svv: SV => V, ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
-    apply[SV, V](identity(_)).asFeature(featureType, name, range, desc)
+    apply[SV, V](identity(_)).asFeature(featureType, name, range, validityInterval, desc)
 
   def asFeature[FT <: Type, V <: Value](
    featureType: FT,
    name:        Name,
    desc:        Description
   )(implicit svv: SV => V, ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
-    asFeature(featureType, name, range = None, desc)
+    asFeature(featureType, name, range = None, validityInterval = None, desc)
 }
 
 /**
@@ -113,6 +116,7 @@ case class FeatureBuilder[S, SV, FV <% V, V <: Value](
     featureType: T,
     name: Name,
     range: Option[Value.Range[V]],
+    validityInterval: Option[Interval],
     desc: Description
   )(implicit ev: Conforms[T, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
     Patterns.general[S, V](fsBuilder.namespace,
@@ -121,14 +125,16 @@ case class FeatureBuilder[S, SV, FV <% V, V <: Value](
                            featureType,
                            fsBuilder.entity,
                            (s: S) => view.lift(s).map(value(_): V),
-                           range)
+                           range,
+                           validityInterval
+    )
 
   def asFeature[T <: Type](
     featureType: T,
     name: Name,
     desc: Description
   )(implicit ev: Conforms[T, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
-    asFeature(featureType, name, range = None, desc)
+    asFeature(featureType, name, range = None, validityInterval = None, desc)
 }
 
 /**
@@ -158,14 +164,15 @@ case class AggregationFeatureBuilder[S, SV, T, FV <% V, V <: Value](
     featureType: FT,
     name: Name,
     range: Option[Value.Range[V]],
+    validityInterval: Option[Interval],
     desc: Description
   )(implicit ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]): AggregationFeature[S, SV, T, V] =
-    AggregationFeature(name, desc, aggregator.andThenPresent(fvOpt => fvOpt.map(fv => fv: V)), view, featureType, range)
+    AggregationFeature(name, desc, aggregator.andThenPresent(fvOpt => fvOpt.map(fv => fv: V)), view, featureType, range, validityInterval)
 
   def asFeature[FT <: Type](
     featureType: FT,
     name: Name,
     desc: Description
   )(implicit ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]): AggregationFeature[S, SV, T, V] =
-    asFeature(featureType, name, range = None, desc)
+    asFeature(featureType, name, range = None, validityInterval = None, desc)
 }

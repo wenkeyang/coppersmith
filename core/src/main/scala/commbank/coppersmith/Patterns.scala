@@ -18,6 +18,8 @@ import scala.reflect.runtime.universe.TypeTag
 
 import au.com.cba.omnia.maestro.api.Field
 
+import org.joda.time.Interval
+
 import Feature._
 
 object Patterns {
@@ -30,9 +32,10 @@ object Patterns {
     fType:     Type,
     entity:    S => EntityId,
     value:     S => Option[V],
-    range:     Option[Value.Range[V]]
+    range:     Option[Value.Range[V]],
+    validity:  Option[Interval]
   ) =
-    new Feature[S, V](Metadata[S, V](namespace, name, desc, fType, range)) {
+    new Feature[S, V](Metadata[S, V](namespace, name, desc, fType, range, validity)) {
       def generate(source: S) = value(source).map(
         FeatureValue(entity(source), name, _)
       )
@@ -44,6 +47,7 @@ object Patterns {
     entity:    S => EntityId,
     field:     Field[S, FV],
     desc:      Description,
-    range:     Option[Value.Range[V]]
-  ) = general[S, V](namespace, field.name, desc, fType, entity, (s: S) => Option(field.get(s): V), range)
+    range:     Option[Value.Range[V]],
+    validity:  Option[Interval]
+  ) = general[S, V](namespace, field.name, desc, fType, entity, (s: S) => Option(field.get(s): V), range, validity)
 }

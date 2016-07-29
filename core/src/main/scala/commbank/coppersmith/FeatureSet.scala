@@ -16,6 +16,8 @@ package commbank.coppersmith
 
 import scala.reflect.runtime.universe.TypeTag
 
+import org.joda.time.Interval
+
 import scalaz.syntax.std.boolean.ToBooleanOpsFromBoolean
 
 import au.com.cba.omnia.maestro.api.Field
@@ -57,8 +59,9 @@ abstract class PivotFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
   def pivot[V <: Value : TypeTag, FV <% V](field: Field[S, FV],
                                            humanDescription: String,
                                            featureType: Type,
-                                           range: Option[Value.Range[V]] = None) =
-    Patterns.pivot(namespace, featureType, entity, field, humanDescription, range)
+                                           range: Option[Value.Range[V]] = None,
+                                           validityInterval: Option[Interval] = None) =
+    Patterns.pivot(namespace, featureType, entity, field, humanDescription, range, validityInterval)
 }
 
 abstract class BasicFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
@@ -67,16 +70,17 @@ abstract class BasicFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
   def basicFeature[V <: Value : TypeTag](featureName: Name,
                                          humanDescription: String,
                                          featureType: Type,
-                                         range: Option[Value.Range[V]])(
+                                         range: Option[Value.Range[V]],
+                                         validityInterval: Option[Interval])(
                                          value: S => V) =
     Patterns.general(namespace, featureName, humanDescription, featureType, entity,
-      (s: S) => Some(value(s)), range)
+      (s: S) => Some(value(s)), range, validityInterval)
 
   def basicFeature[V <: Value : TypeTag](featureName: Name,
                                          humanDescription: String,
                                          featureType: Type)(
                                          value: S => V): Feature[S, V] =
-    basicFeature(featureName, humanDescription, featureType, None)(value)
+    basicFeature(featureName, humanDescription, featureType, None, None)(value)
 }
 
 abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends FeatureSetWithTime[S] {
@@ -89,15 +93,16 @@ abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends Featur
 
   def queryFeature(featureName: Name,
                    humanDescription: String,
-                   range: Option[Value.Range[V]])(
+                   range: Option[Value.Range[V]],
+                   validityInterval: Option[Interval])(
                    filter: Filter) =
     Patterns.general(namespace, featureName, humanDescription, featureType, entity,
-      (s: S) => filter(s).option(value(s)), range)
+      (s: S) => filter(s).option(value(s)), range, validityInterval)
 
   def queryFeature(featureName: Name,
                    humanDescription: String)(
                    filter: Filter): Feature[S, V] =
-    queryFeature(featureName, humanDescription, None)(filter)
+    queryFeature(featureName, humanDescription, None, None)(filter)
 }
 
 import scalaz.syntax.foldable1.ToFoldable1Ops
@@ -107,18 +112,19 @@ import scalaz.syntax.std.option.ToOptionIdOps
 import com.twitter.algebird.{Aggregator, AveragedValue, Monoid, Semigroup}
 
 case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
-  name:        Name,
-  description: Description,
-  aggregator:  Aggregator[SV, U, Option[V]],
-  view:        PartialFunction[S, SV],
-  featureType: Type,
-  range:       Option[Value.Range[V]] = None
+  name:             Name,
+  description:      Description,
+  aggregator:       Aggregator[SV, U, Option[V]],
+  view:             PartialFunction[S, SV],
+  featureType:      Type,
+  range:            Option[Value.Range[V]] = None,
+  validityInterval: Option[Interval] = None
 ) {
   import AggregationFeature.AlgebirdSemigroup
   // Note: Implementation exists here to satisfty feature signature and enable unit testing.
   // Framework should take advantage of aggregators that can run natively on the underlying plumbing.
   def toFeature(namespace: Namespace) = new Feature[(EntityId, Iterable[S]), Value](
-    Metadata(namespace, name, description, featureType, range)
+    Metadata(namespace, name, description, featureType, range, validityInterval)
   ) {
     def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
       val (entity, source) = s
