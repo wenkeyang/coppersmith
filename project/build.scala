@@ -95,7 +95,11 @@ object build extends Build {
         ++ Seq(
           libraryDependencies ++= depend.hadoopClasspath,
           libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
-          libraryDependencies ++= depend.parquet()
+          libraryDependencies ++= depend.parquet(),
+          libraryDependencies += "uk.org.lidalia" % "slf4j-test" % "1.1.0" % "test" exclude("joda-time", "joda-time"),
+          dependencyOverrides += "com.google.guava" % "guava" % "14.0.1",  // required by slf4j-test,
+          (managedClasspath in Test) := (managedClasspath in Test).value
+            .sortBy(_.get(moduleID.key).map(_.name) == Some("hive-exec"))
         )
         ++ Seq(
           sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
