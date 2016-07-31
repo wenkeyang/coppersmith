@@ -37,7 +37,7 @@ object CoppersmithStats {
   implicit def fromTypedPipe[T](typedPipe: TypedPipe[T]) = new CoppersmithStats(typedPipe)
 
   /** Run the [[com.twitter.scalding.Execution]], logging coppersmith counters after completion. */
-  def executeAndLogCounters[T](exec: Execution[T]): Execution[T] = {
+  def logCountersAfter[T](exec: Execution[T]): Execution[T] = {
     val tryExecution: Execution[Try[T]] =
       exec.map{ Success(_) }.recoverWith{ case throwable: Throwable => Execution.from[Try[T]](Failure(throwable)) }
 
@@ -56,8 +56,8 @@ object CoppersmithStats {
     else {
       log.info("Coppersmith counters:")
       coppersmithKeys.map { key =>
-        val parts = key.counter.split(raw"\.", 2)
-        (parts(0).toLong, parts(1), key)
+        val Array(id, name) = key.counter.split(raw"\.", 2)
+        (id.toLong, name, key)
       }.toList.sortBy(_._1).foreach { case (id, name, key) =>
 	log.info(f"    ${name}%-30s ${counters(key)}%10d")
       }
