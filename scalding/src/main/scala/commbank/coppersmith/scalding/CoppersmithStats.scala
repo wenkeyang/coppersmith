@@ -51,7 +51,7 @@ object CoppersmithStats {
   def logCounters(counters: ExecutionCounters): Unit = {
     val coppersmithKeys = counters.keys.filter(_.group == group)
     if (coppersmithKeys.isEmpty) {
-      log.info("Coppersmith counters: NONE (this may be due to a failed execution)")
+      log.info("Coppersmith counters: NONE (either no records to process, or job failed)")
     }
     else {
       log.info("Coppersmith counters:")

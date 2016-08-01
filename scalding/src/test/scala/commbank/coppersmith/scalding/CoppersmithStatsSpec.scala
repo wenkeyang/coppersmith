@@ -27,8 +27,9 @@ import au.com.cba.omnia.thermometer.core._
 import CoppersmithStats.fromTypedPipe
 
 object CoppersmithStatsSpec extends ThermometerSpec { def is = s2"""
-    Stats are logged in a sensible order  $orderedLogs
-    Behaviour when execution fails        $failedExecution
+  CoppersmithStats
+    should log stats in a sensible order    $orderedLogs
+    behaves like this when execution fails  $failedExecution
   """
 
   override def after = {
@@ -66,8 +67,8 @@ object CoppersmithStatsSpec extends ThermometerSpec { def is = s2"""
     val logger = TestLoggerFactory.getTestLogger("commbank.coppersmith.scalding.CoppersmithStats")
     logger.getAllLoggingEvents().toList must_== List(
       // This shows the current behaviour, but is not what we *actually* want.
-      // Seeing the partial counts could be very useful for debugging.
-      info("Coppersmith counters: NONE (this may be due to a failed execution)")
+      // After all, seeing the partial counts could be very useful for debugging.
+      info("Coppersmith counters: NONE (either no records to process, or job failed)")
     )
   }
 }
