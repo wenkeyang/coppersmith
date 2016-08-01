@@ -62,7 +62,8 @@ case class HiveTextSource[S <: ThriftStruct : Decode](
   paths:     List[Path],
   delimiter: String
 ) extends ScaldingDataSource[S] {
-  val log = LoggerFactory.getLogger(getClass())
+  // Avoid serializing this, as a workaround when using slf4j-test (only a concern in tests)
+  @transient lazy val log = LoggerFactory.getLogger(getClass())
 
   def load = {
     log.info(s"Loading '${StringEscapeUtils.escapeJava(delimiter)}' delimited text from " + paths.mkString(","))
