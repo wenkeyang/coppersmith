@@ -28,10 +28,15 @@ import CoppersmithStats.fromTypedPipe
 
 object CoppersmithStatsSpec extends ThermometerSpec { def is = s2"""
     Stats are logged in a sensible order  $orderedLogs
+    Behaviour when execution fails        $failedExecution
   """
 
+  override def after = {
+    TestLoggerFactory.clearAll()
+    super.after
+  }
+
   def orderedLogs = {
-    // Logically, a.2 follows directly after a.1, even though the call to withCounter happens after b.1
     val a1 = TypedPipe.from(List(1, 2, 3, 4, 2, 1)).withCounter("a.1")
     val b1 = TypedPipe.from(List(2, 2, 4, 4, 5)).withCounter("b.1").groupBy((x: Int) => x)
     val a2 = a1.filter(_ > 1).withCounter("a.2")  // result is List(2, 3, 4, 2)
@@ -42,11 +47,27 @@ object CoppersmithStatsSpec extends ThermometerSpec { def is = s2"""
 
     val logger = TestLoggerFactory.getTestLogger("commbank.coppersmith.scalding.CoppersmithStats")
     logger.getAllLoggingEvents().toList must_== List(
+      // Logically, a.2 follows directly after a.1, even though the call to withCounter happened after b.1
       info("Coppersmith counters:"                        ),
       info("    a.1                                     6"),
       info("    a.2                                     4"),
       info("    b.1                                     5"),
       info("    c                                       2")
+    )
+  }
+
+  def failedExecution = {
+    val a = TypedPipe.from(List(1, 2, 3, 4, 5)).withCounter("a")
+    val b = a.map{ (x: Int) => if (x > 3) throw new Exception else x }.withCounter("b")
+
+    val exec = CoppersmithStats.logCountersAfter(b.toIterableExecution)
+    execute(exec) must beFailedTry
+
+    val logger = TestLoggerFactory.getTestLogger("commbank.coppersmith.scalding.CoppersmithStats")
+    logger.getAllLoggingEvents().toList must_== List(
+      // This shows the current behaviour, but is not what we *actually* want.
+      // Seeing the partial counts could be very useful for debugging.
+      info("Coppersmith counters: NONE (this may be due to a failed execution)")
     )
   }
 }
