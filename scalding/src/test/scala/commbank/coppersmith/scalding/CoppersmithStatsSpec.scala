@@ -17,6 +17,7 @@ package commbank.coppersmith.scalding
 import scala.collection.JavaConversions._
 
 import com.twitter.scalding.TypedPipe
+import com.twitter.algebird.Aggregator
 
 import uk.org.lidalia.slf4jtest.TestLoggerFactory
 import uk.org.lidalia.slf4jtest.LoggingEvent.info
@@ -26,18 +27,26 @@ import au.com.cba.omnia.thermometer.core._
 import CoppersmithStats.fromTypedPipe
 
 object CoppersmithStatsSpec extends ThermometerSpec { def is = s2"""
-    Stats are logged in a sensible order  $stats
+    Stats are logged in a sensible order  $orderedLogs
   """
 
-  def stats = {
-    val tp = TypedPipe.from(List(1,2,3)).withCounter("tp")
-    val exec = CoppersmithStats.logCountersAfter(tp.toIterableExecution)
-    executesSuccessfully(exec) must_== List(1,2,3)
+  def orderedLogs = {
+    // Logically, a.2 follows directly after a.1, even though the call to withCounter happens after b.1
+    val a1 = TypedPipe.from(List(1, 2, 3, 4, 2, 1)).withCounter("a.1")
+    val b1 = TypedPipe.from(List(2, 2, 4, 4, 5)).withCounter("b.1").groupBy((x: Int) => x)
+    val a2 = a1.filter(_ > 1).withCounter("a.2")  // result is List(2, 3, 4, 2)
+    val c  = a2.groupBy((x: Int) => x).join(b1).aggregate(Aggregator.size).toTypedPipe.withCounter("c")
+
+    val exec = CoppersmithStats.logCountersAfter(c.toIterableExecution)
+    executesSuccessfully(exec) must containTheSameElementsAs(List((2, 4), (4, 2)))
 
     val logger = TestLoggerFactory.getTestLogger("commbank.coppersmith.scalding.CoppersmithStats")
     logger.getAllLoggingEvents().toList must_== List(
       info("Coppersmith counters:"                        ),
-      info("    tp                                      3")
+      info("    a.1                                     6"),
+      info("    a.2                                     4"),
+      info("    b.1                                     5"),
+      info("    c                                       2")
     )
   }
 }
