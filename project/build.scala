@@ -94,12 +94,7 @@ object build extends Build {
         ++ uniformThriftSettings
         ++ Seq(
           libraryDependencies ++= depend.hadoopClasspath,
-          libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
-          libraryDependencies ++= depend.parquet(),
-          libraryDependencies += "uk.org.lidalia" % "slf4j-test" % "1.1.0" % "test" exclude("joda-time", "joda-time"),
-          dependencyOverrides += "com.google.guava" % "guava" % "14.0.1",  // required by slf4j-test,
-          (managedClasspath in Test) := (managedClasspath in Test).value
-            .sortBy(_.get(moduleID.key).map(_.name) == Some("hive-exec"))
+          libraryDependencies ++= depend.parquet()
         )
         ++ Seq(
           sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
@@ -107,6 +102,15 @@ object build extends Build {
             IO.write(genFile, MultiwayJoinGenerator.generateLiftScalding(joins))
             Seq(genFile)
           }
+        )
+        ++ Seq(
+          // test settings
+          libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
+          libraryDependencies += "uk.org.lidalia" % "slf4j-test" % "1.1.0" % "test" exclude("joda-time", "joda-time"),
+          dependencyOverrides += "com.google.guava" % "guava" % "14.0.1",  // required by slf4j-test,
+          // move hive-exec to the end of the classpath, so its guava classes don't shadow the above ones
+          (managedClasspath in Test) := (managedClasspath in Test).value
+            .sortBy(_.get(moduleID.key).map(_.name) == Some("hive-exec"))
         )
   ).dependsOn(core % "compile->compile;test->test", tools)
 
