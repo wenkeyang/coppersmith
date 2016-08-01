@@ -101,8 +101,7 @@ case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : Tup
 
   def load = {
     log.info("Loading parquet from " + paths.mkString(","))
-    TypedPipe.from(ParquetScroogeSource[S](paths.map(_.toString): _*))
-      .withCounter("load.parquet")
+    TypedPipe.from(ParquetScroogeSource[S](paths.map(_.toString): _*)).withCounter("load.parquet")
   }
 }
 
@@ -120,7 +119,6 @@ case class TypedPipeSource[S](pipe: TypedPipe[S]) extends ScaldingDataSource[S] 
 
   def load = {
     log.info(s"Loading from a TypedPipeSource")
-    pipe
-      .withCounter("load.typedpipe")
+    pipe.withCounter("load.typedpipe")
   }
 }
