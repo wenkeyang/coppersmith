@@ -1453,38 +1453,37 @@ E.g. `HollywoodGoldenEraMovieFeatures` has an accompanying
 ### Setup
 
 In order to run the example you first need to obtain the famous Movie Lens data set that was used
-in the Netflix challenge, and the list of directors from IMDb.
+in the Netflix challenge
+([usage license](http://files.grouplens.org/datasets/movielens/ml-100k-README.txt)),
+and the list of directors from IMDb
+([copyright/license](http://www.imdb.com/Copyright)).
 
-http://grouplens.org/datasets/movielens/
+The following commands will download the necessary files to a directory called `data`:
 
-http://www.imdb.com/interfaces
+```
+mkdir -p data/ratings data/movies data/users data/directors
+curl -O http://files.grouplens.org/datasets/movielens/ml-100k.zip
+unzip -j -d data/movies ml-100k.zip ml-100k/u.item
+unzip -j -d data/ratings ml-100k.zip ml-100k/u.data
+unzip -j -d data/user ml-100k.zip ml-100k/u.user
+rm ml-100k.zip
+curl ftp://ftp.fu-berlin.de/pub/misc/movies/database/directors.list.gz | gzcat > data/directors/directors.list
+```
 
-unzip the ml-100k.zip in your project directory under data/ml-100k/
+If the last command above gives an error such as "curl: (6) Could not resolve host: ftp.fu-berlin.de", then instead try:
 
-unzip directors.list.gz in your project directory under data/
+```
+ftp_proxy=$http_proxy curl ftp://ftp.fu-berlin.de/pub/misc/movies/database/directors.list.gz | gzcat > data/directors/directors.list
+```
 
 Then if you, like me, are running Hadoop on Vagrant (there are easy instructions on how to do that
 here
 https://blog.cloudera.com/blog/2014/06/how-to-install-a-virtual-apache-hadoop-cluster-with-vagrant-and-cloudera-manager/)
-you would do something similar to:
+you would do the following (as the `vagrant` user):
 
-As user hdfs in my case:
 ```
-hdfs dfs -mkdir -p data/ratings
-hdfs dfs -mkdir data/movies
-hdfs dfs -mkdir data/users
-hdfs dfs -mkdir data/directors
-hdfs dfs -chmod -R a+rwx data
+hdfs dfs -put data
 ```
-
-As user vagrant:
-```
-hdfs dfs -copyFromLocal /vagrant/data/ml-100k/u.item data/movies/
-hdfs dfs -copyFromLocal /vagrant/data/ml-100k/u.data data/ratings/
-hdfs dfs -copyFromLocal /vagrant/data/ml-100k/u.user data/users/
-hdfs dfs -copyFromLocal /vagrant/data/directors.list data/directors/
-```
-
 
 In my case as this is a fresh cluster I had to create the home directory for the vagrant user
 (as user hdfs):
