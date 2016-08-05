@@ -70,7 +70,7 @@ object MetadataOutput {
       val metadataWithConforms: List[(Metadata[Any, Value], Option[Conforms[Type, Value]])] =
         metadataSets.flatMap(_.metadata).map { m =>
           (m, allConforms.find(c => conforms_?(c, m)))
-        }.toList
+        }
       val features = metadataWithConforms.map (singleItem.tupled)
       MetadataJsonV0.write(MetadataJsonV0(features))
     }
@@ -127,18 +127,19 @@ object MetadataOutput {
 
   private def genericValueTypeToString(v: ValueType) = v.toString.replace("Type", "").toLowerCase
 
-  def genericValueToString(v: Value): Option[String] = (v match {
+  def genericValueToString(v: Value): Option[String] = v match {
     case Integral(v)      => v.map(_.toString)
     case Decimal(v)       => v.map(_.toString)
     case FloatingPoint(v) => v.map(_.toString)
     case Str(v)           => v
-    case Date(v)          => v.map(_.toString)
-    case Time(v)          => v.map(_.toString)
-    case Bool(v)          => v.map(_.toString)	
-  })
+    case Date(v)          => v.map(_.toIso8601ExtendedFormatString)
+    case Time(v)          => v.map(_.toRfc3339String)
+    case Bool(v)          => v.map(_.toString)
+  }
 
   private def genericRangeToJson(r: Option[Value.Range[Value]]): Option[RangeV0] = r map {
     case Value.MinMaxRange(min, max) => NumericRangeV0(genericValueToString(min), genericValueToString(max))
     case Value.SetRange(set)         => SetRangeV0(set.map(genericValueToString).toList)
+    case Value.MapRange(map)  => ???
   }
 }

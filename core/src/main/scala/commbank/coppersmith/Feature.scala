@@ -15,7 +15,7 @@
 package commbank.coppersmith
 
 import scala.annotation.implicitNotFound
-import scala.collection.immutable.ListSet
+import scala.collection.immutable.ListMap
 import scala.reflect.runtime.universe.{TypeTag, Type => ScalaType, typeOf}
 
 import scalaz.{Name => _, Value => _, _}, Scalaz._, Order.orderBy
@@ -73,6 +73,36 @@ object Feature {
     implicit def fromOTime(t: Option[Timestamp]):         Time          = Time(t)
     implicit def fromOBoolean(b: Option[Boolean]):        Bool          = Bool(b)
 
+    // When using MapRange to specify mappings between values and descriptions, implicit conversion
+    // did not work for values within pairs.
+    implicit def intPairToIntegralPair[S](in: (Int, S)): (Integral, S) = {
+      in match {case (a, b) => (a, b)}
+    }
+
+    implicit def longPairToIntegralPair[S](in: (Long, S)): (Integral, S) = {
+      in match {case (a, b) => (a, b)}
+    }
+
+    implicit def doublePairToFloatingPointPair[S](in: (Double, S)): (FloatingPoint, S) = {
+      in match {case (a, b) => (a, b)}
+    }
+
+    implicit def bigDecimalPairToDecimalPair[S](in: (BigDecimal, S)): (Decimal, S) = {
+      in match {case (a, b) => (a, b)}
+    }
+
+    implicit def stringPairToStrPair[S](in: (String, S)): (Str, S) = {
+      in match {case (a, b) => (a, b)}
+    }
+
+    implicit def datestampPairToDatePair[S](in: (Datestamp, S)): (Date, S) = {
+      in match {case (a, b) => (a, b)}
+    }
+
+    implicit def timestampPairTimeToPair[S](in: (Timestamp, S)): (Time, S) = {
+      in match {case (a, b) => (a, b)}
+    }
+
     implicit val intOrder: Order[Integral]      = orderBy(_.value)
     implicit val decOrder: Order[Decimal]       = orderBy(_.value)
     implicit val fpOrder:  Order[FloatingPoint] = orderBy(_.value)
@@ -90,15 +120,24 @@ object Feature {
       def contains(v: V) = v >= min && v <= max
       def widestValueSize = None
     }
-    case class SetRange[V : Order](values: ListSet[V]) extends Range[V] {
+    case class SetRange[V : Order](values: List[V]) extends Range[V] {
       def contains(v: V) = values.contains(v)
       def widestValueSize = values.collect {
         case Str(s) => s.map(_.length).getOrElse(0)
+      }.toNel.map(_.foldRight1(math.max(_, _)))
+    }
+    case class MapRange[V : Order](values: ListMap[V, String]) extends Range[V] {
+      def contains(v: V) = values.contains(v)
+      def widestValueSize = values.collect {
+        case (Str(s), _) => s.map(_.length).getOrElse(0)
       }.toList.toNel.map(_.foldRight1(math.max(_, _)))
     }
     object SetRange {
       // Should return Range[V] once V is made invariant on Range and contains is added back
-      def apply[V : Order](values: V*): SetRange[V] = SetRange(ListSet(values: _*))
+      def apply[V : Order](values: V*): SetRange[V] = SetRange(List(values: _*).distinct)
+    }
+    object MapRange {
+      def apply[V : Order](values: (V, String)*): MapRange[V] = MapRange(ListMap(values: _*))
     }
   }
 

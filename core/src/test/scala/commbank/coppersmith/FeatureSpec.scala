@@ -14,6 +14,8 @@
 
 package commbank.coppersmith
 
+import scala.collection.immutable.ListMap
+
 import commbank.coppersmith.util.{Timestamp, Datestamp}
 import org.joda.time.DateTime
 import org.scalacheck._, Prop.forAll
@@ -78,6 +80,13 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
     Non-range values excluded    $nonRangeValuesExcluded
     No widest for non-Str values $nonStrWidest
     Widest Str wider than others $widestStr
+
+  MapRange
+  ========
+    Range values contained       $mapRangeValueContained
+    Non-range values excluded    $nonMapRangeValuesExcluded
+    No widest for non-Str values $mapRangeNonStrWidest
+    Widest Str wider than others $mapRangeWidestStr
 """
 
   implicit def arbStrs: Arbitrary[NonEmptyList[Str]] = NonEmptyListArbitrary(Arbitrary(strValueGen))
@@ -142,6 +151,29 @@ object FeatureValueRangeSpec extends Specification with ScalaCheck { def is = s2
       case _ => 0
     }.maximum1
     SetRange(vals.list:_*).widestValueSize must beSome(widest)
+  }}
+
+  def mapRangeValueContained = forAll { (idx: Int, vals: NonEmptyList[(Value, String)]) =>
+    val randIndex = math.abs(idx % vals.size)
+    MapRange(vals.list:_*).contains(vals.list(randIndex)._1) must beTrue
+  }
+
+  def nonMapRangeValuesExcluded = forAll { (vals: NonEmptyList[(Value, String)]) =>
+    val excluded = vals.head._1
+    val range = MapRange(ListMap(vals.tail: _*) - excluded)
+    range.contains(excluded) must beFalse
+  }
+
+  def mapRangeNonStrWidest = forAll { (vals: NonEmptyList[(Value, String)]) => !vals.head._1.isInstanceOf[Str] ==> {
+    MapRange(vals.list: _*).widestValueSize must beNone
+  }}
+
+  def mapRangeWidestStr = forAll { (vals: NonEmptyList[(Str, String)]) => {
+    val widest = vals.map {
+      case (Str(Some(s)), _) => s.length
+      case _ => 0
+    }.maximum1
+    MapRange(vals.list: _*).widestValueSize must beSome(widest)
   }}
 }
 

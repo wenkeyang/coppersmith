@@ -83,6 +83,22 @@ object Arbitraries {
   implicit val dateValueGen: Gen[Date] = arbitrary[Option[Datestamp]].map(Date)
   implicit val timeValueGen: Gen[Time] = arbitrary[Option[Timestamp]].map(Time)
 
+  implicit val arbIntegral = Arbitrary(integralValueGen)
+  implicit val arbDecimal = Arbitrary(decimalValueGen)
+  implicit val arbFloatingPoint = Arbitrary(floatingPointValueGen)
+  implicit val arbStr = Arbitrary(strValueGen)
+  implicit val arbBool = Arbitrary(boolValueGen)
+  implicit val arbDate = Arbitrary(dateValueGen)
+  implicit val arbTime = Arbitrary(timeValueGen)
+
+  implicit val integralValueStringGen: Gen[(Integral, String)] = arbitrary[(Integral, String)]
+  implicit val decimalValueStringGen: Gen[(Decimal, String)] = arbitrary[(Decimal, String)]
+  implicit val floatingPointValueStringGen: Gen[(FloatingPoint, String)] = arbitrary[(FloatingPoint, String)]
+  implicit val strValueStringGen: Gen[(Str, String)] = arbitrary[(Str, String)]
+  implicit val boolValueStringGen: Gen[(Bool, String)] = arbitrary[(Bool, String)]
+  implicit val dateValueStringGen: Gen[(Date, String)] = arbitrary[(Date, String)]
+  implicit val timeValueStringGen: Gen[(Time, String)] = arbitrary[(Time, String)]
+
   implicit val arbValue: Arbitrary[Value] = Arbitrary(oneOf(integralValueGen, decimalValueGen, floatingPointValueGen, strValueGen, boolValueGen, dateValueGen, timeValueGen))
 
   // Generates values of the same subtype, but arbitrarily chooses the subtype to generate
@@ -96,6 +112,19 @@ object Arbitraries {
         NonEmptyListArbitrary(Arbitrary(boolValueGen)).arbitrary,
         NonEmptyListArbitrary(Arbitrary(dateValueGen)).arbitrary,
         NonEmptyListArbitrary(Arbitrary(timeValueGen)).arbitrary
+      )
+    )
+
+  implicit def arbValueStringTuples: Arbitrary[NonEmptyList[(Value, String)]] =
+    Arbitrary(
+      oneOf(
+        NonEmptyListArbitrary(Arbitrary(decimalValueStringGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(floatingPointValueStringGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(integralValueStringGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(strValueStringGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(boolValueStringGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(dateValueStringGen)).arbitrary,
+        NonEmptyListArbitrary(Arbitrary(timeValueStringGen)).arbitrary
       )
     )
 
@@ -120,15 +149,20 @@ object Arbitraries {
     vs <- arbValues
   } yield SetRange(vs.toList:_*)
 
+  implicit val arbMapRange: Arbitrary[MapRange[Value]] = for {
+    vs <- arbValues
+    strs <- Arbitrary(Gen.containerOfN[List, String](vs.size, arbitrary[String]))
+  } yield MapRange(vs.toList.zip(strs): _*)
+
   implicit val arbRange: Arbitrary[Option[Range[Value]]] =
-    Arbitrary(Gen.option(oneOf(arbMinMaxRange.arbitrary, arbSetRange.arbitrary)))
+    Arbitrary(Gen.option(oneOf(arbMinMaxRange.arbitrary, arbSetRange.arbitrary, arbMapRange.arbitrary)))
 
   def typeMatches(c: Class[_], r: Option[Range[Value]]): Boolean = {
     r match {
-      case Some(MinMaxRange(min, _)) if min.getClass == c => true
-      case Some(SetRange(vs)) if vs.isEmpty || vs.head.getClass == c => true
+      case Some(MinMaxRange(min, _)) => min.getClass == c
+      case Some(SetRange(vs)) => vs.isEmpty || vs.head.getClass == c
+      case Some(MapRange(vs)) => vs.isEmpty || vs.head._1.getClass == c
       case None => true
-      case _ => false
     }
   }
 

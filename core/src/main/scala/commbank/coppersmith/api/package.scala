@@ -22,10 +22,10 @@ import commbank.coppersmith.generated.GeneratedJoinTypeInstances
 package object api extends GeneratedJoinTypeInstances with SourceBinderInstances {
 
   object Coppersmith extends au.com.cba.omnia.maestro.macros.MacroSupport {
-    implicit def fromFS[S](fs: FeatureSource[S, _]) =
+    implicit def fromFS[S](fs: FeatureSource[S, _]): FeatureBuilderSource[S] =
       commbank.coppersmith.FeatureBuilderSource.fromFS(fs)
 
-    implicit def fromCFS[S, C: TypeTag](fs: ContextFeatureSource[S, C, _]) =
+    implicit def fromCFS[S, C: TypeTag](fs: ContextFeatureSource[S, C, _]): FeatureBuilderSource[(S, C)] =
       commbank.coppersmith.FeatureBuilderSource.fromCFS(fs)
   }
 
@@ -77,6 +77,7 @@ package object api extends GeneratedJoinTypeInstances with SourceBinderInstances
   val FeatureValue = commbank.coppersmith.FeatureValue
   val MinMaxRange = Value.MinMaxRange
   val SetRange = Value.SetRange
+  val MapRange = Value.MapRange
   val Patterns = commbank.coppersmith.Patterns
 
   //Maestro dependencies below

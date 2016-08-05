@@ -32,15 +32,15 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
 """
 
   def genericValueToString = forAll { (v: Value) => {
-    val expected: Option[String] = (v match {
+    val expected: Option[String] = v match {
       case Integral(v)      => v.map(_.toString)
       case Decimal(v)       => v.map(_.toString)
       case FloatingPoint(v) => v.map(_.toString)
       case Str(v)           => v
       case Bool(v)          => v.map(_.toString)
-      case Date(v)          => v.map(_.toString)
-      case Time(v)          => v.map(_.toString)
-    })
+      case Date(v)          => v.map(_.toIso8601ExtendedFormatString)
+      case Time(v)          => v.map(_.toRfc3339String)
+    }
     MetadataOutput.genericValueToString(v) must_== expected
   }}
 
@@ -69,10 +69,10 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
 
   def typeMatches(v: Value, r: Option[Range[Value]]): Boolean = {
     r match {
-      case Some(MinMaxRange(min, _)) if min.getClass == v.getClass => true
-      case Some(SetRange(vs)) if vs.nonEmpty && vs.head.getClass == v.getClass => true
+      case Some(MinMaxRange(min, _)) => min.getClass == v.getClass
+      case Some(SetRange(vs)) => vs.nonEmpty && vs.head.getClass == v.getClass
+      case Some(MapRange(vs)) => vs.nonEmpty && vs.head.getClass == v.getClass
       case None => true
-      case _ => false
     }
   }
 
@@ -103,19 +103,25 @@ object MetadataOutputSpec extends Specification with ScalaCheck with JsonMatcher
       case Some(MinMaxRange(min,max)) => /("range") /("min" -> expectedValue(min)) and
                                          /("range") /("max" -> expectedValue(max))
       case Some(SetRange(set))        => /("range").andHave(allOf(set.map(expectedValue).toList:_*))
+      case Some(MapRange(m))          => /("range").andHave(allOf(m.toList.map { case (v, _) => expectedValue(v) }: _*))
       case None                       => /("range").negate
     }
 
     val oConforms = (fType, value) match {
-      case (Nominal,    Str(_))      => Some(NominalStr)
-      case (Ordinal,    Decimal(_))  => Some(OrdinalDecimal)
-      case (Continuous, Decimal(_))  => Some(ContinuousDecimal)
-      case (Ordinal,    Integral(_)) => Some(OrdinalIntegral)
-      case (Continuous, Integral(_)) => Some(ContinuousIntegral)
-      case (Discrete,   Integral(_)) => Some(DiscreteIntegral)
-      case (Instant,    Date(_))     => Some(InstantDate)
-      case (Instant,    Time(_))     => Some(InstantTime)
-      case _                         => None
+      case (Ordinal,    Str(_))           => Some(OrdinalStr)
+      case (Nominal,    Str(_))           => Some(NominalStr)
+      case (Ordinal,    Decimal(_))       => Some(OrdinalDecimal)
+      case (Continuous, Decimal(_))       => Some(ContinuousDecimal)
+      case (Continuous, FloatingPoint(_)) => Some(ContinuousFloatingPoint)
+      case (Ordinal,    FloatingPoint(_)) => Some(OrdinalFloatingPoint)
+      case (Ordinal,    Integral(_))      => Some(OrdinalIntegral)
+      case (Continuous, Integral(_))      => Some(ContinuousIntegral)
+      case (Discrete,   Integral(_))      => Some(DiscreteIntegral)
+      case (Nominal,    Integral(_))      => Some(NominalIntegral)
+      case (Nominal,    Bool(_))          => Some(NominalBool)
+      case (Instant,    Date(_))          => Some(InstantDate)
+      case (Instant,    Time(_))          => Some(InstantTime)
+      case _                              => None
     }
     val expectedTypesConform = oConforms.isDefined
 

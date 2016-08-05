@@ -79,7 +79,7 @@ A feature must also define some metadata, including:
 - a feature *name*,
 - a feature *description*,
 - a feature *featureType* (`Continuous`, `Discrete`, `Ordinal`, `Nominal` or `Instant`) and optionally
-- a feature *range* (`MinMaxRange`, `SetRange`).
+- a feature *range* (`MinMaxRange`, `SetRange` or `MapRange`).
 
 `featureType` | Permitted `Value` types | Examples
 --- | --- | ---
@@ -396,7 +396,18 @@ object FluentUserFeatures extends FeatureSetWithTime[User] {
       case "scientist"     => 44
       case "administrator" => 71
       case _               => 0
-    }).asFeature(Nominal, "OCCUPATION_CODE", "Occupation code for user")
+    }).asFeature(
+      Nominal, 
+      "OCCUPATION_CODE",
+      Some(MapRange(
+        15 -> "engineer",
+        28 -> "programmer",
+        44 -> "scientist",
+        71 -> "administrator",
+        0  -> "other"
+      )),
+      "Occupation code for user"
+    )
 
   val features = List(userAge, userAgeGroup, userIsEngineer, occupationCode)
 }
