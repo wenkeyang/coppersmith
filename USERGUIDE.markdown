@@ -384,7 +384,8 @@ object FluentUserFeatures extends FeatureSetWithTime[User] {
     case x if x > 14 && x <= 24 => "Youth"
     case x if x > 24 && x <= 64 => "Adult"
     case x if x > 64            => "Senior"
-  }).asFeature(Ordinal, "USER_AGE_GROUP", "Age group of user")
+  }).asFeature(Ordinal, "USER_AGE_GROUP", Some(SetRange("Child", "Youth", "Adult", "Senior")), 
+               "Age group of user")
 
   val userIsEngineer = select(user => user.occupation == "engineer")
     .asFeature(Nominal, "USER_IS_ENGINEER", "Whether the user is an engineer")
@@ -559,7 +560,7 @@ object AggregationFeatures extends AggregationFeatureSet[Rating] {
   val select = source.featureSetBuilder(namespace, entity)
 
   val avgRating = select(avg(_.rating))
-    .asFeature(Continuous, "MOVIE_AVG_RATING",
+    .asFeature(Continuous, "MOVIE_AVG_RATING", Some(MinMaxRange(0.0, 5.0)),
                "Average movie rating")
   val aggregationFeatures = List(avgRating)
 }
@@ -659,7 +660,7 @@ object PopularRatingCountFeatures extends AggregationFeatureSet[Rating] {
   val select = source.featureSetBuilder(namespace, entity)
 
   val popularRatingCount = select(count(_.rating > 3)).having(_ > 10)
-    .asFeature(Discrete, "MOVIE_POPULAR_RATING_COUNT",
+    .asFeature(Discrete, "MOVIE_POPULAR_RATING_COUNT", 
                "High rating count for movies that have more than 10 high ratings")
 
   val aggregationFeatures = List(popularRatingCount)
@@ -810,7 +811,7 @@ object JoinFeatures extends AggregationFeatureSet[(Movie, Rating)] {
 
   val averageRatingForComedyMovies = select(avg(_._2.rating))
     .where(_._1.isComedy)
-    .asFeature(Continuous, "COMEDY_MOVIE_AVG_RATING",
+    .asFeature(Continuous, "COMEDY_MOVIE_AVG_RATING", Some(MinMaxRange(0.0, 5.0)),
                "Average rating for comedy movies")
 
   val aggregationFeatures = List(averageRatingForComedyMovies)
@@ -935,7 +936,7 @@ object MultiJoinFeatures extends AggregationFeatureSet[(Movie, Rating, User)] {
   val avgRatingForSciFiMoviesFromEngineeringUsers= select(avg(_._2.rating))
     .where(_._3.occupation == "engineer")
     .andWhere(_._1.isScifi)
-    .asFeature(Continuous, "SCIFI_MOVIE_AVG_RATING_FROM_ENGINEERS",
+    .asFeature(Continuous, "SCIFI_MOVIE_AVG_RATING_FROM_ENGINEERS", Some(MinMaxRange(0.0, 5.0)),
                "Average rating for movie that is scifi, where users' occupations are 'engineer'")
 
   val aggregationFeatures = List(avgRatingForSciFiMoviesFromEngineeringUsers)
@@ -1044,7 +1045,8 @@ object SourceViewAggregationFeatures extends AggregationFeatureSet[(Movie, Ratin
   val avgComedyRatings =
     builder.collect { case (movie, rating) if movie.isComedy => rating.rating.toDouble }
       .select(AveragedValue.aggregator)
-      .asFeature(Continuous, "COMEDY_MOVIE_AVERAGE_RATING", "Average rating for comedy movies")
+      .asFeature(Continuous, "COMEDY_MOVIE_AVERAGE_RATING", Some(MinMaxRange(0.0, 5.0)),
+                 "Average rating for comedy movies")
 
   val aggregationFeatures = List(avgComedyRatings)
 }
@@ -1094,7 +1096,7 @@ object ComedyJoinFeatures extends AggregationFeatureSet[(Movie, Rating)] {
 
   // Here we no longer need: .where(_._1.isComedy)
   val averageRatingForComedyMovies = select(avg(_._2.rating))
-    .asFeature(Continuous, "COMEDY_MOVIE_AVG_RATING_V2",
+    .asFeature(Continuous, "COMEDY_MOVIE_AVG_RATING_V2", Some(MinMaxRange(0.0, 5.0)),
                "Average rating for comedy movies")
 
   val aggregationFeatures = List(averageRatingForComedyMovies)
@@ -1355,7 +1357,8 @@ object DirectorFeatures extends AggregationFeatureSet[(Director, Movie, Rating)]
   val select = source.featureSetBuilder(namespace, entity)
 
   val directorAvgRating = select(avg(_._3.rating))
-    .asFeature(Continuous, "DIRECTOR_AVG_RATING", "Average rating of all movies the director has directed")
+    .asFeature(Continuous, "DIRECTOR_AVG_RATING", Some(MinMaxRange(0.0, 5.0)),
+               "Average rating of all movies the director has directed")
 
   val aggregationFeatures = List(directorAvgRating)
 }
