@@ -21,7 +21,7 @@ import commbank.coppersmith.Feature.Value
 import commbank.coppersmith.lift.generated.GeneratedMemoryLift
 
 trait MemoryLift extends Lift[List] with GeneratedMemoryLift {
-  def lift[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[V]] = {
+  def lift[S, V <: Value](f: Feature[S, V])(s: List[S]): List[FeatureValue[V]] = {
     s.flatMap(s => f.generate(s))
   }
 
@@ -30,9 +30,9 @@ trait MemoryLift extends Lift[List] with GeneratedMemoryLift {
   }
 
   def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, List]](
-    underlying: U,
-    binder:     B,
-    filter:     Option[S => Boolean]
+      underlying: U,
+      binder: B,
+      filter: Option[S => Boolean]
   ) = MemoryBoundFeatureSource(underlying, binder, filter)
 
   def liftFilter[S](p: List[S], f: S => Boolean) = p.filter(f)
@@ -42,15 +42,14 @@ object memory extends MemoryLift {
   implicit def framework: Lift[List] = this
 }
 
-
 object MemoryLift {
   def innerJoin[S1, S2, J : Ordering](
-    f1: S1 => J,
-    f2: S2 => J,
-    s1: List[S1],
-    s2: List[S2]
+      f1: S1 => J,
+      f2: S2 => J,
+      s1: List[S1],
+      s2: List[S2]
   ): List[(S1, S2)] = {
-    implicit val orderJ: Order[J] = Order.fromScalaOrdering[J]
+    implicit val orderJ: Order[J]  = Order.fromScalaOrdering[J]
     val map1: Map[J, Iterable[S1]] = s1.groupBy(f1)
     val map2: Map[J, Iterable[S2]] = s2.groupBy(f2)
     for {
@@ -62,19 +61,17 @@ object MemoryLift {
   }
 
   def leftJoin[S1, S2, J : Ordering](
-    f1: S1 => J,
-    f2: S2 => J,
-    s1: List[S1],
-    s2: List[S2]
+      f1: S1 => J,
+      f2: S2 => J,
+      s1: List[S1],
+      s2: List[S2]
   ): List[(S1, Option[S2])] = {
     val map1: Map[J, Iterable[S1]] = s1.groupBy(f1)
     val map2: Map[J, Iterable[S2]] = s2.groupBy(f2)
-    map1.toList.flatMap { case (k1, s1s) =>
-      s1s.flatMap(s1 =>
-        map2.get(k1).map(s2s =>
-          s2s.map(s2 => (s1, s2.some))
-        ).getOrElse(List((s1, None)))
-      )
+    map1.toList.flatMap {
+      case (k1, s1s) =>
+        s1s.flatMap(s1 =>
+              map2.get(k1).map(s2s => s2s.map(s2 => (s1, s2.some))).getOrElse(List((s1, None))))
     }
   }
 }
@@ -82,9 +79,9 @@ object MemoryLift {
 import memory.framework
 
 case class MemoryBoundFeatureSource[S, U <: FeatureSource[S, U]](
-  underlying: U,
-  binder:     SourceBinder[S, U, List],
-  filter:     Option[S => Boolean]
+    underlying: U,
+    binder: SourceBinder[S, U, List],
+    filter: Option[S => Boolean]
 ) extends BoundFeatureSource[S, List] {
   def load: List[S] = {
     val pipe = binder.bind(underlying)

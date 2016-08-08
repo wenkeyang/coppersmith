@@ -18,7 +18,7 @@ import commbank.coppersmith.Feature._
 import scala.reflect.runtime.universe.TypeTag
 
 object FeatureStub {
-  def apply[S : TypeTag, V  <: Value : TypeTag] = new FeatureStub[S, V]
+  def apply[S : TypeTag, V <: Value : TypeTag] = new FeatureStub[S, V]
 }
 
 /**
@@ -26,20 +26,19 @@ object FeatureStub {
   * @tparam S Feature source
   * @tparam V Value type
   */
-
 class FeatureStub[S : TypeTag, V <: Value : TypeTag] {
   def asFeatureMetadata(
-    featureType: Type,
-    namespace:   Namespace,
-    name:        Name,
-    desc:        Description
+      featureType: Type,
+      namespace: Namespace,
+      name: Name,
+      desc: Description
   ): Metadata[S, V] = asFeatureMetadata(featureType, namespace, name, None, desc)
 
   def asFeatureMetadata(
-    featureType: Type,
-    namespace:   Namespace,
-    name:        Name,
-    range:       Option[Value.Range[V]],
-    desc:        Description
+      featureType: Type,
+      namespace: Namespace,
+      name: Name,
+      range: Option[Value.Range[V]],
+      desc: Description
   ): Metadata[S, V] = Metadata[S, V](namespace, name, desc, featureType, range)
 }

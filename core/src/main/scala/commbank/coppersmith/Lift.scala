@@ -24,22 +24,22 @@ import Feature.Value
 // ContextFeatureSource.bindWithContext is unable to derive implicit Functor instance,
 // and needs to access it via the Lift instance instead.
 abstract class Lift[P[_]](implicit val functor: Functor[P]) extends GeneratedLift[P] {
-  def lift[S, V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[V]]
+  def lift[S, V <: Value](f: Feature[S, V])(s: P[S]): P[FeatureValue[V]]
 
   def lift[S](fs: FeatureSet[S])(s: P[S]): P[FeatureValue[_]]
 
   def liftJoin[A, B, J : Ordering](
-    joined: Joined2[A, B, J, A, B]
-  )(a:P[A], b: P[B]): P[(A, B)] = liftJoinInner(joined)(a, b) // From GenereatedLift
+      joined: Joined2[A, B, J, A, B]
+  )(a: P[A], b: P[B]): P[(A, B)] = liftJoinInner(joined)(a, b) // From GenereatedLift
 
   def liftLeftJoin[A, B, J : Ordering](
-    joined: Joined2[A, B, J, A, Option[B]]
+      joined: Joined2[A, B, J, A, Option[B]]
   )(a: P[A], b: P[B]): P[(A, Option[B])] = liftJoinLeft(joined)(a, b) // From GenereatedLift
 
   def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, P]](
-    underlying: U,
-    binder:     B,
-    filter:     Option[S => Boolean]
+      underlying: U,
+      binder: B,
+      filter: Option[S => Boolean]
   ): BoundFeatureSource[S, P]
 
   def liftFilter[S](p: P[S], f: S => Boolean): P[S]

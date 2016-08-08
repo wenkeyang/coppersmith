@@ -27,8 +27,8 @@ import commbank.coppersmith.Feature._
 import commbank.coppersmith._
 
 trait FeatureJobConfig[S] {
-  def featureSource:  BoundFeatureSource[S, TypedPipe]
-  def featureSink:    FeatureSink
+  def featureSource: BoundFeatureSource[S, TypedPipe]
+  def featureSink: FeatureSink
   def featureContext: FeatureContext
 }
 
@@ -41,11 +41,11 @@ object SimpleFeatureJob extends SimpleFeatureJobOps
 trait SimpleFeatureJobOps {
   val log = org.slf4j.LoggerFactory.getLogger(getClass())
 
-  def generate[S](cfg:      Config => FeatureJobConfig[S],
+  def generate[S](cfg: Config => FeatureJobConfig[S],
                   features: FeatureSetWithTime[S]): Execution[JobStatus] =
     generate(FeatureSetExecutions(FeatureSetExecution(cfg, features)))
 
-  def generate[S](cfg:      Config => FeatureJobConfig[S],
+  def generate[S](cfg: Config => FeatureJobConfig[S],
                   features: AggregationFeatureSet[S]): Execution[JobStatus] =
     generate(FeatureSetExecutions(FeatureSetExecution(cfg, features)))
 
@@ -61,17 +61,16 @@ trait SimpleFeatureJobOps {
   // Run each outer group of executions in sequence, accumulating paths at each step
   private def generateFeatures(featureSetExecutions: FeatureSetExecutions): Execution[Set[Path]] =
     featureSetExecutions.allExecutions.foldLeft(Execution.from(Set[Path]()))(
-      (resultSoFar, executions) => resultSoFar.flatMap(paths =>
-        generateFeaturesPar(executions).map(_ ++ paths)
-      )
+        (resultSoFar, executions) =>
+          resultSoFar.flatMap(paths => generateFeaturesPar(executions).map(_ ++ paths))
     )
 
   // Run executions in parallel (zip), combining the tupled sets of of paths at each step
   private def generateFeaturesPar(executions: List[FeatureSetExecution]): Execution[Set[Path]] =
     executions.foldLeft(Execution.from(Set[Path]()))(
-      (zippedSoFar, featureSetExecution) =>
-        zippedSoFar.zip(featureSetExecution.generate).map {
-          case (accPaths, paths) => accPaths ++ paths
+        (zippedSoFar, featureSetExecution) =>
+          zippedSoFar.zip(featureSetExecution.generate).map {
+            case (accPaths, paths) => accPaths ++ paths
         }
     )
 
@@ -93,6 +92,7 @@ trait SimpleFeatureJobOps {
   * form outer level are run sequentially
   */
 case class FeatureSetExecutions(allExecutions: List[List[FeatureSetExecution]]) {
+
   /** Add a new group of executions to run after all previous groups */
   def andThen(executions: FeatureSetExecution*) =
     FeatureSetExecutions(allExecutions :+ executions.toList)
@@ -112,46 +112,46 @@ trait FeatureSetExecution {
 
   import FeatureSetExecution.{generateFeatures, generateOneToMany, generateAggregate}
   def generate(): Execution[Set[Path]] = features.fold(
-    regFeatures => generateFeatures[Source](config, generateOneToMany(regFeatures)_),
-    aggFeatures => generateFeatures[Source](config, generateAggregate(aggFeatures)_)
+      regFeatures => generateFeatures[Source](config, generateOneToMany(regFeatures) _),
+      aggFeatures => generateFeatures[Source](config, generateAggregate(aggFeatures) _)
   )
 }
 
 object FeatureSetExecution {
   def apply[S](
-    cfg: Config => FeatureJobConfig[S],
-    fs:  FeatureSetWithTime[S]
+      cfg: Config => FeatureJobConfig[S],
+      fs: FeatureSetWithTime[S]
   ): FeatureSetExecution = new FeatureSetExecution {
     type Source = S
-    def config = cfg
+    def config   = cfg
     def features = Left(fs)
   }
   def apply[S](
-    cfg: Config => FeatureJobConfig[S],
-    fs:  AggregationFeatureSet[S]
+      cfg: Config => FeatureJobConfig[S],
+      fs: AggregationFeatureSet[S]
   ): FeatureSetExecution = new FeatureSetExecution {
     type Source = S
-    def config = cfg
+    def config   = cfg
     def features = Right(fs)
   }
 
   import SimpleFeatureJob.writeErrorFailure
   private def generateFeatures[S](
-    cfg:       Config => FeatureJobConfig[S],
-    transform: (TypedPipe[S], FeatureContext) => TypedPipe[(FeatureValue[Value], FeatureTime)]
+      cfg: Config => FeatureJobConfig[S],
+      transform: (TypedPipe[S], FeatureContext) => TypedPipe[(FeatureValue[Value], FeatureTime)]
   ): Execution[Set[Path]] = {
     for {
-      conf   <- Execution.getConfig.map(cfg)
-      source  = conf.featureSource
-      input   = source.load
-      values  = transform(input, conf.featureContext)
+      conf <- Execution.getConfig.map(cfg)
+      source = conf.featureSource
+      input  = source.load
+      values = transform(input, conf.featureContext)
       result <- conf.featureSink.write(values)
       paths  <- result.fold(writeErrorFailure(_), Execution.from(_))
     } yield paths
   }
 
   private def generateOneToMany[S](
-    features: FeatureSetWithTime[S]
+      features: FeatureSetWithTime[S]
   )(input: TypedPipe[S], ctx: FeatureContext): TypedPipe[(FeatureValue[Value], FeatureTime)] = {
     input.flatMap { s =>
       val time = features.time(s, ctx)
@@ -160,12 +160,14 @@ object FeatureSetExecution {
   }
 
   private def generateAggregate[S](
-    features: AggregationFeatureSet[S]
+      features: AggregationFeatureSet[S]
   )(input: TypedPipe[S], ctx: FeatureContext): TypedPipe[(FeatureValue[Value], FeatureTime)] = {
     val grouped: Grouped[EntityId, S] = input.groupBy(s => features.entity(s))
-    val (joinedAggregator, unjoiner) = join(features.aggregationFeatures.toList.map(serialisable(_)))
-    grouped.aggregate(joinedAggregator).toTypedPipe.flatMap { case (e, v) =>
-      unjoiner.apply(e, v).map((_, ctx.generationTime.getMillis))
+    val (joinedAggregator, unjoiner) = join(
+        features.aggregationFeatures.toList.map(serialisable(_)))
+    grouped.aggregate(joinedAggregator).toTypedPipe.flatMap {
+      case (e, v) =>
+        unjoiner.apply(e, v).map((_, ctx.generationTime.getMillis))
     }
   }
 
@@ -175,25 +177,25 @@ object FeatureSetExecution {
   // Also takes care of applying the source view, resulting in aggregators from the same set working
   // on the same source type.
   private def serialisable[S, SV, V <: Value](
-    feature: AggregationFeature[S, SV, _, V]
+      feature: AggregationFeature[S, SV, _, V]
   ): SerialisableAggregationFeature[S] = {
     val aggregator = composeView(feature.aggregator, feature.view)
     SerialisableAggregationFeature[S](feature.name, aggregator)
   }
 
   case class SerialisableAggregationFeature[S](
-    name:       Name,
-    aggregator: Aggregator[S, _, Option[Value]]
+      name: Name,
+      aggregator: Aggregator[S, _, Option[Value]]
   )
 
   def composeView[S, SV, B, V <: Value](
-    aggregator: Aggregator[SV, B, Option[V]],
-    view: PartialFunction[S, SV]
+      aggregator: Aggregator[SV, B, Option[V]],
+      view: PartialFunction[S, SV]
   ): Aggregator[S, Option[B], Option[Value]] = {
     import com.twitter.algebird.MonoidAggregator
     new MonoidAggregator[S, Option[B], Option[Value]] {
-      def prepare(s: S) = view.lift(s).map(aggregator.prepare(_))
-      def monoid = new com.twitter.algebird.OptionMonoid[B]()(aggregator.semigroup)
+      def prepare(s: S)            = view.lift(s).map(aggregator.prepare(_))
+      def monoid                   = new com.twitter.algebird.OptionMonoid[B]()(aggregator.semigroup)
       def present(bOpt: Option[B]) = bOpt.flatMap(aggregator.present(_))
     }
   }
@@ -242,7 +244,7 @@ object FeatureSetExecution {
    */
   def unjoiner(name: Name, remaining: Unjoiner)(e: EntityId, a: Any) = a match {
     case (Some(v: Value), vs) => FeatureValue(e, name, v) :: remaining.apply(e, vs)
-    case (None, vs) => remaining(e, vs)
+    case (None, vs)           => remaining(e, vs)
     // Will only occur if implemenation of values falls out of sync with join (from above).
     case _ => sys.error("Assumption failed: Wrong shape " + a)
   }

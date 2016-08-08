@@ -50,27 +50,27 @@ import FeatureSetBuilder.ComposePartial
   * @tparam SV View of Source from which to generate feature
   */
 case class FeatureSetBuilder[S, SV](
-  namespace: Namespace,
-  entity:    S => EntityId,
-  view:      PartialFunction[S, SV]
+    namespace: Namespace,
+    entity: S => EntityId,
+    view: PartialFunction[S, SV]
 ) {
   def map[SVV](f: Function[SV, SVV]): FeatureSetBuilder[S, SVV] = copy(view = view.andThen(f))
 
   def collect[SVV](pf: PartialFunction[SV, SVV]): FeatureSetBuilder[S, SVV] =
     copy(view = view.andThenPartial(pf))
 
-  def apply[FV <% V, V <: Value](value : SV => FV): FeatureBuilder[S, SV, FV, V] =
+  def apply[FV <% V, V <: Value](value: SV => FV): FeatureBuilder[S, SV, FV, V] =
     FeatureBuilder(this, value, view)
 
   def apply[T, FV <% V, V <: Value](
       aggregator: Aggregator[SV, T, FV]): AggregationFeatureBuilder[S, SV, T, FV, V] = {
-      val agg = new Aggregator[SV, T, Option[FV]] {
-        def prepare(s: SV) = aggregator.prepare(s)
-        def semigroup = aggregator.semigroup
-        // Lift `T` into `Option` - essentially `.having(_ => true)`
-        def present(t: T) = aggregator.present(t).some
-      }
-     AggregationFeatureBuilder(this, agg, view)
+    val agg = new Aggregator[SV, T, Option[FV]] {
+      def prepare(s: SV) = aggregator.prepare(s)
+      def semigroup      = aggregator.semigroup
+      // Lift `T` into `Option` - essentially `.having(_ => true)`
+      def present(t: T) = aggregator.present(t).some
+    }
+    AggregationFeatureBuilder(this, agg, view)
   }
 
   // For fluent-API, eg, collect{...}.select(...) as opposed to collect{...}(...) or
@@ -80,17 +80,17 @@ case class FeatureSetBuilder[S, SV](
   // Allows feature to be built directly from map or collect without having to specify
   // select(identity(_))
   def asFeature[FT <: Type, V <: Value](
-    featureType: FT,
-    name:        Name,
-    range:       Option[Value.Range[V]],
-    desc:        Description
+      featureType: FT,
+      name: Name,
+      range: Option[Value.Range[V]],
+      desc: Description
   )(implicit svv: SV => V, ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
     apply[SV, V](identity(_)).asFeature(featureType, name, range, desc)
 
   def asFeature[FT <: Type, V <: Value](
-   featureType: FT,
-   name:        Name,
-   desc:        Description
+      featureType: FT,
+      name: Name,
+      desc: Description
   )(implicit svv: SV => V, ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
     asFeature(featureType, name, range = None, desc)
 }
@@ -102,18 +102,19 @@ case class FeatureSetBuilder[S, SV](
   * @tparam V  Type of Feature Value
   */
 case class FeatureBuilder[S, SV, FV <% V, V <: Value](
-  fsBuilder: FeatureSetBuilder[S, SV],
-  value:     SV => FV,
-  view:      PartialFunction[S, SV]
+    fsBuilder: FeatureSetBuilder[S, SV],
+    value: SV => FV,
+    view: PartialFunction[S, SV]
 ) {
   def andWhere(condition: SV => Boolean) = where(condition)
-  def where(condition: SV => Boolean) = copy(view = view.andThenPartial { case s if condition(s) => s })
+  def where(condition: SV => Boolean) =
+    copy(view = view.andThenPartial { case s if condition(s) => s })
 
   def asFeature[T <: Type](
-    featureType: T,
-    name: Name,
-    range: Option[Value.Range[V]],
-    desc: Description
+      featureType: T,
+      name: Name,
+      range: Option[Value.Range[V]],
+      desc: Description
   )(implicit ev: Conforms[T, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
     Patterns.general[S, V](fsBuilder.namespace,
                            name,
@@ -124,9 +125,9 @@ case class FeatureBuilder[S, SV, FV <% V, V <: Value](
                            range)
 
   def asFeature[T <: Type](
-    featureType: T,
-    name: Name,
-    desc: Description
+      featureType: T,
+      name: Name,
+      desc: Description
   )(implicit ev: Conforms[T, V], tts: TypeTag[S], ttv: TypeTag[V]): Feature[S, V] =
     asFeature(featureType, name, range = None, desc)
 }
@@ -139,33 +140,41 @@ case class FeatureBuilder[S, SV, FV <% V, V <: Value](
   * @tparam V  Type of Feature Value
   */
 case class AggregationFeatureBuilder[S, SV, T, FV <% V, V <: Value](
-  fsBuilder:  FeatureSetBuilder[S, SV],
-  aggregator: Aggregator[SV, T, Option[FV]],
-  view:       PartialFunction[S, SV]
+    fsBuilder: FeatureSetBuilder[S, SV],
+    aggregator: Aggregator[SV, T, Option[FV]],
+    view: PartialFunction[S, SV]
 ) {
   def andWhere(condition: SV => Boolean) = where(condition)
-  def where(condition: SV => Boolean) = copy(view = view.andThenPartial { case s if condition(s) => s })
+  def where(condition: SV => Boolean) =
+    copy(view = view.andThenPartial { case s if condition(s) => s })
   def having(condition: T => Boolean) =
-    copy(aggregator =
-      new Aggregator[SV, T, Option[FV]] {
-        def prepare(s: SV) = aggregator.prepare(s)
-        def semigroup = aggregator.semigroup
-        def present(t: T) = condition(t).option(aggregator.present(t)).flatten
-      }
-    )
+    copy(aggregator = new Aggregator[SV, T, Option[FV]] {
+      def prepare(s: SV) = aggregator.prepare(s)
+      def semigroup      = aggregator.semigroup
+      def present(t: T)  = condition(t).option(aggregator.present(t)).flatten
+    })
 
   def asFeature[FT <: Type](
-    featureType: FT,
-    name: Name,
-    range: Option[Value.Range[V]],
-    desc: Description
-  )(implicit ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]): AggregationFeature[S, SV, T, V] =
-    AggregationFeature(name, desc, aggregator.andThenPresent(fvOpt => fvOpt.map(fv => fv: V)), view, featureType, range)
+      featureType: FT,
+      name: Name,
+      range: Option[Value.Range[V]],
+      desc: Description
+  )(implicit ev: Conforms[FT, V],
+    tts: TypeTag[S],
+    ttv: TypeTag[V]): AggregationFeature[S, SV, T, V] =
+    AggregationFeature(name,
+                       desc,
+                       aggregator.andThenPresent(fvOpt => fvOpt.map(fv => fv: V)),
+                       view,
+                       featureType,
+                       range)
 
   def asFeature[FT <: Type](
-    featureType: FT,
-    name: Name,
-    desc: Description
-  )(implicit ev: Conforms[FT, V], tts: TypeTag[S], ttv: TypeTag[V]): AggregationFeature[S, SV, T, V] =
+      featureType: FT,
+      name: Name,
+      desc: Description
+  )(implicit ev: Conforms[FT, V],
+    tts: TypeTag[S],
+    ttv: TypeTag[V]): AggregationFeature[S, SV, T, V] =
     asFeature(featureType, name, range = None, desc)
 }

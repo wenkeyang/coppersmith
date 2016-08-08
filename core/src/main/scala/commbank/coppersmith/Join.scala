@@ -28,7 +28,7 @@ case class From[S](filter: Option[S => Boolean] = None) extends FeatureSource[S,
 
 object Join {
   def join[T]: InnerJoinableTo[T] = new InnerJoinableTo[T]
-  def apply[T] = join[T]
+  def apply[T]                    = join[T]
 
   def left[T]: LeftOuterJoinableTo[T] = new LeftOuterJoinableTo[T]
 
@@ -43,11 +43,12 @@ object Join {
   }
 
   class JoinableTo[L] {
-    def inner[R]: IncompleteJoin[L, R, L, R]         = new IncompleteJoin[L, R, L, R]
-    def left[R]:  IncompleteJoin[L, R, L, Option[R]] = new IncompleteJoin[L, R, L, Option[R]]
+    def inner[R]: IncompleteJoin[L, R, L, R]        = new IncompleteJoin[L, R, L, R]
+    def left[R]: IncompleteJoin[L, R, L, Option[R]] = new IncompleteJoin[L, R, L, Option[R]]
   }
 
   class IncompleteJoin[S1, S2, T1, T2] {
-    def on[J: Ordering](s1: T1 => J, s2: S2 => J): Joined2[S1, S2, J, T1, T2] = Joined2(s1, s2, None)
+    def on[J : Ordering](s1: T1 => J, s2: S2 => J): Joined2[S1, S2, J, T1, T2] =
+      Joined2(s1, s2, None)
   }
 }

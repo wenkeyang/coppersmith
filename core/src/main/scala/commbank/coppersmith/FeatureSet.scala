@@ -27,19 +27,19 @@ trait FeatureSet[S] extends MetadataSet[S] {
 
   def features: Iterable[Feature[S, Value]]
 
-  def generate(source: S): Iterable[FeatureValue[Value]] = features.flatMap(f =>
-    f.generate(source)
-  )
+  def generate(source: S): Iterable[FeatureValue[Value]] =
+    features.flatMap(f => f.generate(source))
   def metadata: Iterable[Metadata[S, Value]] = {
     features.map(_.metadata)
   }
 }
 
 trait FeatureSetWithTime[S] extends FeatureSet[S] {
+
   /**
-   * Specifies the time associated with a feature. Most of the time that will be
-   * the job time, but when it depends on data, this method should be overridden.
-   */
+    * Specifies the time associated with a feature. Most of the time that will be
+    * the job time, but when it depends on data, this method should be overridden.
+    */
   def time(source: S, c: FeatureContext): FeatureTime = c.generationTime.getMillis
 }
 
@@ -63,36 +63,40 @@ abstract class BasicFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
   def basicFeature[V <: Value : TypeTag](featureName: Name,
                                          humanDescription: String,
                                          featureType: Type,
-                                         range: Option[Value.Range[V]])(
-                                         value: S => V) =
-    Patterns.general(namespace, featureName, humanDescription, featureType, entity,
-      (s: S) => Some(value(s)), range)
+                                         range: Option[Value.Range[V]])(value: S => V) =
+    Patterns.general(namespace,
+                     featureName,
+                     humanDescription,
+                     featureType,
+                     entity,
+                     (s: S) => Some(value(s)),
+                     range)
 
   def basicFeature[V <: Value : TypeTag](featureName: Name,
                                          humanDescription: String,
-                                         featureType: Type)(
-                                         value: S => V): Feature[S, V] =
+                                         featureType: Type)(value: S => V): Feature[S, V] =
     basicFeature(featureName, humanDescription, featureType, None)(value)
 }
 
 abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends FeatureSetWithTime[S] {
   type Filter = S => Boolean
 
-  def featureType:  Feature.Type
+  def featureType: Feature.Type
 
   def entity(s: S): EntityId
-  def value(s: S):  V
+  def value(s: S): V
 
-  def queryFeature(featureName: Name,
-                   humanDescription: String,
-                   range: Option[Value.Range[V]])(
-                   filter: Filter) =
-    Patterns.general(namespace, featureName, humanDescription, featureType, entity,
-      (s: S) => filter(s).option(value(s)), range)
+  def queryFeature(featureName: Name, humanDescription: String, range: Option[Value.Range[V]])(
+      filter: Filter) =
+    Patterns.general(namespace,
+                     featureName,
+                     humanDescription,
+                     featureType,
+                     entity,
+                     (s: S) => filter(s).option(value(s)),
+                     range)
 
-  def queryFeature(featureName: Name,
-                   humanDescription: String)(
-                   filter: Filter): Feature[S, V] =
+  def queryFeature(featureName: Name, humanDescription: String)(filter: Filter): Feature[S, V] =
     queryFeature(featureName, humanDescription, None)(filter)
 }
 
@@ -103,33 +107,35 @@ import scalaz.syntax.std.option.ToOptionIdOps
 import com.twitter.algebird.{Aggregator, AveragedValue, Monoid, Semigroup}
 
 case class AggregationFeature[S : TypeTag, SV, U, +V <: Value : TypeTag](
-  name:        Name,
-  description: Description,
-  aggregator:  Aggregator[SV, U, Option[V]],
-  view:        PartialFunction[S, SV],
-  featureType: Type,
-  range:       Option[Value.Range[V]] = None
+    name: Name,
+    description: Description,
+    aggregator: Aggregator[SV, U, Option[V]],
+    view: PartialFunction[S, SV],
+    featureType: Type,
+    range: Option[Value.Range[V]] = None
 ) {
   import AggregationFeature.AlgebirdSemigroup
   // Note: Implementation exists here to satisfty feature signature and enable unit testing.
   // Framework should take advantage of aggregators that can run natively on the underlying plumbing.
-  def toFeature(namespace: Namespace) = new Feature[(EntityId, Iterable[S]), Value](
-    Metadata(namespace, name, description, featureType, range)
-  ) {
-    def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
-      val (entity, source) = s
-      val sourceView = source.toList.collect(view).toNel
-      sourceView.flatMap(nonEmptySource => {
-        val aggregated: U = nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
-        aggregator.present(aggregated).map(FeatureValue(entity, name, _))
-      })
+  def toFeature(namespace: Namespace) =
+    new Feature[(EntityId, Iterable[S]), Value](
+        Metadata(namespace, name, description, featureType, range)
+    ) {
+      def generate(s: (EntityId, Iterable[S])): Option[FeatureValue[Value]] = {
+        val (entity, source) = s
+        val sourceView       = source.toList.collect(view).toNel
+        sourceView.flatMap(nonEmptySource => {
+          val aggregated: U =
+            nonEmptySource.foldMap1(aggregator.prepare)(aggregator.semigroup.toScalaz)
+          aggregator.present(aggregated).map(FeatureValue(entity, name, _))
+        })
+      }
     }
-  }
 }
 
 object BigDecimalMonoid extends Monoid[BigDecimal] {
   def plus(l: BigDecimal, r: BigDecimal) = l + r
-  def zero = 0L
+  def zero                               = 0L
 }
 
 trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
@@ -162,7 +168,7 @@ trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
     AggregationFeature.minBy[S, O, V](o)(v)
   def sum[V : Monoid](v: S => V): Aggregator[S, V, V] =
     Aggregator.prepareMonoid(v)
-  def uniqueCountBy[T](f : S => T): Aggregator[S, Set[T], Int] =
+  def uniqueCountBy[T](f: S => T): Aggregator[S, Set[T], Int] =
     AggregationFeature.uniqueCountBy(f)
 }
 
@@ -178,13 +184,14 @@ object AggregationFeature {
   def minBy[T, O : Ordering, V](o: T => O)(v: T => V): Aggregator[T, T, V] =
     Aggregator.minBy[T, O](o).andThenPresent[V](v)
 
-  def max[T, V : Ordering](v: T => V): Aggregator[T, V, V]        = Aggregator.max[V].composePrepare[T](v)
-  def min[T, V : Ordering](v: T => V): Aggregator[T, V, V]        = Aggregator.min[V].composePrepare[T](v)
-  def uniqueCountBy[S, T](f : S => T): Aggregator[S, Set[T], Int] = Aggregator.uniqueCount[T].composePrepare(f)
+  def max[T, V : Ordering](v: T => V): Aggregator[T, V, V] = Aggregator.max[V].composePrepare[T](v)
+  def min[T, V : Ordering](v: T => V): Aggregator[T, V, V] = Aggregator.min[V].composePrepare[T](v)
+  def uniqueCountBy[S, T](f: S => T): Aggregator[S, Set[T], Int] =
+    Aggregator.uniqueCount[T].composePrepare(f)
 
   // TODO: Would be surprised if this doesn't exist elsewhere
   implicit class AlgebirdSemigroup[T](s: Semigroup[T]) {
-    def toScalaz = new scalaz.Semigroup[T] { def append(t1: T, t2: =>T): T = s.plus(t1, t2) }
+    def toScalaz = new scalaz.Semigroup[T] { def append(t1: T, t2: => T): T = s.plus(t1, t2) }
   }
 
   // Based on com.twitter.algebird.AveragedGroup. Omits the scaling code
@@ -196,9 +203,11 @@ object AggregationFeature {
 
     object BigDAveragedValue {
       implicit val group = BigDAveragedGroup
-      def numericAggregator[N](implicit num: Numeric[N]): MonoidAggregator[N, BigDAveragedValue, BigDecimal] =
-        Aggregator.prepareMonoid { n: N => new BigDAveragedValue(1L, num.toDouble(n)) }
-          .andThenPresent(_.value)
+      def numericAggregator[N](
+          implicit num: Numeric[N]): MonoidAggregator[N, BigDAveragedValue, BigDecimal] =
+        Aggregator.prepareMonoid { n: N =>
+          new BigDAveragedValue(1L, num.toDouble(n))
+        }.andThenPresent(_.value)
     }
 
     case class BigDAveragedValue(count: Long, value: BigDecimal)
@@ -219,12 +228,13 @@ object AggregationFeature {
       override def negate(av: BigDAveragedValue) = BigDAveragedValue(-av.count, av.value)
 
       def plus(cntAve1: BigDAveragedValue, cntAve2: BigDAveragedValue): BigDAveragedValue = {
-        val (big, small) = if (cntAve1.count >= cntAve2.count)
-          (cntAve1, cntAve2)
-        else
-          (cntAve2, cntAve1)
-        val n = big.count
-        val k = small.count
+        val (big, small) =
+          if (cntAve1.count >= cntAve2.count)
+            (cntAve1, cntAve2)
+          else
+            (cntAve2, cntAve1)
+        val n      = big.count
+        val k      = small.count
         val newCnt = n + k
         if (newCnt == n) {
           // Handle zero without allocation
@@ -232,8 +242,8 @@ object AggregationFeature {
         } else if (newCnt == 0L) {
           zero
         } else {
-          val an = big.value
-          val ak = small.value
+          val an     = big.value
+          val ak     = small.value
           val newAve = (n * an + k * ak) / newCnt
           new BigDAveragedValue(newCnt, newAve)
         }

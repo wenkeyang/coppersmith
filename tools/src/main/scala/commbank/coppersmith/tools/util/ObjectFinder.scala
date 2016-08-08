@@ -22,20 +22,21 @@ import scalaz.Scalaz._
 import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner
 
 object ObjectFinder {
-  def findObjects[T : ClassTag](packages: String*): Set[T] = {
+  def findObjects[T: ClassTag](packages: String*): Set[T] = {
     val cls = implicitly[ClassTag[T]].runtimeClass
     val scanner = new FastClasspathScanner(packages: _*).scan()
-    val classNames: Iterable[String] =
-      if (cls.isInterface) {
-        scanner.getNamesOfClassesImplementing(cls).asScala
-      } else {
-        scanner.getNamesOfSubclassesOf(cls).asScala
-      }
+    val classNames: Iterable[String] = if (cls.isInterface) {
+      scanner.getNamesOfClassesImplementing(cls).asScala
+    } else {
+      scanner.getNamesOfSubclassesOf(cls).asScala
+    }
 
     val objectInstances: Iterable[T] = classNames.flatMap { cn =>
       val objClass = Class.forName(cn)
       val fields = objClass.getDeclaredFields
-      fields.find(_.getName === "MODULE$") >>= { f => Option(f.get(null).asInstanceOf[T]) }
+      fields.find(_.getName === "MODULE$") >>= { f =>
+        Option(f.get(null).asInstanceOf[T])
+      }
     }
 
     objectInstances.toSet

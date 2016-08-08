@@ -27,19 +27,20 @@ import FeatureSink.AttemptedWriteToCommitted
 /**
   * Parquet FeatureSink implementation - create using HiveParquetSink.apply in companion object.
   */
-case class HiveParquetSink[T <: ThriftStruct : Manifest : FeatureValueEnc, P : TupleSetter] private(
-  table:         HiveTable[T, (P, T)],
-  partitionPath: Path
+case class HiveParquetSink[T <: ThriftStruct : Manifest : FeatureValueEnc, P : TupleSetter] private (
+    table: HiveTable[T, (P, T)],
+    partitionPath: Path
 ) extends FeatureSink {
   def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)]): FeatureSink.WriteResult = {
-    FeatureSink.isCommitted(partitionPath).flatMap(committed =>
-      if (committed) {
-        Execution.from(Left(AttemptedWriteToCommitted(partitionPath)))
-      } else {
-        val eavts = features.map(implicitly[FeatureValueEnc[T]].encode)
-        table.writeExecution(eavts).map(_ => Right(Set(partitionPath)))
-      }
-    )
+    FeatureSink
+      .isCommitted(partitionPath)
+      .flatMap(committed =>
+            if (committed) {
+          Execution.from(Left(AttemptedWriteToCommitted(partitionPath)))
+        } else {
+          val eavts = features.map(implicitly[FeatureValueEnc[T]].encode)
+          table.writeExecution(eavts).map(_ => Right(Set(partitionPath)))
+      })
   }
 }
 
@@ -48,17 +49,17 @@ object HiveParquetSink {
   type TableName    = String
 
   def apply[
-    T <: ThriftStruct : Manifest : FeatureValueEnc,
-    P : Manifest : PathComponents : TupleSetter
+      T <: ThriftStruct : Manifest : FeatureValueEnc,
+      P : Manifest : PathComponents : TupleSetter
   ](
-    dbName:    DatabaseName,
-    tableName: TableName,
-    tablePath: Path,
-    partition: FixedSinkPartition[T, P]
+      dbName: DatabaseName,
+      tableName: TableName,
+      tablePath: Path,
+      partition: FixedSinkPartition[T, P]
   ): HiveParquetSink[T, P] = {
     val hiveTable = HiveTable[T, P](dbName, tableName, partition.underlying, tablePath.toString)
 
-    val pathComponents = implicitly[PathComponents[P]].toComponents(partition.partitionValue)
+    val pathComponents   = implicitly[PathComponents[P]].toComponents(partition.partitionValue)
     val partitionRelPath = new Path(partition.underlying.pattern.format(pathComponents: _*))
 
     HiveParquetSink[T, P](hiveTable, new Path(tablePath, partitionRelPath))

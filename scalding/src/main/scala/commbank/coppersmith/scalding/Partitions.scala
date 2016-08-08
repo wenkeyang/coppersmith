@@ -28,7 +28,8 @@ import Partitions.PathComponents
   * `Partitions.apply` methods to create instances, or the `unpartitioned` value for
   * unpartitioned data.
   */
-case class Partitions[P : PathComponents] private(pattern: String, values: List[P]) {
+case class Partitions[P : PathComponents] private (pattern: String, values: List[P]) {
+
   /** Paths relative to the supplied `basePath` */
   def toPaths(basePath: Path): List[Path] =
     oPaths.map(_.map(new Path(basePath, _))).map(_.list).getOrElse(List(new Path(basePath, "*")))
@@ -36,9 +37,9 @@ case class Partitions[P : PathComponents] private(pattern: String, values: List[
   def relativePaths: List[Path] = oPaths.map(_.list).getOrElse(List(new Path(".")))
 
   /** Relative paths that this instance represents, or `None` if `values` is empty. */
-  def oPaths: Option[NonEmptyList[Path]] = values.toNel.map(_.map(value =>
-   new Path(pattern.format(implicitly[PathComponents[P]].toComponents((value)): _*))
-  ))
+  def oPaths: Option[NonEmptyList[Path]] =
+    values.toNel.map(_.map(value =>
+              new Path(pattern.format(implicitly[PathComponents[P]].toComponents((value)): _*))))
 }
 
 object Partitions {

@@ -20,22 +20,22 @@ import commbank.coppersmith.Lift
 package object scalding {
 
   type FeatureJobConfig[S] = commbank.coppersmith.scalding.FeatureJobConfig[S]
-  type SimpleFeatureJob = commbank.coppersmith.scalding.SimpleFeatureJob
-  type FeatureValueEnc[T] = commbank.coppersmith.scalding.FeatureValueEnc[T]
+  type SimpleFeatureJob    = commbank.coppersmith.scalding.SimpleFeatureJob
+  type FeatureValueEnc[T]  = commbank.coppersmith.scalding.FeatureValueEnc[T]
 
   val FeatureSetExecutions = commbank.coppersmith.scalding.FeatureSetExecutions
-  val FeatureSetExecution = commbank.coppersmith.scalding.FeatureSetExecution
+  val FeatureSetExecution  = commbank.coppersmith.scalding.FeatureSetExecution
 
-  val Partitions = commbank.coppersmith.scalding.Partitions
-  val PathComponents = commbank.coppersmith.scalding.Partitions
-  val HiveTextSource = commbank.coppersmith.scalding.HiveTextSource
-  val HiveParquetSource = commbank.coppersmith.scalding.HiveParquetSource
-  val TypedPipeSource = commbank.coppersmith.scalding.TypedPipeSource
-  val FixedSinkPartition = commbank.coppersmith.scalding.FixedSinkPartition
+  val Partitions           = commbank.coppersmith.scalding.Partitions
+  val PathComponents       = commbank.coppersmith.scalding.Partitions
+  val HiveTextSource       = commbank.coppersmith.scalding.HiveTextSource
+  val HiveParquetSource    = commbank.coppersmith.scalding.HiveParquetSource
+  val TypedPipeSource      = commbank.coppersmith.scalding.TypedPipeSource
+  val FixedSinkPartition   = commbank.coppersmith.scalding.FixedSinkPartition
   val DerivedSinkPartition = commbank.coppersmith.scalding.DerivedSinkPartition
-  val HiveTextSink = commbank.coppersmith.scalding.HiveTextSink
-  val HiveParquetSink = commbank.coppersmith.scalding.HiveParquetSink
-  val EavtText = commbank.coppersmith.scalding.EavtText
+  val HiveTextSink         = commbank.coppersmith.scalding.HiveTextSink
+  val HiveParquetSink      = commbank.coppersmith.scalding.HiveParquetSink
+  val EavtText             = commbank.coppersmith.scalding.EavtText
 
   implicit val framework: Lift[TypedPipe] = commbank.coppersmith.scalding.lift.scalding
 }

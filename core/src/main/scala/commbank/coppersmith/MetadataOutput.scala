@@ -22,9 +22,8 @@ import argonaut._, Argonaut._
 import commbank.coppersmith.Feature.Value._
 
 object MetadataOutput {
-  case class MetadataPrinter[O] (
-    fn: (Metadata[_, Feature.Value], Option[Conforms[_, _]]) => O,
-    combiner: List[O] => String)
+  case class MetadataPrinter[O](fn: (Metadata[_, Feature.Value], Option[Conforms[_, _]]) => O,
+                                combiner: List[O] => String)
 
   val defaultCombiner = (list: List[String]) => list.mkString("\n")
 
@@ -39,48 +38,48 @@ object MetadataOutput {
   }
 
   private def psvFeatureTypeToString(f: Feature.Type) = f match {
-    case t : Type.Categorical => "categorical"
-    case t : Type.Numeric     => "continuous"
-    case Type.Instant         => "datetime"
+    case t: Type.Categorical => "categorical"
+    case t: Type.Numeric     => "continuous"
+    case Type.Instant        => "datetime"
   }
 
   private def genericFeatureTypeToString(f: Feature.Type) = f.toString.toLowerCase
 
   private def genericValueTypeToString(v: ValueType) = v.toString.replace("Type", "").toLowerCase
 
-  def genericValueToJson(v: Value): Json = (v match {
-    case Integral(v)      => v.map(i => jString(i.toString))
-    case Decimal(v)       => v.map(bd => jString(bd.toString))
-    case FloatingPoint(v) => v.map(fp => jString(fp.toString))
-    case Str(v)           => v.map(jString)
-    case Date(v)          => v.map(d => jString(d.toString))
-    case Time(v)          => v.map(t => jString(t.toString))
-    case Bool(v)          => v.map(b => jString(b.toString))
-  }).getOrElse(jNull)
+  def genericValueToJson(v: Value): Json =
+    (v match {
+      case Integral(v)      => v.map(i => jString(i.toString))
+      case Decimal(v)       => v.map(bd => jString(bd.toString))
+      case FloatingPoint(v) => v.map(fp => jString(fp.toString))
+      case Str(v)           => v.map(jString)
+      case Date(v)          => v.map(d => jString(d.toString))
+      case Time(v)          => v.map(t => jString(t.toString))
+      case Bool(v)          => v.map(b => jString(b.toString))
+    }).getOrElse(jNull)
 
   private def genericRangeToJson(r: Option[Value.Range[Value]]) = r match {
-    case Some(Value.MinMaxRange(min, max)) => Some(Json("min" -> genericValueToJson(min),
-                                                   "max" -> genericValueToJson(max)))
-    case Some(Value.SetRange(set))         => Some(jArrayElements(set.map(genericValueToJson).toList: _*))
-    case None                              => None
+    case Some(Value.MinMaxRange(min, max)) =>
+      Some(Json("min" -> genericValueToJson(min), "max" -> genericValueToJson(max)))
+    case Some(Value.SetRange(set)) => Some(jArrayElements(set.map(genericValueToJson).toList: _*))
+    case None                      => None
   }
 
   val Psv: MetadataPrinter[String] = MetadataPrinter[String]((m, _) => {
-      val valueType = psvValueTypeToString(m.valueType)
-      val featureType = psvFeatureTypeToString(m.featureType)
-      List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
+    val valueType   = psvValueTypeToString(m.valueType)
+    val featureType = psvFeatureTypeToString(m.featureType)
+    List(m.namespace + "." + m.name, valueType, featureType).map(_.toLowerCase).mkString("|")
   }, defaultCombiner)
-
 
   val JsonObject: MetadataPrinter[Json] = MetadataPrinter((md, oConforms) => {
     val json = Json(
-      "name" -> jString(md.name),
-      "namespace" -> jString(md.namespace),
-      "description" -> jString(md.description),
-      "source" -> jString(md.sourceType.toString),
-      "featureType" -> jString(genericFeatureTypeToString(md.featureType)),
-      "valueType" -> jString(genericValueTypeToString(md.valueType)),
-      "typesConform" -> jBool(oConforms.isDefined)
+        "name"         -> jString(md.name),
+        "namespace"    -> jString(md.namespace),
+        "description"  -> jString(md.description),
+        "source"       -> jString(md.sourceType.toString),
+        "featureType"  -> jString(genericFeatureTypeToString(md.featureType)),
+        "valueType"    -> jString(genericValueTypeToString(md.valueType)),
+        "typesConform" -> jBool(oConforms.isDefined)
     )
     genericRangeToJson(md.valueRange) match {
       case Some(r) => ("range" -> r) ->: json
@@ -88,12 +87,11 @@ object MetadataOutput {
     }
   }, lst => jArrayElements(lst: _*).nospaces)
 
-
   trait HasMetadata[S] {
     def metadata: Iterable[Metadata[S, Value]]
   }
 
-  implicit def fromFeature[S, V <: Value](f:Feature[S, V]): HasMetadata[S] = new HasMetadata[S] {
+  implicit def fromFeature[S, V <: Value](f: Feature[S, V]): HasMetadata[S] = new HasMetadata[S] {
     def metadata: Iterable[Metadata[S, V]] = Seq(f.metadata)
   }
 
@@ -102,8 +100,8 @@ object MetadataOutput {
   }
 
   def metadataString[S, O](
-    metadata: List[(Metadata[S, Feature.Value], Option[Conforms[_, _]])],
-    printer: MetadataPrinter[O]
+      metadata: List[(Metadata[S, Feature.Value], Option[Conforms[_, _]])],
+      printer: MetadataPrinter[O]
   ): String = {
     printer.combiner(metadata.map(printer.fn.tupled))
   }

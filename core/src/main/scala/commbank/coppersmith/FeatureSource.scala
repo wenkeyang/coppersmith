@@ -20,7 +20,8 @@ import scalaz.syntax.std.option.ToOptionIdOps
 abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => Boolean] = None) {
   self: FS =>
 
-  def filter(p: S => Boolean): FS = copyWithFilter(filter.map(f => (s: S) => f(s) && p(s)).orElse(p.some))
+  def filter(p: S => Boolean): FS =
+    copyWithFilter(filter.map(f => (s: S) => f(s) && p(s)).orElse(p.some))
 
   def copyWithFilter(filter: Option[S => Boolean]): FS
 
@@ -34,16 +35,16 @@ abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => 
 // TODO: See if it is possible to extend FeatureSource directly here to remove
 // additional FeatureBuilderSourceInstances.fromCFS implicit method
 case class ContextFeatureSource[S, C, FS <: FeatureSource[S, FS]](
-  underlying: FeatureSource[S, FS],
-  filter:     Option[((S, C)) => Boolean] = None
+    underlying: FeatureSource[S, FS],
+    filter: Option[((S, C)) => Boolean] = None
 ) {
   def bindWithContext[P[_] : Lift](
-    binder: SourceBinder[S, FS, P],
-    ctx:    C
+      binder: SourceBinder[S, FS, P],
+      ctx: C
   ): BoundFeatureSource[(S, C), P] = {
     new BoundFeatureSource[(S, C), P] {
       def load: P[(S, C)] = {
-        val lift = implicitly[Lift[P]]
+        val lift   = implicitly[Lift[P]]
         val loaded = lift.functor.map(underlying.bind(binder).load)((_, ctx))
         filter.map(lift.liftFilter(loaded, _)).getOrElse(loaded)
       }
@@ -70,13 +71,13 @@ trait SourceBinderInstances extends GeneratedBindings with GeneratedJoinTypeInst
   def from[S, P[_] : Lift](dataSource: DataSource[S, P]) = FromBinder(dataSource)
 
   def join[L, R, J : Ordering, P[_] : Lift](
-    leftSrc:  DataSource[L, P],
-    rightSrc: DataSource[R, P]
+      leftSrc: DataSource[L, P],
+      rightSrc: DataSource[R, P]
   ) = joinMulti[L, R, J, L, R, P](leftSrc, rightSrc) // From GeneratedBindings
 
   def leftJoin[L, R, J : Ordering, P[_] : Lift](
-    leftSrc:  DataSource[L, P],
-    rightSrc: DataSource[R, P]
+      leftSrc: DataSource[L, P],
+      rightSrc: DataSource[R, P]
   ) = joinMulti[L, R, J, L, Option[R], P](leftSrc, rightSrc) // From GeneratedBindings
 }
 

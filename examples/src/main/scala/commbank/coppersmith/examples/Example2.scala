@@ -29,35 +29,37 @@ object Example2 {
   val customerJoinAccount = Join[Customer].to[Account].on(_.acct, _.id)
 
   val feature = Patterns.general[(Customer, Account), FloatingPoint](
-    "ns",
-    "name",
-    "description",
-    Continuous,
-    {case (c, a) => c._1},
-    {case (c,a)  => Some(a.balance)},
-    None
+      "ns",
+      "name",
+      "description",
+      Continuous, { case (c, a) => c._1 }, { case (c, a) => Some(a.balance) },
+      None
   )
 
-  case class ExampleConfig(config:Config) {
+  case class ExampleConfig(config: Config) {
     val args          = config.getArgs
     val hdfsInputPath = args("input-dir")
-    val queryDate     = args.optional("query-date").cata(new DateTime(_), DateTime.now().minusMonths(1))
-    val yearMonth     = queryDate.toString("yyyyMM")
-    val env           = args("hdfs-root")
-    val hivePath      = s"${env}/view/warehouse/features/customers"
-    val year          = queryDate.toString("yyyy")
-    val month         = queryDate.toString("MM")
+    val queryDate =
+      args.optional("query-date").cata(new DateTime(_), DateTime.now().minusMonths(1))
+    val yearMonth = queryDate.toString("yyyyMM")
+    val env       = args("hdfs-root")
+    val hivePath  = s"${env}/view/warehouse/features/customers"
+    val year      = queryDate.toString("yyyy")
+    val month     = queryDate.toString("MM")
   }
 
   def featureJob: Execution[JobStatus] = {
     for {
-      conf            <- Execution.getConfig.map(ExampleConfig)
-      (customers, _)  <- Execution.from(Util.decodeHive[Customer](
-                           MultipleTextLineFiles(s"${conf.hdfsInputPath}/cust/efft_yr_month=${conf.yearMonth}")))
-      (accounts, _)   <- Execution.from(Util.decodeHive[Account](
-                           MultipleTextLineFiles(s"${conf.hdfsInputPath}/acct/efft_yr_month=${conf.yearMonth}")))
-      outputPipe      =  liftJoin(customerJoinAccount)(customers, accounts)
-      _               <- outputPipe.writeExecution(TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
+      conf <- Execution.getConfig.map(ExampleConfig)
+      (customers, _) <- Execution.from(
+                           Util.decodeHive[Customer](MultipleTextLineFiles(
+                                   s"${conf.hdfsInputPath}/cust/efft_yr_month=${conf.yearMonth}")))
+      (accounts, _) <- Execution.from(
+                          Util.decodeHive[Account](MultipleTextLineFiles(
+                                  s"${conf.hdfsInputPath}/acct/efft_yr_month=${conf.yearMonth}")))
+      outputPipe = liftJoin(customerJoinAccount)(customers, accounts)
+      _ <- outputPipe.writeExecution(
+              TypedPsv(s"${conf.hivePath}/year=${conf.year}/month=${conf.month}"))
     } yield (JobFinished)
   }
 }

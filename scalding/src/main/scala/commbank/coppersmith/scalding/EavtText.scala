@@ -23,20 +23,20 @@ import commbank.coppersmith.thrift.Eavt
 
 object EavtText {
   val eavtByDay = DerivedSinkPartition[Eavt, (String, String, String)](
-    HivePartition.byDay(Fields[Eavt].Time, "yyyy-MM-dd")
+      HivePartition.byDay(Fields[Eavt].Time, "yyyy-MM-dd")
   )
 
   implicit object EavtEnc extends FeatureValueEnc[Eavt] {
     def encode(fvt: (FeatureValue[Value], FeatureTime)): Eavt = fvt match {
       case (fv, time) =>
         val featureValue = (fv.value match {
-          case Integral(v) => v.map(_.toString)
-          case Decimal(v) => v.map(_.toString)
+          case Integral(v)      => v.map(_.toString)
+          case Decimal(v)       => v.map(_.toString)
           case FloatingPoint(v) => v.map(_.toString)
-          case Str(v) => v
-          case Bool(v) => v.map(_.toString)
-          case Date(v) => v.map(_.toString)
-          case Time(v) => v.map(_.toString)
+          case Str(v)           => v
+          case Bool(v)          => v.map(_.toString)
+          case Date(v)          => v.map(_.toString)
+          case Time(v)          => v.map(_.toString)
         }).getOrElse(HiveTextSink.NullValue)
 
         val featureTime = new DateTime(time).toString("yyyy-MM-dd")

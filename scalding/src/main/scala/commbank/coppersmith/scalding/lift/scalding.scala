@@ -24,7 +24,7 @@ import ScaldingScalazInstances.typedPipeFunctor
 
 trait ScaldingLift extends Lift[TypedPipe] with GeneratedScaldingLift {
 
-  def lift[S, V <: Value](f:Feature[S,V])(s: TypedPipe[S]): TypedPipe[FeatureValue[V]] = {
+  def lift[S, V <: Value](f: Feature[S, V])(s: TypedPipe[S]): TypedPipe[FeatureValue[V]] = {
     s.flatMap(s => f.generate(s))
   }
 
@@ -33,9 +33,9 @@ trait ScaldingLift extends Lift[TypedPipe] with GeneratedScaldingLift {
   }
 
   def liftBinder[S, U <: FeatureSource[S, U], B <: SourceBinder[S, U, TypedPipe]](
-    underlying: U,
-    binder:     B,
-    filter:     Option[S => Boolean]
+      underlying: U,
+      binder: B,
+      filter: Option[S => Boolean]
   ) = ScaldingBoundFeatureSource(underlying, binder, filter)
 
   def liftFilter[S](p: TypedPipe[S], f: S => Boolean) = p.filter(f)

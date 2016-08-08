@@ -36,17 +36,19 @@ object Datestamp {
 
   def parseFormat(pattern: String): (String => Either[(String, String), Datestamp]) = {
     val fmt = DateTimeFormat.forPattern(pattern)
-    time => {
-      Try(fmt.parseLocalDate(time)) match {
-        case Success(d) => Right(Datestamp(d.getYear, d.getMonthOfYear, d.getDayOfMonth))
-        case Failure(_) => Left((time, pattern))
+    time =>
+      {
+        Try(fmt.parseLocalDate(time)) match {
+          case Success(d) => Right(Datestamp(d.getYear, d.getMonthOfYear, d.getDayOfMonth))
+          case Failure(_) => Left((time, pattern))
+        }
       }
-    }
   }
 
   def unsafeParseFormat(pattern: String): (String => Datestamp) = {
     val f = parseFormat(pattern)
-    time => f(time).right.getOrElse(sys.error(s"Unable to parse date: ${f(time).left.get}"))
+    time =>
+      f(time).right.getOrElse(sys.error(s"Unable to parse date: ${f(time).left.get}"))
   }
 
   implicit def ordering[A <: Datestamp]: Ordering[A] = Ordering.by(_.toString)
@@ -112,17 +114,18 @@ object Timestamp {
     if (!p.contains("Z")) throw new IllegalArgumentException(s"$pattern doesn't parse timezones.")
 
     val fmt = DateTimeFormat.forPattern(pattern)
-    time => {
-      val triedTime = Try {
-        val dt     = fmt.withOffsetParsed.parseDateTime(time)
-        val tz     = dt.getZone.getOffset(dt)
-        val offset = Some((MILLISECONDS.toHours(tz).toInt,
-          Math.abs(MILLISECONDS.toMinutes(tz).toInt % 60)))
+    time =>
+      {
+        val triedTime = Try {
+          val dt = fmt.withOffsetParsed.parseDateTime(time)
+          val tz = dt.getZone.getOffset(dt)
+          val offset =
+            Some((MILLISECONDS.toHours(tz).toInt, Math.abs(MILLISECONDS.toMinutes(tz).toInt % 60)))
 
-        Timestamp(dt.getMillis, offset)
+          Timestamp(dt.getMillis, offset)
+        }
+        Either.cond(triedTime.isSuccess, triedTime.get, (time, pattern))
       }
-      Either.cond(triedTime.isSuccess, triedTime.get, (time, pattern))
-    }
   }
 
   /**
@@ -134,7 +137,8 @@ object Timestamp {
     */
   def unsafeParseFormat(pattern: String): String => Timestamp = {
     val f = parseFormat(pattern)
-    s => f(s).right.getOrElse(sys.error(s"Unable to parse time: ${f(s).left.get}"))
+    s =>
+      f(s).right.getOrElse(sys.error(s"Unable to parse time: ${f(s).left.get}"))
   }
 
   /**
@@ -146,16 +150,18 @@ object Timestamp {
     * @return A function from a time string and offset to either the parsed Timestamp,
     *         or the time arg and pattern used if parsing fails
     */
-  def parseFormatWithOffset(pattern: String): (String, Offset) => Either[(String, String), Timestamp] = {
+  def parseFormatWithOffset(
+      pattern: String): (String, Offset) => Either[(String, String), Timestamp] = {
     val fmt = DateTimeFormat.forPattern(pattern)
-    (time, offset) => {
-      val (h, m)  = offset.getOrElse((0, 0))
-      val tz      = DateTimeZone.forOffsetHoursMinutes(h, m)
-      // Without withOffsetParsed the timezone fields are moved to system timezone
-      val triedDT = Try(fmt.withOffsetParsed().parseDateTime(time).withZoneRetainFields(tz))
+    (time, offset) =>
+      {
+        val (h, m) = offset.getOrElse((0, 0))
+        val tz     = DateTimeZone.forOffsetHoursMinutes(h, m)
+        // Without withOffsetParsed the timezone fields are moved to system timezone
+        val triedDT = Try(fmt.withOffsetParsed().parseDateTime(time).withZoneRetainFields(tz))
 
-      Either.cond(triedDT.isSuccess, Timestamp(triedDT.get.getMillis, offset), (time, pattern))
-    }
+        Either.cond(triedDT.isSuccess, Timestamp(triedDT.get.getMillis, offset), (time, pattern))
+      }
   }
 
   /**
@@ -168,29 +174,30 @@ object Timestamp {
     */
   def unsafeParseFormatWithOffset(pattern: String): (String, Offset) => Timestamp = {
     val f = parseFormatWithOffset(pattern)
-    (s, o) => f(s, o).right.getOrElse(sys.error(s"Unable to parse time: ${f(s, o).left.get}"))
+    (s, o) =>
+      f(s, o).right.getOrElse(sys.error(s"Unable to parse time: ${f(s, o).left.get}"))
   }
 
   private def parseOffset(time: String): Option[(Int, Int)] = {
     // Parse timezone hour and minute
-    val tzParser =
-      """.*([\-+]\d{2}):(\d{2}).*""".r
+    val tzParser = """.*([\-+]\d{2}):(\d{2}).*""".r
 
     // -00:00 represents unknown timezone
     val offset = time match {
       case tzParser("-00", "00") => None
-      case tzParser(h, m) => Some((h.toInt, m.toInt))
-      case _ => None
+      case tzParser(h, m)        => Some((h.toInt, m.toInt))
+      case _                     => None
     }
     offset
   }
 
-  implicit def ordering[A <: Timestamp]: Ordering[A] = Ordering.by(t => (t.toUTC.toString, t.offset))
+  implicit def ordering[A <: Timestamp]: Ordering[A] =
+    Ordering.by(t => (t.toUTC.toString, t.offset))
   implicit def scalazOrder[A <: Timestamp]: Order[A] = Order.fromScalaOrdering(ordering)
 }
 
 case class Datestamp(year: Int, month: Int, day: Int) {
-  protected def toLocalDate: org.joda.time.LocalDate ={
+  protected def toLocalDate: org.joda.time.LocalDate = {
     new LocalDate(year, month, day)
   }
 
@@ -212,9 +219,9 @@ case class Timestamp(millis: Long, offset: Offset) {
     Timestamp.unsafeParseWithMillis(dt.toString("yyyy-MM-dd'T'HH:mm:ss.SSSZZ"))
   }
 
-  protected def toDateTime: org.joda.time.DateTime ={
-    val (h, m) = offset.getOrElse((0,0))
-    val tz = DateTimeZone.forOffsetHoursMinutes(h, m)
+  protected def toDateTime: org.joda.time.DateTime = {
+    val (h, m) = offset.getOrElse((0, 0))
+    val tz     = DateTimeZone.forOffsetHoursMinutes(h, m)
     new DateTime(millis, tz)
   }
 
@@ -223,4 +230,3 @@ case class Timestamp(millis: Long, offset: Offset) {
     f"${toDateTime.toString("yyyy-MM-dd'T'HH:mm:ss.SSS")}$offsetStr"
   }
 }
-

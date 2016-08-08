@@ -35,6 +35,7 @@ import commbank.coppersmith.DataSource
   * It provides some high level utility methods, such as filtering.
   */
 trait ScaldingDataSource[S] extends DataSource[S, TypedPipe] {
+
   /** Apply a filter to the raw data source.
     * Prefer [[commbank.coppersmith.FeatureBuilder.where]], since that allows the filter
     * to be expressed in the feature definition, rather than the config.
@@ -50,19 +51,19 @@ trait ScaldingDataSource[S] extends DataSource[S, TypedPipe] {
 }
 
 case class HiveTextSource[S <: ThriftStruct : Decode](
-  paths:     List[Path],
-  delimiter: String
+    paths: List[Path],
+    delimiter: String
 ) extends ScaldingDataSource[S] {
   val log = LoggerFactory.getLogger(getClass())
 
   def load = {
     log.info("Loading from " + paths.mkString(","))
-    val decoder = implicitly[Decode[S]]
+    val decoder               = implicitly[Decode[S]]
     val input: TextLineScheme = MultipleTextLineFiles(paths.map(_.toString): _*)
     input.map { raw =>
       decoder.decode(none = "\\N", Splitter.delimited(delimiter).run(raw).toList)
     }.collect {
-      case DecodeOk(row)            => row
+      case DecodeOk(row) => row
       case e @ DecodeError(_, _, _) =>
         throw new Exception("Cannot decode input to HiveTextSource: " + errorMessage(e))
     }
@@ -78,15 +79,15 @@ case class HiveTextSource[S <: ThriftStruct : Decode](
 
 object HiveTextSource {
   def apply[S <: ThriftStruct : Decode, P](
-    basePath: Path,
-    partitions: Partitions[P],
-    delimiter: String = "|"
+      basePath: Path,
+      partitions: Partitions[P],
+      delimiter: String = "|"
   ): HiveTextSource[S] =
     HiveTextSource[S](partitions.toPaths(basePath), delimiter)
 }
 
 case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter](
-  paths: List[Path]
+    paths: List[Path]
 ) extends ScaldingDataSource[S] {
   val log = LoggerFactory.getLogger(getClass())
 
@@ -97,9 +98,9 @@ case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : Tup
 }
 
 object HiveParquetSource {
-  def apply[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter , P](
-    basePath: Path,
-    partitions: Partitions[P]
+  def apply[S <: ThriftStruct : Manifest : TupleConverter : TupleSetter, P](
+      basePath: Path,
+      partitions: Partitions[P]
   ): HiveParquetSource[S] =
     HiveParquetSource[S](partitions.toPaths(basePath))
 }

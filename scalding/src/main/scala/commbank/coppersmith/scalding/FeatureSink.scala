@@ -32,13 +32,13 @@ import au.com.cba.omnia.maestro.api._, Maestro._
 import commbank.coppersmith.Feature._
 import commbank.coppersmith.FeatureValue
 
-
 import Partitions.PathComponents
 import HiveSupport.{DelimiterConflictStrategy, FailJob}
 
 import FeatureSink.WriteResult
 
 trait FeatureSink {
+
   /**
     * Persist feature values, returning the list of paths written (for committing at the
     * end of the job) or an error if trying to write to a path that is already committed
@@ -49,12 +49,13 @@ trait FeatureSink {
 object FeatureSink {
   sealed trait WriteError
   case class AlreadyCommitted(paths: NonEmptyList[Path]) extends WriteError
-  case class AttemptedWriteToCommitted(path: Path) extends WriteError
+  case class AttemptedWriteToCommitted(path: Path)       extends WriteError
 
   type WriteResult = Execution[Either[WriteError, Set[Path]]]
 
   def commitFlag(path: Path) = new Path(path, "_SUCCESS")
-  def isCommitted(path: Path): Execution[Boolean] = Execution.fromHdfs(Hdfs.exists(commitFlag(path)))
+  def isCommitted(path: Path): Execution[Boolean] =
+    Execution.fromHdfs(Hdfs.exists(commitFlag(path)))
 
   type CommitResult = Execution[Either[WriteError, Unit]]
   // Note: Check for committed flags and subsequent writing thereof is not atomic
@@ -67,13 +68,15 @@ object FeatureSink {
 
     pathCommits.flatMap(pathCommitStates => {
       val committedPaths = pathCommitStates.collect { case (path, true) => path }
-      committedPaths.toNel.map(committed =>
-        Execution.from(Left(AlreadyCommitted(committed)))
-      ).getOrElse(
-        paths.toList.map(path =>
-          Execution.fromHdfs(Hdfs.create(commitFlag(path)))
-        ).sequence.unit.map(Right(_))
-      )
+      committedPaths.toNel
+        .map(committed => Execution.from(Left(AlreadyCommitted(committed))))
+        .getOrElse(
+            paths.toList
+              .map(path => Execution.fromHdfs(Hdfs.create(commitFlag(path))))
+              .sequence
+              .unit
+              .map(Right(_))
+        )
     })
   }
 }
@@ -86,31 +89,31 @@ sealed trait SinkPartition[T] {
 }
 
 final case class FixedSinkPartition[T, PP : PathComponents : TupleSetter](
-  fieldNames: List[String],
-  pathPattern: String,
-  partitionValue: PP
+    fieldNames: List[String],
+    pathPattern: String,
+    partitionValue: PP
 ) extends SinkPartition[T] {
   type P = PP
   def pathComponents = implicitly
-  def tupleSetter = implicitly
-  def underlying = Partition(fieldNames, _ => partitionValue, pathPattern)
+  def tupleSetter    = implicitly
+  def underlying     = Partition(fieldNames, _ => partitionValue, pathPattern)
 }
 
 object FixedSinkPartition {
   def byDay[T](dt: DateTime) =
     FixedSinkPartition[T, (String, String, String)](
-      List("year", "month", "day"),
-      "year=%s/month=%s/day=%s",
-      (dt.getYear.toString, f"${dt.getMonthOfYear}%02d", f"${dt.getDayOfMonth}%02d")
+        List("year", "month", "day"),
+        "year=%s/month=%s/day=%s",
+        (dt.getYear.toString, f"${dt.getMonthOfYear}%02d", f"${dt.getDayOfMonth}%02d")
     )
 }
 
 final case class DerivedSinkPartition[T, PP : PathComponents : TupleSetter](
-  underlying: Partition[T, PP]
+    underlying: Partition[T, PP]
 ) extends SinkPartition[T] {
   type P = PP
   def pathComponents = implicitly
-  def tupleSetter = implicitly
+  def tupleSetter    = implicitly
 }
 
 trait FeatureValueEnc[T] extends Encoder[(FeatureValue[Value], FeatureTime), T] {
@@ -126,27 +129,26 @@ object HiveTextSink {
 }
 
 case class HiveTextSink[
-  T <: ThriftStruct with Product : FeatureValueEnc : Manifest
+    T <: ThriftStruct with Product : FeatureValueEnc : Manifest
 ](
-  dbName:    HiveTextSink.DatabaseName,
-  tablePath: Path,
-  tableName: HiveTextSink.TableName,
-  partition: SinkPartition[T],
-  delimiter: String = HiveTextSink.Delimiter,
-  dcs:       DelimiterConflictStrategy[T] = FailJob[T]()
+    dbName: HiveTextSink.DatabaseName,
+    tablePath: Path,
+    tableName: HiveTextSink.TableName,
+    partition: SinkPartition[T],
+    delimiter: String = HiveTextSink.Delimiter,
+    dcs: DelimiterConflictStrategy[T] = FailJob[T]()
 ) extends FeatureSink {
   def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)]) = {
     val textPipe = features.map(implicitly[FeatureValueEnc[T]].encode)
 
-    val hiveConfig =
-      HiveSupport.HiveConfig[T, partition.P](
+    val hiveConfig = HiveSupport.HiveConfig[T, partition.P](
         partition.underlying,
         dbName,
         tablePath,
         tableName,
         delimiter,
         dcs
-      )
+    )
 
     implicit val pathComponents: PathComponents[partition.P] = partition.pathComponents
     // Note: This needs to be explicitly specified so that the TupleSetter.singleSetter
