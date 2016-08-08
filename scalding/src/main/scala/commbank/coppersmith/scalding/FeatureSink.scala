@@ -15,7 +15,7 @@
 package commbank.coppersmith.scalding
 
 import com.twitter.scalding.typed.TypedPipe
-import com.twitter.scalding.{Execution, TupleSetter}
+import com.twitter.scalding.{Execution, TupleSetter, TupleConverter}
 import com.twitter.util.Encoder
 
 import org.apache.hadoop.fs.Path
@@ -82,10 +82,11 @@ sealed trait SinkPartition[T] {
   type P
   def pathComponents: PathComponents[P]
   def tupleSetter: TupleSetter[P]
+  def tupleConverter: TupleConverter[P]
   def underlying: Partition[T, P]
 }
 
-final case class FixedSinkPartition[T, PP : PathComponents : TupleSetter](
+final case class FixedSinkPartition[T, PP : PathComponents : TupleSetter : TupleConverter](
   fieldNames: List[String],
   pathPattern: String,
   partitionValue: PP
@@ -93,6 +94,7 @@ final case class FixedSinkPartition[T, PP : PathComponents : TupleSetter](
   type P = PP
   def pathComponents = implicitly
   def tupleSetter = implicitly
+  def tupleConverter = implicitly
   def underlying = Partition(fieldNames, _ => partitionValue, pathPattern)
 }
 
@@ -105,12 +107,13 @@ object FixedSinkPartition {
     )
 }
 
-final case class DerivedSinkPartition[T, PP : PathComponents : TupleSetter](
+final case class DerivedSinkPartition[T, PP : PathComponents : TupleSetter : TupleConverter](
   underlying: Partition[T, PP]
 ) extends SinkPartition[T] {
   type P = PP
   def pathComponents = implicitly
   def tupleSetter = implicitly
+  def tupleConverter = implicitly
 }
 
 trait FeatureValueEnc[T] extends Encoder[(FeatureValue[Value], FeatureTime), T] {
@@ -149,9 +152,10 @@ case class HiveTextSink[
       )
 
     implicit val pathComponents: PathComponents[partition.P] = partition.pathComponents
-    // Note: This needs to be explicitly specified so that the TupleSetter.singleSetter
-    // instance isn't used (causing a failure at runtime).
+    // Note: These needs to be explicitly specified so that the TupleSetter.singleSetter and
+    // TupleConverter.singleConverter instances aren't used (causing a failure at runtime).
     implicit val tupleSetter: TupleSetter[partition.P] = partition.tupleSetter
+    implicit val tupleConverter: TupleConverter[partition.P] = partition.tupleConverter
     HiveSupport.writeTextTable(hiveConfig, textPipe)
   }
 }

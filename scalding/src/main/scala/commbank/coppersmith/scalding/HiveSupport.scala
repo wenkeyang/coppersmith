@@ -75,10 +75,20 @@ object HiveSupport {
       val sink = PartitionedTextLine(tempDir.toString, partition.pattern);
       {
         for {
-                         // Use append semantics for now as an interim fix to address #97
-                         // Check if this is still relevant once #137 is addressed
-          _           <- partitioned.writeExecution(sink).withSubConfig(createUniqueFilenames(_))
-          oPValues    <- partitioned.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
+                         // Ensure part files have unique names, because the default "part-nnnnn" is not
+                         // suitable for moving multiple feature set outputs into a single destination.
+          written     <- partitioned.writeThrough(sink).withSubConfig(createUniqueFilenames(_))
+                         // Performance note: writeThrough works by returning the sink as a new source.
+                         // Unfortunately, this means an extra MapReduce step involving a scan of all the
+                         // data just written in order to obtain a list of partitions, which cascading
+                         // actually knows already (see BasePartitionTap.getChildPartitionIdentifiers).
+          oPValues    <- written.aggregate(Aggregator.toSet.composePrepare(_._1)).toOptionExecution
+                         .recoverWith {
+                           // Another writeThrough quirk: we need to explicitly handle the edge case where
+                           // no features were written (hence no partitions).
+                           case ex: java.io.IOException if ex.getMessage == "No input paths specified in job"
+                             => Execution.from(None)
+                         }
           oPartitions  = oPValues.map(_.toSet.toList).toList.flatten.toNel.map(pValues =>
                            Partitions(conf.partition, pValues.head, pValues.tail: _*)
                          )
