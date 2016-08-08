@@ -28,4 +28,4 @@ addSbtPlugin("au.com.cba.omnia" % "uniform-thrift"     % uniformVersion)
 
 addSbtPlugin("au.com.cba.omnia" % "uniform-assembly"   % uniformVersion)
 
-addSbtPlugin("com.geirsson" % "sbt-scalafmt" % "0.2.11")
+addSbtPlugin("com.geirsson" % "sbt-scalafmt" % "0.2.12")
