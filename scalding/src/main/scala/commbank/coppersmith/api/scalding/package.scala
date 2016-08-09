@@ -20,6 +20,7 @@ import commbank.coppersmith.Lift
 package object scalding {
 
   type FeatureJobConfig[S] = commbank.coppersmith.scalding.FeatureJobConfig[S]
+  type SimpleFeatureJobOps = commbank.coppersmith.scalding.SimpleFeatureJobOps
   type SimpleFeatureJob = commbank.coppersmith.scalding.SimpleFeatureJob
   type FeatureValueEnc[T] = commbank.coppersmith.scalding.FeatureValueEnc[T]
 

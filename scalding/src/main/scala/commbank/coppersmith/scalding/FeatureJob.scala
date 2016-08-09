@@ -32,14 +32,24 @@ trait FeatureJobConfig[S] {
   def featureContext: FeatureContext
 }
 
+/** Extend this class if you just want to generate features,
+  * and have no custom requirements for how jobs are launched, monitored, configured, etc.
+  *
+  * If you have any special requirements, consider [[SimpleFeatureJobOps]] instead.
+  */
 abstract class SimpleFeatureJob extends MaestroJob with SimpleFeatureJobOps {
   val attemptsExceeded = Execution.from(JobNeverReady)
 }
 
 object SimpleFeatureJob extends SimpleFeatureJobOps
 
+/** Mix in this trait if you need more flexiblity than [[SimpleFeatureJob]] provides.
+  *
+  * For example, if your organisation already has a bespoke base class which jobs need to extend,
+  * then you can mix in this trait to add support for generating coppersmith features.
+  */
 trait SimpleFeatureJobOps {
-  val log = org.slf4j.LoggerFactory.getLogger(getClass())
+  private val log = org.slf4j.LoggerFactory.getLogger(getClass())
 
   def generate[S](cfg:      Config => FeatureJobConfig[S],
                   features: FeatureSetWithTime[S]): Execution[JobStatus] =
