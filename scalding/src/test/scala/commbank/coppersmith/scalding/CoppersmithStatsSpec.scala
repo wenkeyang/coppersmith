@@ -32,9 +32,9 @@ object CoppersmithStatsSpec extends ThermometerSpec { def is = s2"""
     behaves like this when execution fails  $failedExecution
   """
 
-  override def after = {
+  override def before = {
     TestLoggerFactory.clearAll()
-    super.after
+    super.before
   }
 
   def orderedLogs = {
