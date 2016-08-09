@@ -49,7 +49,7 @@ object Datestamp {
     time => f(time).right.getOrElse(sys.error(s"Unable to parse date: ${f(time).left.get}"))
   }
 
-  implicit def ordering[A <: Datestamp]: Ordering[A] = Ordering.by(_.toString)
+  implicit def ordering[A <: Datestamp]: Ordering[A] = Ordering.by(_.toIso8601ExtendedFormatString)
   implicit def scalazOrder[A <: Datestamp]: Order[A] = Order.fromScalaOrdering(ordering)
 }
 
@@ -185,7 +185,7 @@ object Timestamp {
     offset
   }
 
-  implicit def ordering[A <: Timestamp]: Ordering[A] = Ordering.by(t => (t.toUTC.toString, t.offset))
+  implicit def ordering[A <: Timestamp]: Ordering[A] = Ordering.by(t => (t.millis, t.offset))
   implicit def scalazOrder[A <: Timestamp]: Order[A] = Order.fromScalaOrdering(ordering)
 }
 
