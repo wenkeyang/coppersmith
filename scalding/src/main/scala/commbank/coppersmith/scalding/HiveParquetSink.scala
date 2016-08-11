@@ -56,7 +56,17 @@ object HiveParquetSink {
     tablePath: Path,
     partition: FixedSinkPartition[T, P]
   ): HiveParquetSink[T, P] = {
-    val hiveTable = HiveTable[T, P](dbName, tableName, partition.underlying, tablePath.toString)
+    val hiveTable = HiveTable[T, P](
+      dbName,
+      tableName,
+      partition.underlying,
+      tablePath.toString
+    )(implicitly[Manifest[T]],
+      implicitly[Manifest[P]],
+      // Note: This needs to be explicitly specified so that the TupleSetter.singleSetter
+      // instance isn't used (causing a failure at runtime).
+      partition.tupleSetter
+    )
 
     val pathComponents = implicitly[PathComponents[P]].toComponents(partition.partitionValue)
     val partitionRelPath = new Path(partition.underlying.pattern.format(pathComponents: _*))
