@@ -40,7 +40,7 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
     must generate expected feature values $generateFeatureValues
 """
 
-  object CustomerFeatureSet extends FeatureSet[Customer] {
+  object CustomerFeatureSet extends AbstractFeatureSet[Customer] {
     val namespace           = "test.namespace"
     def entity(c: Customer) = c.id
     def time(c: Customer, ctx: FeatureContext)   = c.time

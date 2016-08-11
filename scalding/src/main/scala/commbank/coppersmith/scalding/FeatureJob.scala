@@ -52,7 +52,7 @@ trait SimpleFeatureJobOps {
   private val log = org.slf4j.LoggerFactory.getLogger(getClass())
 
   def generate[S](cfg:      Config => FeatureJobConfig[S],
-                  features: FeatureSetWithTime[S]): Execution[JobStatus] =
+                  features: FeatureSet[S]): Execution[JobStatus] =
     generate(FeatureSetExecutions(FeatureSetExecution(cfg, features)))
 
   def generate[S](cfg:      Config => FeatureJobConfig[S],
@@ -118,7 +118,7 @@ trait FeatureSetExecution {
 
   def config: Config => FeatureJobConfig[Source]
 
-  def features: Either[FeatureSetWithTime[Source], AggregationFeatureSet[Source]]
+  def features: Either[FeatureSet[Source], AggregationFeatureSet[Source]]
 
   import FeatureSetExecution.{generateFeatures, generateOneToMany, generateAggregate}
   def generate(): Execution[Set[Path]] = features.fold(
@@ -130,7 +130,7 @@ trait FeatureSetExecution {
 object FeatureSetExecution {
   def apply[S](
     cfg: Config => FeatureJobConfig[S],
-    fs:  FeatureSetWithTime[S]
+    fs:  FeatureSet[S]
   ): FeatureSetExecution = new FeatureSetExecution {
     type Source = S
     def config = cfg
@@ -161,7 +161,7 @@ object FeatureSetExecution {
   }
 
   private def generateOneToMany[S](
-    features: FeatureSetWithTime[S]
+    features: FeatureSet[S]
   )(input: TypedPipe[S], ctx: FeatureContext): TypedPipe[(FeatureValue[Value], FeatureTime)] = {
     input.flatMap { s =>
       val time = features.time(s, ctx)

@@ -189,7 +189,7 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
 }
 
 object ScaldingJobSpec {
-  object RegularFeatures extends FeatureSet[Account] with FeatureSetWithTime[Account] {
+  object RegularFeatures extends FeatureSet[Account] {
     val namespace          = "test.namespace"
     def entity(a: Account) = a.id
 

@@ -22,9 +22,8 @@ import au.com.cba.omnia.maestro.api.Field
 
 import Feature._
 
-trait FeatureSet[S] extends MetadataSet[S] {
+trait AbstractFeatureSet[S] extends MetadataSet[S] {
   def name: String = getClass.getSimpleName
-
   def namespace: Feature.Namespace
 
   def features: Iterable[Feature[S, Value]]
@@ -37,7 +36,7 @@ trait FeatureSet[S] extends MetadataSet[S] {
   }
 }
 
-trait FeatureSetWithTime[S] extends FeatureSet[S] {
+trait FeatureSet[S] extends AbstractFeatureSet[S] {
   /**
    * Specifies the time associated with a feature. Most of the time that will be
    * the job time, but when it depends on data, this method should be overridden.
@@ -51,7 +50,7 @@ trait MetadataSet[S] {
   def metadata: Iterable[Metadata[S, Value]]
 }
 
-abstract class PivotFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
+abstract class PivotFeatureSet[S : TypeTag] extends FeatureSet[S] {
   def entity(s: S): EntityId
 
   def pivot[V <: Value : TypeTag, FV <% V](field: Field[S, FV],
@@ -61,7 +60,7 @@ abstract class PivotFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
     Patterns.pivot(namespace, featureType, entity, field, humanDescription, range)
 }
 
-abstract class BasicFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
+abstract class BasicFeatureSet[S : TypeTag] extends FeatureSet[S] {
   def entity(s: S): EntityId
 
   def basicFeature[V <: Value : TypeTag](featureName: Name,
@@ -79,7 +78,7 @@ abstract class BasicFeatureSet[S : TypeTag] extends FeatureSetWithTime[S] {
     basicFeature(featureName, humanDescription, featureType, None)(value)
 }
 
-abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends FeatureSetWithTime[S] {
+abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends FeatureSet[S] {
   type Filter = S => Boolean
 
   def featureType:  Feature.Type

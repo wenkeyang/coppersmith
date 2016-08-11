@@ -1,6 +1,19 @@
 Change log
 ==========
 
+## 0.22.0
+Renamed `FeatureSet` -> `AbstractFeatureSet` and `FeatureSetWithTime` ->
+`FeatureSet`.
+
+### Upgrading
+  - Regular feature sets that extend `FeatureSetWithTime` will cause a
+    deprecation warning to be produced. In time, these feature sets
+    should be changed to extend `FeatureSet` instead. There are no
+    known use-cases where the current `FeatureSet` trait (now named
+    `AbstractFeatureSet`) is extended directly, but if such cases
+    exist, they will need to be changed to extend `AbstractFeatureSet`
+    instead.
+
 ## 0.21.0
 The coppersmith plugin no longer pulls in coppersmith dependencies, so
 that dependency clashes are easier to manage.
