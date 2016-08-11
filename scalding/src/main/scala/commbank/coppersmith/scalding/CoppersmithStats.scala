@@ -49,17 +49,17 @@ object CoppersmithStats {
 
   /** Log (at INFO level) all coppersmith counters found in the passed [[com.twitter.scalding.ExecutionCounters]]. */
   def logCounters(counters: ExecutionCounters): Unit = {
-    val coppersmithKeys = counters.keys.filter(_.group == group)
-    if (coppersmithKeys.isEmpty) {
-      log.info("Coppersmith counters: NONE (either no records to process, or job failed)")
+    if (counters.keys.isEmpty) {
+      log.warn("Hadoop counters not available (usually caused by job failure)")
     }
     else {
+      val coppersmithKeys = counters.keys.filter(_.group == group)
       log.info("Coppersmith counters:")
       coppersmithKeys.map { key =>
         val Array(id, name) = key.counter.split(raw"\.", 2)
         (id.toLong, name, key)
       }.toList.sortBy(_._1).foreach { case (id, name, key) =>
-	log.info(f"    ${name}%-30s ${counters(key)}%10d")
+        log.info(f"    ${name}%-30s ${counters(key)}%10d")
       }
     }
   }

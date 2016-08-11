@@ -20,7 +20,7 @@ import com.twitter.scalding.TypedPipe
 import com.twitter.algebird.Aggregator
 
 import uk.org.lidalia.slf4jtest.TestLoggerFactory
-import uk.org.lidalia.slf4jtest.LoggingEvent.info
+import uk.org.lidalia.slf4jtest.LoggingEvent.{info, warn}
 
 import au.com.cba.omnia.thermometer.core._
 
@@ -58,6 +58,7 @@ object CoppersmithStatsSpec extends ThermometerSpec { def is = s2"""
   }
 
   def failedExecution = {
+    // simulate a failure after partial processing (on the fourth element of the pipe)
     val a = TypedPipe.from(List(1, 2, 3, 4, 5)).withCounter("a")
     val b = a.map{ (x: Int) => if (x > 3) throw new Exception else x }.withCounter("b")
 
@@ -66,9 +67,9 @@ object CoppersmithStatsSpec extends ThermometerSpec { def is = s2"""
 
     val logger = TestLoggerFactory.getTestLogger("commbank.coppersmith.scalding.CoppersmithStats")
     logger.getAllLoggingEvents().toList must_== List(
-      // This shows the current behaviour, but is not what we *actually* want.
+      // TODO: This shows the current behaviour, but is not what we *actually* want.
       // After all, seeing the partial counts could be very useful for debugging.
-      info("Coppersmith counters: NONE (either no records to process, or job failed)")
+      warn("Hadoop counters not available (usually caused by job failure)")
     )
   }
 }
