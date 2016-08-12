@@ -1,6 +1,39 @@
 Change log
 ==========
 
+## 0.23.0
+`HiveParquetSink` and `HiveTextSink` now write metadata alongside features.
+The metadata will be output in `_feature_metadata/` with the name
+`_${METADATA_SET_NAMES}_METADATA.V1.json` (e.g. `_RegularFeatures$_METADATA.V1.json`
+or `_RegularFeatures$_AggregationFeatures$_METADATA.V1.json`)
+
+### Upgrading
+  - Custom sink implementations must change:
+
+    ```scala
+    def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)]): WriteResult
+    ```
+
+    to
+
+    ```scala
+    def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)],
+              metadataSet: List[MetadataSet[Any]]): WriteResult
+    ```
+
+  - Thermometer tests that use globs in paths, e.g.
+
+     ```scala
+     s"${sink.tablePath}/*/*/*/*"
+     ```
+
+     should be changed to
+
+     ```scala
+     s"${sink.tablePath}/*/*/*/[^_]*"
+     ```
+
+
 ## 0.22.0
 Renamed `FeatureSet` -> `AbstractFeatureSet` and `FeatureSetWithTime` ->
 `FeatureSet`.

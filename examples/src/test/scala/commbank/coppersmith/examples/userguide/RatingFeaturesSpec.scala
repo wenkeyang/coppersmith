@@ -43,7 +43,7 @@ object RatingFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
 
     executesSuccessfully(RatingFeaturesJob.job) must_== JobFinished
 
-    val outPath = s"$dir/user/dev/ratings/year=2015/month=01/day=01/*"
+    val outPath = s"$dir/user/dev/ratings/year=2015/month=01/day=01/part-*"
     expectations { context =>
       context.lines(new Path(outPath)).toSet must_==
         Set(

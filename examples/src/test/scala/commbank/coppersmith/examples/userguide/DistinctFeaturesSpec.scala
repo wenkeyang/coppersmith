@@ -45,7 +45,7 @@ object DistinctFeaturesSpec extends ThermometerHiveSpec { def is = s2"""
 
     executesSuccessfully(job) must_== JobFinished
 
-    val outPath = s"$dir/user/dev/users/year=2015/month=01/day=01/*"
+    val outPath = s"$dir/user/dev/users/year=2015/month=01/day=01/part-*"
     expectations { context =>
       context.lines(new Path(outPath)).toSet.size must_== expectedLength
     }

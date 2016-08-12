@@ -20,6 +20,7 @@ import com.twitter.util.Encoder
 
 import org.apache.hadoop.fs.Path
 
+import scalaz.Scalaz._
 import scalaz.NonEmptyList
 import scalaz.std.list.listInstance
 import scalaz.syntax.std.list.ToListOpsFromList
@@ -29,21 +30,25 @@ import org.joda.time.DateTime
 
 import au.com.cba.omnia.maestro.api._, Maestro._
 
-import commbank.coppersmith.Feature._
-import commbank.coppersmith.FeatureValue
-
+import commbank.coppersmith._, Feature._
 
 import Partitions.PathComponents
 import HiveSupport.{DelimiterConflictStrategy, FailJob}
 
-import FeatureSink.WriteResult
+import FeatureSink.{MetadataWriter, WriteResult}
 
 trait FeatureSink {
   /**
     * Persist feature values, returning the list of paths written (for committing at the
     * end of the job) or an error if trying to write to a path that is already committed
     */
-  def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)]): WriteResult
+  def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)],
+            metadataSet: MetadataSet[Any]): WriteResult
+
+  def metadataWriter: MetadataWriter
+
+  def writeMetadata(metadataSet: MetadataSet[Any], paths: Set[Path]) =
+    metadataWriter(metadataSet, paths)
 }
 
 object FeatureSink {
@@ -52,6 +57,19 @@ object FeatureSink {
   case class AttemptedWriteToCommitted(path: Path) extends WriteError
 
   type WriteResult = Execution[Either[WriteError, Set[Path]]]
+  type MetadataWriter = (MetadataSet[Any], Set[Path]) => WriteResult
+
+  val defaultMetadataWriter: MetadataWriter = (metadataSet, paths) => {
+    val metadataOut = MetadataOutput.Json1
+    val metadata = metadataOut.stringify(metadataOut.doOutput(List(metadataSet), Conforms.allConforms))
+    val metadataFileName = s"_feature_metadata/_${metadataSet.name}_METADATA.V${metadataOut.version}.json"
+
+    val writes: Execution[List[Unit]] = paths.map { p =>
+      val f = new Path(p, metadataFileName)
+      Execution.fromHdfs(Hdfs.write(f, metadata))
+    }.toList.sequence
+    writes.map(_ => Right(paths))
+  }
 
   def commitFlag(path: Path) = new Path(path, "_SUCCESS")
   def isCommitted(path: Path): Execution[Boolean] = Execution.fromHdfs(Hdfs.exists(commitFlag(path)))
@@ -131,14 +149,15 @@ object HiveTextSink {
 case class HiveTextSink[
   T <: ThriftStruct with Product : FeatureValueEnc : Manifest
 ](
-  dbName:    HiveTextSink.DatabaseName,
-  tablePath: Path,
-  tableName: HiveTextSink.TableName,
-  partition: SinkPartition[T],
-  delimiter: String = HiveTextSink.Delimiter,
-  dcs:       DelimiterConflictStrategy[T] = FailJob[T]()
+   dbName:        HiveTextSink.DatabaseName,
+   tablePath:     Path,
+   tableName:     HiveTextSink.TableName,
+   partition:     SinkPartition[T],
+   delimiter:     String = HiveTextSink.Delimiter,
+   dcs:           DelimiterConflictStrategy[T] = FailJob[T](),
+   metadataWriter: MetadataWriter = FeatureSink.defaultMetadataWriter
 ) extends FeatureSink {
-  def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)]) = {
+  def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)], metadataSet: MetadataSet[Any]) = {
     val textPipe = features.map(implicitly[FeatureValueEnc[T]].encode)
 
     val hiveConfig =
@@ -156,6 +175,13 @@ case class HiveTextSink[
     // TupleConverter.singleConverter instances aren't used (causing a failure at runtime).
     implicit val tupleSetter: TupleSetter[partition.P] = partition.tupleSetter
     implicit val tupleConverter: TupleConverter[partition.P] = partition.tupleConverter
-    HiveSupport.writeTextTable(hiveConfig, textPipe)
+
+    val result = HiveSupport.writeTextTable(hiveConfig, textPipe)
+    result.flatMap {
+      case Left(x) => Execution.from(Left(x))
+      case Right(ps : Set[Path]) => {
+        writeMetadata(metadataSet, ps)
+      }
+    }
   }
 }

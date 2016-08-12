@@ -173,6 +173,13 @@ object Feature {
       metadata.featureType.getClass == getClazz(conforms.typeTag) &&
         metadata.valueType == conforms.valueType
     }
+
+    // A dynamic ObjectFinder driven approach would be better here, but fails to find any objects
+    // in thermometer tests
+    def allConforms: Set[Conforms[_, _]] =
+      Set(ContinuousDecimal, ContinuousFloatingPoint, ContinuousIntegral, DiscreteIntegral,
+        OrdinalDecimal, OrdinalFloatingPoint, OrdinalIntegral, OrdinalStr, NominalBool, NominalIntegral,
+        NominalStr)
   }
 
   implicit class RichFeature[S : TypeTag, V <: Value : TypeTag](f: Feature[S, V]) {
@@ -237,7 +244,7 @@ object Feature {
   // Hold references to basic source and value type instances instead of requiring
   // TagType instances, as the latter can cause serialisation regressions in some
   // cases where the metadata is closed over.
-  case class Metadata[S, +V <: Value] private(
+  case class Metadata[+S, +V <: Value] private(
     namespace:   Namespace,
     name:        Name,
     description: Description,

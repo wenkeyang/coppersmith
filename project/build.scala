@@ -104,7 +104,7 @@ object build extends Build {
             Seq(genFile)
           }
         )
-  ).dependsOn(core % "compile->compile;test->test")
+  ).dependsOn(core % "compile->compile;test->test", tools)
 
   lazy val examples = Project(
     id = "examples"

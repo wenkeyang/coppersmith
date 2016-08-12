@@ -35,8 +35,7 @@ object MetadataMain {
 
     val metadataSets = ObjectFinder.findObjects[MetadataSet[Any]](packagge, "commbank.coppersmith").toList
 
-    val allConforms =
-      ObjectFinder.findObjects[Conforms[Type, Value]](args(0), "commbank.coppersmith", "au.com.cba.omnia")
+    val allConforms: Set[Conforms[_, _]] = Conforms.allConforms
 
     // The repetition here is regrettable but getting the types without statically
     // knowing the formatter is really awkward

@@ -28,20 +28,23 @@ object MetadataOutput {
     // Existential types caused pain here. The source and value types are actually
     // already encoded in the features, so just going to the top type parameter helps
     // things here.
-    def doOutput(metadataSets: List[MetadataSet[Any]], conforms: Set[Conforms[Type, Value]]): OutType
+    def doOutput(metadataSets: List[MetadataSet[Any]], conforms: Set[Conforms[_, _]]): OutType
     def stringify(o: OutType): String
+    val version: Int
   }
 
   object Psv extends MetadataOut {
     type OutType = String
 
-    val singleItem = (md: Metadata[_, Value], oConforms: Option[Conforms[Type, Value]]) => {
+    val version = 0
+
+    val singleItem = (md: Metadata[_, Value], oConforms: Option[Conforms[_, _]]) => {
       val valueType = psvValueTypeToString(md.valueType)
       val featureType = psvFeatureTypeToString(md.featureType)
       List(md.namespace + "." + md.name, valueType, featureType).map(_.toLowerCase).mkString("|")
     }
 
-    def doOutput(metadataSets: List[MetadataSet[Any]], allConforms: Set[Conforms[Type, Value]]) = {
+    def doOutput(metadataSets: List[MetadataSet[Any]], allConforms: Set[Conforms[_, _]]) = {
       val metadataWithConforms = metadataSets.flatMap(_.metadata).map(m => (m, allConforms.find(c => conforms_?(c, m))))
       metadataWithConforms.map(singleItem.tupled).mkString("\n")
     }
@@ -51,6 +54,7 @@ object MetadataOutput {
 
   object Json0 extends MetadataOut {
     type OutType = Json
+    val version  = 0
 
     val singleItem = (md: Metadata[_, Value], oConforms: Option[Conforms[_, _]]) => {
       FeatureMetadataV0(
@@ -66,8 +70,8 @@ object MetadataOutput {
 
 
     def doOutput(metadataSets: List[MetadataSet[Any]],
-                 allConforms: Set[Conforms[Type,Value]]): Json = {
-      val metadataWithConforms: List[(Metadata[Any, Value], Option[Conforms[Type, Value]])] =
+                 allConforms: Set[Conforms[_, _]]): Json = {
+      val metadataWithConforms: List[(Metadata[Any, Value], Option[Conforms[_, _]])] =
         metadataSets.flatMap(_.metadata).map { m =>
           (m, allConforms.find(c => conforms_?(c, m)))
         }
@@ -81,6 +85,7 @@ object MetadataOutput {
 
   object Json1 extends MetadataOut {
     type OutType = Json
+    val version  = 1
 
     val singleItem = (md: Metadata[_, Value], oConforms: Option[Conforms[_, _]]) => {
       FeatureMetadataV1(
@@ -95,10 +100,10 @@ object MetadataOutput {
     }
 
 
-    def doOutput(metadataSets: List[MetadataSet[Any]], allConforms: Set[Conforms[Type,Value]]) = {
+    def doOutput(metadataSets: List[MetadataSet[Any]], allConforms: Set[Conforms[_, _]]) = {
       val setJsons = metadataSets.map { ms =>
         val name: String = ms.name
-        val metadataWithConforms: List[(Metadata[Any, Value], Option[Conforms[Type, Value]])] = ms.metadata.map(m => (m, allConforms.find(c => conforms_?(c, m)))).toList
+        val metadataWithConforms: List[(Metadata[Any, Value], Option[Conforms[_, _]])] = ms.metadata.map(m => (m, allConforms.find(c => conforms_?(c, m)))).toList
         FeatureSetMetadataV1(name, metadataWithConforms.map (singleItem.tupled))
       }
       MetadataJsonV1.write(MetadataJsonV1(1, setJsons))

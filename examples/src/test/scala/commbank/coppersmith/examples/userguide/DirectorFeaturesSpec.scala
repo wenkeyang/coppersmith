@@ -62,7 +62,7 @@ object DirectorFeaturesSpec extends ThermometerHiveSpec {
 
     executesSuccessfully(DirectorFeaturesJob.job) must_== JobFinished
 
-    val outPath = s"$dir/user/dev/directors/year=2015/month=01/day=01/*"
+    val outPath = s"$dir/user/dev/directors/year=2015/month=01/day=01/part-*"
     expectations { context =>
       context.lines(new Path(outPath)).toSet must_==
         Set("Jim|DIRECTOR_AVG_RATING|3.0|2015-01-01")

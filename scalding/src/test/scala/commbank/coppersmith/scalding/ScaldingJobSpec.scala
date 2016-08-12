@@ -22,25 +22,22 @@ import org.scalacheck.Arbitrary
 import org.scalacheck.Gen.alphaStr
 import org.scalacheck.Prop.forAll
 
-import scalaz.syntax.std.list.ToListOpsFromList
-import scalaz.syntax.std.boolean.ToBooleanOpsFromBoolean
-
 import au.com.cba.omnia.maestro.api._, Maestro._
 import au.com.cba.omnia.maestro.test.Records
 
 import au.com.cba.omnia.thermometer.core.Thermometer._
 import au.com.cba.omnia.thermometer.fact.Fact
-import au.com.cba.omnia.thermometer.fact.PathFactoids.{exists, records}
+import au.com.cba.omnia.thermometer.fact.PathFactoids.{exists, records, lines}
 import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
-import commbank.coppersmith._, Feature._, FeatureBuilderSource.fromFS, Type._, Value._
+import commbank.coppersmith._, Feature._
 import Arbitraries._
 
 import commbank.coppersmith.thrift.Eavt
-import commbank.coppersmith.test.thrift.{Account, Customer}
+import commbank.coppersmith.test.thrift.Account
 import commbank.coppersmith.api.scalding.EavtText.{EavtEnc, eavtByDay}
 
-import ScaldingJobSpec.{RegularFeatures, AggregationFeatures}
+import TestFeatureSets.{RegularFeatures, AggregationFeatures}
 
 class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
     Running a regular feature set job
@@ -125,7 +122,9 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
       withEnvironment(path(getClass.getResource("/").toString)) {
         executesOk(SimpleFeatureJob.generate((_: Config) => cfg, RegularFeatures), defaultArgs)
         facts(successFlagsWritten(expected, jobTime): _*)
-        facts(path(s"${sink.tablePath}/*/*/*/*") ==> records(eavtReader, expected))
+        facts(metadataWritten(expected, List(RegularFeatures)): _*)
+        facts(path(s"${sink.tablePath}/*/*/*/[^_]*") ==> records(eavtReader, expected))
+
       }
     }}.set(minTestsOk = 5)
 
@@ -138,7 +137,8 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
       withEnvironment(path(getClass.getResource("/").toString)) {
         executesOk(SimpleFeatureJob.generate((_: Config) => cfg, AggregationFeatures), defaultArgs)
         facts(successFlagsWritten(expected, jobTime): _*)
-        facts(path(s"${sink.tablePath}/*/*/*/*") ==> records(eavtReader, expected))
+        facts(metadataWritten(expected, List(AggregationFeatures)): _*)
+        facts(path(s"${sink.tablePath}/*/*/*/[^_]*") ==> records(eavtReader, expected))
       }
     }}.set(minTestsOk = 5)
 
@@ -156,7 +156,8 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
         )
         executesOk(SimpleFeatureJob.generate(job), defaultArgs)
         facts(successFlagsWritten(expected, jobTime): _*)
-        facts(path(s"${sink.tablePath}/*/*/*/*") ==> records(eavtReader, expected))
+        facts(metadataWritten(expected, List(RegularFeatures, AggregationFeatures)): _*)
+        facts(path(s"${sink.tablePath}/*/*/*/[^_]*") ==> records(eavtReader, expected))
       }
     }}.set(minTestsOk = 5)
 
@@ -175,7 +176,8 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
         )
         executesOk(SimpleFeatureJob.generate(job), defaultArgs)
         facts(successFlagsWritten(expected, jobTime): _*)
-        facts(path(s"${sink.tablePath}/*/*/*/*") ==> records(eavtReader, expected))
+        facts(metadataWritten(expected, List(RegularFeatures, AggregationFeatures)): _*)
+        facts(path(s"${sink.tablePath}/*/*/*/[^_]*") ==> records(eavtReader, expected))
       }
     }}.set(minTestsOk = 5)
 
@@ -186,83 +188,20 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
       path(s"${sink.tablePath}/year=$year/month=$month/day=$day/_SUCCESS") ==> exists
     }
   }
-}
 
-object ScaldingJobSpec {
-  object RegularFeatures extends FeatureSet[Account] {
-    val namespace          = "test.namespace"
-    def entity(a: Account) = a.id
+  private def metadataWritten(expectedValues: List[Eavt],
+                              expectedMetadataSets: List[MetadataSet[Any]]): Seq[Fact] = {
+    val partition          = sink.partition.underlying
+    val expectedPartitions = expectedValues.map(partition.extract(_)).toSet.toSeq
 
-    val source  = From[Account]()
-    val builder = source.featureSetBuilder(namespace, entity)
-    val select: FeatureSetBuilder[Account, Account]  = builder
-
-    type AF = Feature[Account, Value]
-
-    val balanceF: AF = select(_.balance).asFeature(Continuous, "balance", "test")
-    val ageF: AF = select.map(_.age).collect {
-      case Some(age) => age
-    }.asFeature(Continuous, "age", "test")
-
-    def features = List(balanceF, ageF)
-
-    def expectedFeatureValues(custAccts: CustomerAccounts, time: DateTime) = {
-      custAccts.cas.flatMap(_.as.flatMap(acct => {
-        val values = List(
-                  List(FeatureValue[FloatingPoint](acct.id, "balance", acct.balance)),
-          acct.age.map(FeatureValue[Integral]     (acct.id, "age",     _)).toList
-        ).flatten
-        values.map(v => EavtEnc.encode((v, time.getMillis)))
-      })).toList
-    }
-  }
-
-  object AggregationFeatures extends AggregationFeatureSet[Account] {
-    val namespace          = "test.namespace"
-    def entity(a: Account) = a.customerId
-
-    val source  = From[Account]()
-    val builder = source.featureSetBuilder(namespace, entity)
-    val select: FeatureSetBuilder[Account, Account]  = builder
-
-    type AAF = AggregationFeature[Account, Account, _, Value]
-
-    val sizeF:  AAF = select(size)             .asFeature(Continuous, "size",    "test")
-    val sizeBF: AAF = select(size).having(_> 2).asFeature(Continuous, "sizeBig", "test")
-    val minF:   AAF = select(min(_.balance))   .asFeature(Continuous, "min",     "test")
-
-    import com.twitter.algebird.Aggregator
-
-    val collectF: AggregationFeature[Account, Int, _, Value] =
-      builder.map(_.age).collect {
-        case Some(age) => age
-      }.select(Aggregator.fromMonoid[Int]).asFeature(Continuous, "collect", "test")
-
-    // Make sure reflection code in SimpleFeatureJobOps.Unjoiner works with empty source.
-    // Note that it will never be in the expectedFeatureValues.
-    val knownEmptyF: AggregationFeature[Account, Int, _, Value] =
-      builder.map(_.age).collect {
-        case Some(age) if false => age
-      }.select(Aggregator.fromMonoid[Int]).asFeature(Continuous, "knownEmpty", "test")
-
-    def aggregationFeatures = List(sizeF, sizeBF, minF, knownEmptyF, collectF)
-
-    def expectedFeatureValues(custAccts: CustomerAccounts, time: DateTime) = {
-
-      custAccts.cas.flatMap(cag => {
-        val size       = cag.as.size
-        val sizesOver2 = cag.as.size > 2
-        val min        = cag.as.map(_.balance).min
-        val ages       = cag.as.map(_.age).collect { case Some(age) => age }
-        val collect    = ages.toNel.map(_.list.sum)
-        val values     = List(
-          Some(FeatureValue[Integral]              (cag.c.id, "size",    size)),
-          sizesOver2.option((FeatureValue[Integral](cag.c.id, "sizeBig", size))),
-          Some(FeatureValue[FloatingPoint]         (cag.c.id, "min",     min)),
-          collect.map(FeatureValue[Integral]       (cag.c.id, "collect", _))
-        ).flatten
-        values.map(v => EavtEnc.encode((v, time.getMillis)))
-      }).toList
+    for {
+      (year, month, day) <- expectedPartitions
+      em                 <- expectedMetadataSets
+      expectedMetadata   =  MetadataOutput.Json1.stringify(MetadataOutput.Json1.doOutput(List(em),
+                                                           Conforms.allConforms))
+    } yield {
+      path(s"${sink.tablePath}/year=$year/month=$month/day=$day/_feature_metadata/_${em.name}_METADATA.V1.json") ==>
+        lines(expectedMetadata.split("\n").toList)
     }
   }
 }
