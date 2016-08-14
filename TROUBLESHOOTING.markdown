@@ -119,6 +119,12 @@ INFO commbank.coppersmith.scalding.CoppersmithStats:     load.text              
 Then it could indicate that `join.level2` is zero,
 i.e. no records remain after joining the third table.
 
+**NOTE: The reliability of Coppersmith counters is not well understood,
+and they should not be used when accurate record counts are required.**
+They are only intended for diagnosing large problems and trends,
+and in the case of minor discrepancies ("14 records are missing!")
+the data on disk should be treated as the only authorative source of statistics.
+
 You may need to explicitly enable logging in order to see the log messages.
 For example, to see these logs when running Thermometer tests,
 create a file called `src/test/resources/log4j.properties` containing:
