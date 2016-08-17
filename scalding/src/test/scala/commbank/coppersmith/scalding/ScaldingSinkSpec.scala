@@ -64,6 +64,8 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
   def databaseName(t: T): String
   def tableName(t: T):    String
 
+  val statName: String
+
   def valuePipe(vs: NonEmptyList[FeatureValue[Value]], dateTime: DateTime) =
     TypedPipe.from(vs.list.map(v => v -> dateTime.getMillis))
 
@@ -92,9 +94,14 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
       clearData(sink)
 
       withEnvironment(path(getClass.getResource("/").toString)) {
-        executesSuccessfully(sink.write(valuePipe(vs, dateTime), RegularFeatures))
+        val (_, counters) = executesSuccessfully(
+          sink.write(valuePipe(vs, dateTime), RegularFeatures).getCounters
+        )
         facts(
           path(s"${tablePath(sink)}/*/*/*/[^_]*") ==> records(eavtReader, expected)
+        )
+        CoppersmithStats.fromCounters(counters) must_== List(
+          (statName, expected.size)
         )
       }
     }}.set(minTestsOk = 5)
@@ -306,6 +313,7 @@ class HiveTextSinkSpec extends ScaldingSinkSpec[HiveTextSink[Eavt]] {
   def tablePath(sink: HiveTextSink[Eavt]) = sink.tablePath.toString
   def databaseName(sink: HiveTextSink[Eavt]) = sink.dbName
   def tableName(sink: HiveTextSink[Eavt]) = sink.tableName
+  val statName = "write.text"
 }
 
 class HiveParquetSinkSpec extends ScaldingSinkSpec[HiveParquetSink[Eavt, (String, String, String)]] {
@@ -359,4 +367,5 @@ class HiveParquetSinkSpec extends ScaldingSinkSpec[HiveParquetSink[Eavt, (String
   def tablePath(sink: HiveParquetSink[Eavt, (String, String, String)]) = sink.table.tablePath.toString
   def databaseName(sink: HiveParquetSink[Eavt, (String, String, String)]) = sink.table.database
   def tableName(sink: HiveParquetSink[Eavt, (String, String, String)]) = sink.table.table
+  val statName = "write.parquet"
 }

@@ -53,16 +53,18 @@ object CoppersmithStats {
       log.warn("Hadoop counters not available (usually caused by job failure)")
     }
     else {
-      val coppersmithKeys = counters.keys.filter(_.group == group)
       log.info("Coppersmith counters:")
-      coppersmithKeys.map { key =>
-        val Array(id, name) = key.counter.split(raw"\.", 2)
-        (id.toLong, name, key)
-      }.toList.sortBy(_._1).foreach { case (id, name, key) =>
-        log.info(f"    ${name}%-30s ${counters(key)}%10d")
+      fromCounters(counters).foreach { case (name, value) =>
+        log.info(f"    ${name}%-30s ${value}%10d")
       }
     }
   }
+
+  def fromCounters(counters: ExecutionCounters): List[(String, Long)] =
+    counters.keys.filter(_.group == group).map { key =>
+      val Array(id, name) = key.counter.split(raw"\.", 2)
+      (id.toLong, name, key)
+    }.toList.sortBy(_._1).map { case (id, name, key) => (name, counters(key)) }
 }
 
 class CoppersmithStats[T](typedPipe: TypedPipe[T]) extends {
