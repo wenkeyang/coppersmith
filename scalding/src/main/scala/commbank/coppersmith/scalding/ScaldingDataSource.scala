@@ -12,7 +12,8 @@
 //    limitations under the License.
 //
 
-package commbank.coppersmith.scalding
+package commbank.coppersmith
+package scalding
 
 import com.twitter.scalding.TDsl.sourceToTypedPipe
 import com.twitter.scalding.typed.TypedPipe
@@ -29,7 +30,6 @@ import au.com.cba.omnia.ebenezer.scrooge.ParquetScroogeSource
 import au.com.cba.omnia.maestro.api._
 import au.com.cba.omnia.maestro.core.codec.{DecodeOk, DecodeError, ParseError, NotEnoughInput, TooMuchInput}
 
-import commbank.coppersmith.DataSource
 
 /** Scalding data sources should extend this (rather than `DataSource` directly).
   * It provides some high level utility methods, such as filtering.

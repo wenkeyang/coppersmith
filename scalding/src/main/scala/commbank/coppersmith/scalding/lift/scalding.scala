@@ -20,7 +20,16 @@ import commbank.coppersmith._, Feature.Value
 import commbank.coppersmith.scalding.ScaldingBoundFeatureSource
 import commbank.coppersmith.scalding.generated.GeneratedScaldingLift
 
-import ScaldingScalazInstances.typedPipeFunctor
+import scala.reflect.ClassTag
+
+object functor {
+  implicit val typedPipeFunctor: SerializableFunctor[TypedPipe] =
+    new SerializableFunctor[TypedPipe] {
+      def map[A, B : ClassTag](fa: TypedPipe[A])(f: A => B): TypedPipe[B] = fa.map(f)
+    }
+}
+
+import functor._
 
 trait ScaldingLift extends Lift[TypedPipe] with GeneratedScaldingLift {
 

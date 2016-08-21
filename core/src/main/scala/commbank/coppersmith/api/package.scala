@@ -82,6 +82,8 @@ package object api extends GeneratedJoinTypeInstances with SourceBinderInstances
   val MapRange = Value.MapRange
   val Patterns = commbank.coppersmith.Patterns
 
+  val Partitions = commbank.coppersmith.Partitions
+
   //Maestro dependencies below
   lazy val JobFinished =  au.com.cba.omnia.maestro.scalding.JobFinished
   lazy val HivePartition = au.com.cba.omnia.maestro.api.HivePartition

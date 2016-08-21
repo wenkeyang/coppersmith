@@ -16,6 +16,8 @@ package commbank.coppersmith
 
 import commbank.coppersmith.generated.Joined2
 
+import scala.reflect.ClassTag
+
 object From {
   def apply[S](): From[S] = From(None)
 }
@@ -48,6 +50,6 @@ object Join {
   }
 
   class IncompleteJoin[S1, S2, T1, T2] {
-    def on[J: Ordering](s1: T1 => J, s2: S2 => J): Joined2[S1, S2, J, T1, T2] = Joined2(s1, s2, None)
+    def on[J: Ordering : ClassTag](s1: T1 => J, s2: S2 => J): Joined2[S1, S2, J, T1, T2] = Joined2(s1, s2, None)
   }
 }

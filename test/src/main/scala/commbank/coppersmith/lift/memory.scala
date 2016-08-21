@@ -20,6 +20,16 @@ import commbank.coppersmith._
 import commbank.coppersmith.Feature.Value
 import commbank.coppersmith.lift.generated.GeneratedMemoryLift
 
+import scala.reflect.ClassTag
+
+object functor {
+  implicit val listFunctor: SerializableFunctor[List] = new SerializableFunctor[List] {
+    def map[A, B : ClassTag](fa: List[A])(f: A => B): List[B] = fa.map(f)
+  }
+}
+
+import functor._
+
 trait MemoryLift extends Lift[List] with GeneratedMemoryLift {
   def lift[S,V <: Value](f:Feature[S,V])(s: List[S]): List[FeatureValue[V]] = {
     s.flatMap(s => f.generate(s))
@@ -37,6 +47,8 @@ trait MemoryLift extends Lift[List] with GeneratedMemoryLift {
 
   def liftFilter[S](p: List[S], f: S => Boolean) = p.filter(f)
 }
+
+
 
 object memory extends MemoryLift {
   implicit def framework: Lift[List] = this

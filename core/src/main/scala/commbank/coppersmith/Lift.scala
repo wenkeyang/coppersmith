@@ -20,19 +20,26 @@ import commbank.coppersmith.generated.{GeneratedLift, Joined2}
 
 import Feature.Value
 
+import scala.reflect.ClassTag
+
+trait SerializableFunctor [F[_]] {
+  def map[A, B: ClassTag](fa: F[A])(f: A => B) : F[B]
+}
+
+
 // Would have preferred functor to be specified as P[_] : Functor, but upcoming code in
 // ContextFeatureSource.bindWithContext is unable to derive implicit Functor instance,
 // and needs to access it via the Lift instance instead.
-abstract class Lift[P[_]](implicit val functor: Functor[P]) extends GeneratedLift[P] {
+abstract class Lift[P[_]](implicit val functor: SerializableFunctor[P]) extends GeneratedLift[P] {
   def lift[S, V <: Value](f:Feature[S,V])(s: P[S]): P[FeatureValue[V]]
 
   def lift[S](fs: FeatureSet[S])(s: P[S]): P[FeatureValue[_]]
 
-  def liftJoin[A, B, J : Ordering](
+  def liftJoin[A : ClassTag, B : ClassTag, J : Ordering : ClassTag](
     joined: Joined2[A, B, J, A, B]
   )(a:P[A], b: P[B]): P[(A, B)] = liftJoinInner(joined)(a, b) // From GenereatedLift
 
-  def liftLeftJoin[A, B, J : Ordering](
+  def liftLeftJoin[A : ClassTag, B : ClassTag, J : Ordering : ClassTag](
     joined: Joined2[A, B, J, A, Option[B]]
   )(a: P[A], b: P[B]): P[(A, Option[B])] = liftJoinLeft(joined)(a, b) // From GenereatedLift
 

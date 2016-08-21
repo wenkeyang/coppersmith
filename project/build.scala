@@ -32,7 +32,6 @@ object build extends Build {
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
     uniformPublicDependencySettings ++
-    strictDependencySettings ++
     Seq(
       // because thermometer tests cannot run in parallel
       concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
@@ -51,7 +50,7 @@ object build extends Build {
         ++ Seq(
         publishArtifact := false
       )
-    , aggregate = Seq(core, testProject, examples, scalding, tools)
+    , aggregate = Seq(core, testProject, examples, scalding, spark, tools)
   )
 
   lazy val core = Project(
@@ -66,7 +65,8 @@ object build extends Build {
             exclude("org.scala-lang", "scala-compiler"),
           libraryDependencies +=  "io.argonaut" %% "argonaut" % "6.1",
           libraryDependencies ++= depend.testing(configuration = "test"),
-          libraryDependencies ++= depend.omnia("maestro", maestroVersion)
+          libraryDependencies ++= depend.omnia("maestro", maestroVersion),
+          libraryDependencies ++= depend.hadoopClasspath ++ depend.hadoop()
       )
    ++ Seq(
       watchSources <++= baseDirectory map(path => (path / "../project/MultiwayJoinGenerator.scala").get),
@@ -106,6 +106,34 @@ object build extends Build {
         )
   ).dependsOn(core % "compile->compile;test->test", tools)
 
+  lazy val spark = Project(
+    id = "spark"
+    , base = file("spark")
+    , settings =
+      standardSettings
+        ++ uniform.project("coppersmith-spark", "commbank.coppersmith.spark")
+        // ++ uniformThriftSettings
+        ++ Seq(
+          libraryDependencies ++= Seq(
+            "org.apache.spark" %% "spark-core" % "2.0.0",
+            "org.apache.spark" %% "spark-sql" % "2.0.0",
+            "au.com.cba.omnia" %% "permafrost" % "0.13.0-20160718235343-68e0f07",
+            "com.twitter" %% "util-core" % "6.35.0",
+            "au.com.cba.omnia" %% "beeswax" % "0.1.2-20160619053150-80dbb0a"
+          ),
+           libraryDependencies ++= depend.hadoopClasspath,
+        //   libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
+           libraryDependencies ++= depend.parquet()
+        )
+        ++ Seq(
+          sourceGenerators in Compile <+= (sourceManaged in Compile, streams) map { (outdir: File, s) =>
+            val genFile = outdir / "GeneratedSparkLift.scala"
+            IO.write(genFile, MultiwayJoinGenerator.generateLiftSpark(joins))
+            Seq(genFile)
+          }
+         )
+  ).dependsOn(core % "compile->compile;test->test", tools)
+
   lazy val examples = Project(
     id = "examples"
     , base = file("examples")
@@ -142,7 +170,7 @@ object build extends Build {
           fragFiles ++ jobFiles
         }
       )
-  ).dependsOn(core, scalding, testProject)
+  ).dependsOn(core, scalding, spark, testProject)
 
   lazy val testProject = Project(
     id = "test"

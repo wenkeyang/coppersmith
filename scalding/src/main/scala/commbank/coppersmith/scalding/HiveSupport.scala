@@ -12,7 +12,8 @@
 //    limitations under the License.
 //
 
-package commbank.coppersmith.scalding
+package commbank.coppersmith
+package scalding
 
 import com.twitter.algebird.Aggregator
 import com.twitter.scalding.typed.{PartitionedTextLine, TypedPipe}

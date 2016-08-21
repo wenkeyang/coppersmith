@@ -16,6 +16,7 @@ package commbank.coppersmith
 
 import scalaz.syntax.functor.ToFunctorOps
 import scalaz.syntax.std.option.ToOptionIdOps
+import scala.reflect.ClassTag
 
 abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => Boolean] = None) {
   self: FS =>
@@ -69,12 +70,12 @@ import commbank.coppersmith.generated._
 trait SourceBinderInstances extends GeneratedBindings with GeneratedJoinTypeInstances {
   def from[S, P[_] : Lift](dataSource: DataSource[S, P]) = FromBinder(dataSource)
 
-  def join[L, R, J : Ordering, P[_] : Lift](
+  def join[L : ClassTag, R : ClassTag, J : Ordering : ClassTag, P[_] : Lift](
     leftSrc:  DataSource[L, P],
     rightSrc: DataSource[R, P]
   ) = joinMulti[L, R, J, L, R, P](leftSrc, rightSrc) // From GeneratedBindings
 
-  def leftJoin[L, R, J : Ordering, P[_] : Lift](
+  def leftJoin[L : ClassTag, R : ClassTag, J : Ordering : ClassTag, P[_] : Lift](
     leftSrc:  DataSource[L, P],
     rightSrc: DataSource[R, P]
   ) = joinMulti[L, R, J, L, Option[R], P](leftSrc, rightSrc) // From GeneratedBindings

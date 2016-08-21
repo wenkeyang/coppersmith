@@ -12,7 +12,7 @@
 //    limitations under the License.
 //
 
-package commbank.coppersmith.scalding
+package commbank.coppersmith
 
 import scalaz.NonEmptyList
 import scalaz.syntax.std.list.ToListOpsFromList
