@@ -22,7 +22,7 @@ import au.com.cba.omnia.maestro.api.Field
 
 import Feature._
 
-trait AbstractFeatureSet[S] extends MetadataSet[S] {
+trait AbstractFeatureSet[S] extends MetadataSet[S] with Serializable {
   def name: String = getClass.getSimpleName
   def namespace: Feature.Namespace
 

@@ -23,7 +23,6 @@ object Action {
   implicit val actionInstance = new Monad[Action] with Zip [Action] {
     def point[A](a: => A) = Action.pure(a)
     def bind[A, B](fa: Action[A])(f: A => Action[B]) = new Action ({ spark =>
-      println("HERE")
       //TODO deal reasonably with failure
       val a = fa.f(spark)
       val fb = f(a)

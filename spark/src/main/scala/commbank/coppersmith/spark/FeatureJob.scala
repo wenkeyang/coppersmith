@@ -58,6 +58,7 @@ trait SparkyMaestroJob {
 
   def main(args: Array[String]) {
     implicit val spark = SparkSession.builder().getOrCreate() //TODO: read args and configure properly
+    println(s"STARTED SPARK. Master at ${spark.sparkContext.master}")
     val status = try {
       Action.run(job)
     } catch {
@@ -107,20 +108,24 @@ trait SimpleFeatureJobOps {
     generate(FeatureSetExecutions(FeatureSetExecution(cfg, features)))
 
   def generate(featureSetExecutions: FeatureSetExecutions): Action[JobStatus] = {
+    println("GENERATING!!!")
     for {
       paths  <- generateFeatures(featureSetExecutions)
+      _ = println("GOT PATHS: " + paths)
       result <- FeatureSink.commit(paths)
       status <- result.fold(writeErrorFailure(_), _ => Action.pure(JobFinished))
     } yield status
   }
 
   // Run each outer group of executions in sequence, accumulating paths at each step
-  private def generateFeatures(featureSetExecutions: FeatureSetExecutions): Action[Set[Path]] =
-    featureSetExecutions.allExecutions.foldLeft(Action.pure(Set[Path]()))(
+  private def generateFeatures(featureSetExecutions: FeatureSetExecutions): Action[Set[Path]] = {
+    println("FeatureSetExecutions: " + featureSetExecutions)
+    featureSetExecutions.allExecutions.foldLeft(Action.pure(Set[Path]())) {
       (resultSoFar, executions) => resultSoFar.flatMap(paths =>
         generateFeaturesPar(executions).map(_ ++ paths)
       )
-    )
+    }
+  }
 
   // Run executions in parallel (zip), combining the tupled sets of of paths at each step
   private def generateFeaturesPar(executions: List[FeatureSetExecution]): Action[Set[Path]] =
@@ -168,8 +173,8 @@ trait FeatureSetExecution {
 
   import FeatureSetExecution.{generateFeatures, generateOneToMany, generateAggregate}
   def generate(): Action[Set[Path]] = features.fold(
-    regFeatures => generateFeatures[Source](config, generateOneToMany(regFeatures)_, regFeatures),
-    aggFeatures => generateFeatures[Source](config, generateAggregate(aggFeatures)_, aggFeatures)
+    regFeatures => {println("Generating reg"); generateFeatures[Source](config, generateOneToMany(regFeatures)_, regFeatures)},
+    aggFeatures => {println("Generating agg"); generateFeatures[Source](config, generateAggregate(aggFeatures)_, aggFeatures)}
   )
 }
 
@@ -199,7 +204,9 @@ object FeatureSetExecution {
   ): Action[Set[Path]] = {
     for {
       spark <- Action.getSpark
+      _ = println(spark)
       conf   = cfg(spark)
+      _ = println(conf)
       source  = conf.featureSource
       input   = source.load
       values  = transform(input, conf.featureContext)
@@ -211,10 +218,14 @@ object FeatureSetExecution {
   private def generateOneToMany[S](
     features: FeatureSet[S]
   )(input: RDD[S], ctx: FeatureContext): RDD[(FeatureValue[Value], FeatureTime)] = {
-    input.flatMap { s =>
+    println(s"generateOneToMany($features)($input, $ctx)")
+    val res = input.flatMap { s =>
       val time = features.time(s, ctx)
+      println("time: " + time)
       features.generate(s).map(fv => (fv, time))
     }
+    println(res)
+    res
   }
 
   private def generateAggregate[S](

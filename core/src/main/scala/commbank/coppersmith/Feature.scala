@@ -257,7 +257,7 @@ object Feature {
 
 import Feature._
 
-abstract class Feature[S, +V <: Value](val metadata: Metadata[S, V]) {
+abstract class Feature[S, +V <: Value](val metadata: Metadata[S, V]) extends Serializable {
   def generate(source:S): Option[FeatureValue[V]]
 }
 

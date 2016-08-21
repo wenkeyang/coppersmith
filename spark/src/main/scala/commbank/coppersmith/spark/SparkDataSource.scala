@@ -20,12 +20,10 @@ case class RddSource[S](rdd: RDD[S]) extends SparkDataSource[S] {
 }
 
 class HiveTextSource[S <: ThriftStruct : Decode : ClassTag](
-  paths: List[Path],
+  paths: List[String],
   delimiter: String
-)(implicit spark: SparkSession) extends SparkDataSource[S] {
+)(implicit spark: SparkSession) extends SparkDataSource[S] with Serializable {
   val log = LoggerFactory.getLogger(getClass())
-
-  case class TextValue(value: String)
 
   def load = {
     import spark.implicits._
@@ -59,7 +57,7 @@ object HiveTextSource {
     basePath: Path,
     delimiter: String = "|"
   )(implicit spark: SparkSession): HiveTextSource[S] =
-    new HiveTextSource[S](List(basePath), delimiter)
+    new HiveTextSource[S](List(basePath.toString), delimiter)
 }
 
 
@@ -80,3 +78,5 @@ object HiveParquetSource {
   )(implicit spark: SparkSession): HiveParquetSource[S] =
     HiveParquetSource[S](partitions.toPaths(basePath))
 }
+
+case class TextValue(value: String)
