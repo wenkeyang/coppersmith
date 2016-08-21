@@ -13,8 +13,8 @@ class SparkHiveSink[T <: ThriftStruct] (namespace: String, path: Path, table: St
     features: RDD[(FeatureValue[Value], FeatureTime)],
     metadataSet: MetadataSet[Any]):WriteResult = {
       Action.pure(Right({
-        features.foreach(println)
-        //features.saveAsTextFile(s"${path.toString}/${table}")
+        //features.foreach(println)
+        features.saveAsTextFile(s"${path.toString}/${table}")
         Set(new Path(path, table))
       }))
     }

@@ -18,7 +18,7 @@ import scalaz.syntax.functor.ToFunctorOps
 import scalaz.syntax.std.option.ToOptionIdOps
 import scala.reflect.ClassTag
 
-abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => Boolean] = None) {
+abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => Boolean] = None) extends Serializable {
   self: FS =>
 
   def filter(p: S => Boolean): FS = copyWithFilter(filter.map(f => (s: S) => f(s) && p(s)).orElse(p.some))

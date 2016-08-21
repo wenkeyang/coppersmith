@@ -380,13 +380,13 @@ object FluentUserFeatures extends FeatureSet[User] {
   val userAge  = select(user => user.age)
     .asFeature(Continuous, "USER_AGE", Some(MinMaxRange(0, 130)),
       "Age of user in years")
-    
+
   val userAgeGroup = select(user => user.age match {
     case x if x <= 14           => "Child"
     case x if x > 14 && x <= 24 => "Youth"
     case x if x > 24 && x <= 64 => "Adult"
     case x if x > 64            => "Senior"
-  }).asFeature(Ordinal, "USER_AGE_GROUP", Some(SetRange("Child", "Youth", "Adult", "Senior")), 
+  }).asFeature(Ordinal, "USER_AGE_GROUP", Some(SetRange("Child", "Youth", "Adult", "Senior")),
                "Age group of user")
 
   val userIsEngineer = select(user => user.occupation == "engineer")
@@ -399,7 +399,7 @@ object FluentUserFeatures extends FeatureSet[User] {
       case "administrator" => 71
       case _               => 0
     }).asFeature(
-      Nominal, 
+      Nominal,
       "OCCUPATION_CODE",
       Some(MapRange(
         15 -> "engineer",
@@ -673,7 +673,7 @@ object PopularRatingCountFeatures extends AggregationFeatureSet[Rating] {
   val select = source.featureSetBuilder(namespace, entity)
 
   val popularRatingCount = select(count(_.rating > 3)).having(_ > 10)
-    .asFeature(Discrete, "MOVIE_POPULAR_RATING_COUNT", 
+    .asFeature(Discrete, "MOVIE_POPULAR_RATING_COUNT",
                "High rating count for movies that have more than 10 high ratings")
 
   val aggregationFeatures = List(popularRatingCount)
@@ -774,8 +774,8 @@ object MovieGenreFlags extends QueryFeatureSet[Movie, Str] {
 
   val source = From[Movie]()
 
-  val comedyMovie = queryFeature("MOVIE_IS_COMEDY", "'Y' if movie is comedy", Some(SetRange("Y")))(_.isComedy)
-  val fantasyMovie = queryFeature("MOVIE_IS_ACTION", "'Y' if movie is action", Some(SetRange("Y")))(_.isAction)
+  val comedyMovie = queryFeature("MOVIE_IS_COMEDY", "'Y' if movie is comedy", None)(_.isComedy)
+  val fantasyMovie = queryFeature("MOVIE_IS_ACTION", "'Y' if movie is action", None)(_.isAction)
 
   val features = List(comedyMovie, fantasyMovie)
 }
