@@ -17,4 +17,6 @@ package object spark {
   val SparkHiveSink = commbank.coppersmith.spark.SparkHiveSink
 
   type SimpleFeatureJob = commbank.coppersmith.spark.SimpleFeatureJob
+
+  val EavtText = commbank.coppersmith.spark.EavtText
 }

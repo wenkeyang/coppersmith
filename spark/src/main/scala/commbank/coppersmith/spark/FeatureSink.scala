@@ -71,31 +71,6 @@ object FeatureSink {
     }.toList.sequence
     writes.map(_ => Right(paths))
   }
-
-  def commitFlag(path: Path) = new Path(path, "_SUCCESS")
-  def isCommitted(path: Path): Action[Boolean] = Action.fromHdfs(Hdfs.exists(commitFlag(path)))
-
-  type CommitResult = Action[Either[WriteError, Unit]]
-  // Note: Check for committed flags and subsequent writing thereof is not atomic
-  def commit(paths: Set[Path]): CommitResult = {
-
-    // Check all paths for committed state first. Avoids committing earlier paths
-    // if a latter path is already committed and would fail the job overall.
-    val pathCommits: Action[List[(Path, Boolean)]] =
-      paths.toList.map(p => isCommitted(p).map((p, _))).sequence
-
-    pathCommits.flatMap(pathCommitStates => {
-      val committedPaths = pathCommitStates.collect { case (path, true) => path }
-      committedPaths.toNel.map(committed =>
-        Action.pure(Left(AlreadyCommitted(committed)))
-      ).getOrElse(
-        paths.toList.map(path =>
-          Action.fromHdfs(Hdfs.create(commitFlag(path)))
-        ).sequence.map(n => Right(()))
-        /* used to be sequence.unit.map(Right(_)). ask dkristian what unit does */
-      )
-    })
-  }
 }
 
 sealed trait SinkPartition[T] {
@@ -130,6 +105,6 @@ final case class DerivedSinkPartition[T, PP : PathComponents](
   def pathComponents = implicitly
 }
 
-trait FeatureValueEnc[T] extends Encoder[(FeatureValue[Value], FeatureTime), T] {
+trait FeatureValueEnc[T] extends Encoder[(FeatureValue[Value], FeatureTime), T] with Serializable {
   def encode(fvt: (FeatureValue[Value], FeatureTime)): T
 }

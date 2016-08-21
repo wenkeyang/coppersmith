@@ -12,6 +12,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
 import commbank.coppersmith.examples.userguide.MovieGenreFlags
+import EavtText.EavtEnc
 
 case class MovieGenreFlagsConfig(implicit spark: SparkSession) extends FeatureJobConfig[Movie] {
   println("In MovieGenreFlagsConfig")

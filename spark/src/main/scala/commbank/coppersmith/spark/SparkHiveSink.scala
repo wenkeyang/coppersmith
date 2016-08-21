@@ -8,13 +8,18 @@ import Feature._
 
 import commonImports._
 
-class SparkHiveSink[T <: ThriftStruct] (namespace: String, path: Path, table: String) extends FeatureSink {
+import scala.reflect.ClassTag
+
+class SparkHiveSink[T <: ThriftStruct : ClassTag] (
+  namespace: String, path: Path, table: String) extends FeatureSink {
   def write(
     features: RDD[(FeatureValue[Value], FeatureTime)],
     metadataSet: MetadataSet[Any]):WriteResult = {
+      val encoded = features.map(EavtText.EavtEnc.encode).map {eavt =>
+        s"${eavt.entity}|${eavt.attribute}|${eavt.value}|${eavt.time}" // this needs real doing
+      }
       Action.pure(Right({
-        //features.foreach(println)
-        features.saveAsTextFile(s"${path.toString}/${table}")
+        encoded.saveAsTextFile(s"${path.toString}/${table}")
         Set(new Path(path, table))
       }))
     }
@@ -24,7 +29,9 @@ class SparkHiveSink[T <: ThriftStruct] (namespace: String, path: Path, table: St
 
 
 object SparkHiveSink {
-  def apply[T <: ThriftStruct](
+  val NullValue = "\\N"
+
+  def apply[T <: ThriftStruct : FeatureValueEnc : ClassTag](
     namespace: String, path: Path, table:String
   ): SparkHiveSink[T] = new SparkHiveSink(namespace, path, table)
 }

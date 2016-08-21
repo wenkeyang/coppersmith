@@ -111,15 +111,11 @@ trait SimpleFeatureJobOps {
     println("GENERATING!!!")
     for {
       paths  <- generateFeatures(featureSetExecutions)
-      _ = println("GOT PATHS: " + paths)
-      result <- FeatureSink.commit(paths)
-      status <- result.fold(writeErrorFailure(_), _ => Action.pure(JobFinished))
-    } yield status
+    } yield JobFinished
   }
 
   // Run each outer group of executions in sequence, accumulating paths at each step
   private def generateFeatures(featureSetExecutions: FeatureSetExecutions): Action[Set[Path]] = {
-    println("FeatureSetExecutions: " + featureSetExecutions)
     featureSetExecutions.allExecutions.foldLeft(Action.pure(Set[Path]())) {
       (resultSoFar, executions) => resultSoFar.flatMap(paths =>
         generateFeaturesPar(executions).map(_ ++ paths)
@@ -134,7 +130,7 @@ trait SimpleFeatureJobOps {
         zippedSoFar.fzip(featureSetExecution.generate).map {
           case (accPaths, paths) => accPaths ++ paths
         }
-    )
+    )  
 
   import FeatureSink.{AlreadyCommitted, AttemptedWriteToCommitted, WriteError}
   def writeErrorFailure[T](e: WriteError): Action[T] = e match {
@@ -218,10 +214,8 @@ object FeatureSetExecution {
   private def generateOneToMany[S](
     features: FeatureSet[S]
   )(input: RDD[S], ctx: FeatureContext): RDD[(FeatureValue[Value], FeatureTime)] = {
-    println(s"generateOneToMany($features)($input, $ctx)")
     val res = input.flatMap { s =>
       val time = features.time(s, ctx)
-      println("time: " + time)
       features.generate(s).map(fv => (fv, time))
     }
     println(res)
