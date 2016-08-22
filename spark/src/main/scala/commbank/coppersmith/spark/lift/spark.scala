@@ -21,8 +21,10 @@ trait SparkLift extends Lift [RDD] with GeneratedSparkLift {
     (underlying: U,binder: B,filter: Option[S => Boolean]): BoundFeatureSource[S, RDD] =
       SparkBoundFeatureSource(underlying, binder, filter)
 
-   def lift[S](fs: FeatureSet[S])(s: RDD[S]): RDD[commbank.coppersmith.FeatureValue[_]] = ???
-   def lift[S, V <: Feature.Value](f: Feature[S,V])(s: RDD[S]): RDD[FeatureValue[V]] = ???
+   def lift[S](fs: FeatureSet[S])(s: RDD[S]): RDD[commbank.coppersmith.FeatureValue[_]] =
+       s.flatMap(s => fs.generate(s))
+   def lift[S, V <: Feature.Value](f: Feature[S,V])(s: RDD[S]): RDD[FeatureValue[V]] =
+       s.flatMap(s => f.generate(s))
 }
 
 

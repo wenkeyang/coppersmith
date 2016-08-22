@@ -19,7 +19,7 @@ import org.apache.hadoop.fs.Path
 
 import com.twitter.algebird.{MonoidAggregator, Aggregator}
 
-import org.apache.spark.rdd.RDD
+import org.apache.spark.rdd.RDD, RDD._
 import org.apache.spark.sql.SparkSession
 
 import Feature._
@@ -30,6 +30,8 @@ import Action.actionInstance.monadSyntax._
 import Action.actionInstance.zipSyntax._
 
 import org.slf4j.{Logger, LoggerFactory}
+
+import scala.reflect.ClassTag
 
 trait FeatureJobConfig[S] {
   def featureSource:  BoundFeatureSource[S, RDD]
@@ -130,7 +132,7 @@ trait SimpleFeatureJobOps {
         zippedSoFar.fzip(featureSetExecution.generate).map {
           case (accPaths, paths) => accPaths ++ paths
         }
-    )  
+    )
 
   import FeatureSink.{AlreadyCommitted, AttemptedWriteToCommitted, WriteError}
   def writeErrorFailure[T](e: WriteError): Action[T] = e match {
@@ -162,6 +164,7 @@ object FeatureSetExecutions {
 
 trait FeatureSetExecution {
   type Source
+  implicit def ct: ClassTag[Source]
 
   def config: SparkSession => FeatureJobConfig[Source]
 
@@ -222,17 +225,13 @@ object FeatureSetExecution {
     res
   }
 
-  private def generateAggregate[S](
+  private def generateAggregate[S : ClassTag](
     features: AggregationFeatureSet[S]
   )(input: RDD[S], ctx: FeatureContext): RDD[(FeatureValue[Value], FeatureTime)] = {
-    val grouped: RDD[(EntityId, S)] = input.keyBy(s => features.entity(s))
-    val (joinedAggregator : MonoidAggregator[S, _, _], unjoiner: Unjoiner) =
-      join(features.aggregationFeatures.toList.map(serialisable(_)))
-???
 
-    //  grouped.aggregate(joinedAggregator).flatMap { case (e, v) =>
-    //   unjoiner.apply(e, v).map((_, ctx.generationTime.getMillis))
-    // }
+    val keyed = input.keyBy(s => features.entity(s))
+
+    //because we are in-memory we don't have to do weird reflection. just ru
   }
 
   // Work-around for problem of TypeTag instances being tied to AggregationFeature and failing at
@@ -262,54 +261,5 @@ object FeatureSetExecution {
       def monoid = new com.twitter.algebird.OptionMonoid[B]()(aggregator.semigroup)
       def present(bOpt: Option[B]) = bOpt.flatMap(aggregator.present(_))
     }
-  }
-
-  // Note: Could probably avoid reflection in join() and pattern matching on types in
-  // unjoiner() by changing AggregationFeatureSet.aggregationFeatures to be an HList
-
-  type Unjoiner = (EntityId, Any) => List[FeatureValue[Value]]
-
-  /*
-   * Join (compose) aggregators of the form:
-   *
-   *   List(Agg[S, A1, Option[Value1]], Agg[S, A2, Option[Value2]], Agg[S, A3, Option[Value2]], ...)
-   *
-   * to a single aggregator of the form
-   *
-   *   Agg[S, (A1, (A2, (A3, ...))), (Option[Value1], (Option[Value2], (Option[Value3], ...)))]
-   *
-   * and return with an Unjoiner that can deconstruct the resulting values and associate them
-   * back with their original feature name.
-   */
-  def join[S](features: List[SerialisableAggregationFeature[S]]): (Aggregator[S, _, _], Unjoiner) = {
-    features match {
-      case a :: as => {
-        val (agg, remaining) = join(as)
-        (a.aggregator.join(agg).asInstanceOf[Aggregator[S, _, _]], unjoiner(a.name, remaining))
-      }
-      // Dummy aggregator for base case - value will always be ignored by last unjoiner
-      case Nil => (Aggregator.const[Option[Value]](None), (_, _) => List())
-    }
-  }
-
-  /*
-   * Takes values in the form of:
-   *
-   *    (Option[Value1], (Option[Value2], (Option[Value3], ...)))
-   *
-   * from the result of a set of joined aggregation features, and returns a list of
-   * corresponding FeatureValue instances with the original feature name:
-   *
-   *   List(FeatureValue(e, name1, val1), FeatureValue(e, name2, val2), FeatureValue(e, name3, val3), ...)
-   *
-   * `None` values are filtered out of the returned list, as they represent input that that
-   * is filtered completely out as a result of lifting the original aggregator and source
-   * view PartialFunction into the Option MonoidAggregator.
-   */
-  def unjoiner(name: Name, remaining: Unjoiner)(e: EntityId, a: Any) = a match {
-    case (Some(v: Value), vs) => FeatureValue(e, name, v) :: remaining.apply(e, vs)
-    case (None, vs) => remaining(e, vs)
-    // Will only occur if implemenation of values falls out of sync with join (from above).
-    case _ => sys.error("Assumption failed: Wrong shape " + a)
   }
 }
