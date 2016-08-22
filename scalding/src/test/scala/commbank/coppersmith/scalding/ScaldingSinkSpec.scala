@@ -328,7 +328,7 @@ class HiveParquetSinkSpec extends ScaldingSinkSpec[HiveParquetSink[Eavt, (String
           tableName,
           new Path(dir, tablePath),
           FixedSinkPartition.byDay[Eavt](dateTime)
-        )(implicitly, eavtEnc, implicitly, implicitly, implicitly)
+        )(implicitly, eavtEnc, implicitly, implicitly)
         (sink, dateTime)
       }
     )

@@ -54,7 +54,7 @@ object HiveParquetSink {
 
   def apply[
     T <: ThriftStruct : Manifest : FeatureValueEnc,
-    P : Manifest : PathComponents : TupleSetter
+    P : Manifest : PathComponents
   ](
     dbName:    DatabaseName,
     tableName: TableName,
@@ -62,16 +62,14 @@ object HiveParquetSink {
     partition: FixedSinkPartition[T, P],
     writeMetadata: MetadataWriter = FeatureSink.defaultMetadataWriter
   ): HiveParquetSink[T, P] = {
+    // Note: This needs to be explicitly specified so that the TupleSetter.singleSetter
+    // instance isn't used (causing a failure at runtime).
+    implicit val partitionSetter = partition.tupleSetter
     val hiveTable = HiveTable[T, P](
       dbName,
       tableName,
       partition.underlying,
       tablePath.toString
-    )(implicitly[Manifest[T]],
-      implicitly[Manifest[P]],
-      // Note: This needs to be explicitly specified so that the TupleSetter.singleSetter
-      // instance isn't used (causing a failure at runtime).
-      partition.tupleSetter
     )
 
     val pathComponents = implicitly[PathComponents[P]].toComponents(partition.partitionValue)
