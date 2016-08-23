@@ -101,11 +101,11 @@ object SparkyMaestroJob {
 trait SimpleFeatureJobOps {
   private val log = org.slf4j.LoggerFactory.getLogger(getClass())
 
-  def generate[S](cfg:      SparkSession => FeatureJobConfig[S],
+  def generate[S: ClassTag](cfg:      SparkSession => FeatureJobConfig[S],
                   features: FeatureSet[S]): Action[JobStatus] =
     generate(FeatureSetExecutions(FeatureSetExecution(cfg, features)))
 
-  def generate[S](cfg:      SparkSession => FeatureJobConfig[S],
+  def generate[S : ClassTag](cfg:      SparkSession => FeatureJobConfig[S],
                   features: AggregationFeatureSet[S]): Action[JobStatus] =
     generate(FeatureSetExecutions(FeatureSetExecution(cfg, features)))
 
@@ -164,7 +164,7 @@ object FeatureSetExecutions {
 
 trait FeatureSetExecution {
   type Source
-  implicit def ct: ClassTag[Source]
+  def ct: ClassTag[Source]
 
   def config: SparkSession => FeatureJobConfig[Source]
 
@@ -172,25 +172,33 @@ trait FeatureSetExecution {
 
   import FeatureSetExecution.{generateFeatures, generateOneToMany, generateAggregate}
   def generate(): Action[Set[Path]] = features.fold(
-    regFeatures => {println("Generating reg"); generateFeatures[Source](config, generateOneToMany(regFeatures)_, regFeatures)},
-    aggFeatures => {println("Generating agg"); generateFeatures[Source](config, generateAggregate(aggFeatures)_, aggFeatures)}
+    regFeatures => {
+      implicit val tag = ct
+      generateFeatures[Source](config, generateOneToMany(regFeatures)_, regFeatures)
+    },
+    aggFeatures => {
+      implicit val tag = ct
+      generateFeatures[Source](config, generateAggregate(aggFeatures)_, aggFeatures)
+    }
   )
 }
 
 object FeatureSetExecution {
-  def apply[S](
+  def apply[S : ClassTag](
     cfg: SparkSession => FeatureJobConfig[S],
     fs:  FeatureSet[S]
   ): FeatureSetExecution = new FeatureSetExecution {
     type Source = S
+    implicit val ct = implicitly[ClassTag[S]]
     def config = cfg
     def features = Left(fs)
   }
-  def apply[S](
+  def apply[S : ClassTag](
     cfg: SparkSession => FeatureJobConfig[S],
     fs:  AggregationFeatureSet[S]
   ): FeatureSetExecution = new FeatureSetExecution {
     type Source = S
+    implicit val ct = implicitly[ClassTag[S]]
     def config = cfg
     def features = Right(fs)
   }
@@ -231,7 +239,17 @@ object FeatureSetExecution {
 
     val keyed = input.keyBy(s => features.entity(s))
 
-    //because we are in-memory we don't have to do weird reflection. just ru
+    //TODO: revisit this. it's probably fine since in-memory data passes are cheap
+    features.aggregationFeatures.foreach { feature =>
+      val agg: MonoidAggregator[S, Any, Option[Value]] =
+        feature.aggregator.asInstanceOf[MonoidAggregator[S, Any, Option[Value]]]
+
+      val monoid = agg.monoid
+
+      keyed.aggregateByKey(monoid.zero)(agg.append _, monoid.plus _)
+    }
+    ???
+
   }
 
   // Work-around for problem of TypeTag instances being tied to AggregationFeature and failing at
