@@ -161,9 +161,9 @@ trait AggregationFeatureSet[S] extends FeatureSet[(EntityId, Iterable[S])] {
     AggregationFeature.max[S, V](v)
   def min[V : Ordering](v: S => V): Aggregator[S, V, V] =
     AggregationFeature.min[S, V](v)
-  def maxBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V] =
+  def maxBy[O : Ordering, V : Ordering](o: S => O)(v: S => V): Aggregator[S, S, V] =
     AggregationFeature.maxBy[S, O, V](o)(v)
-  def minBy[O : Ordering, V](o: S => O)(v: S => V): Aggregator[S, S, V] =
+  def minBy[O : Ordering, V : Ordering](o: S => O)(v: S => V): Aggregator[S, S, V] =
     AggregationFeature.minBy[S, O, V](o)(v)
   def sum[V : Monoid](v: S => V): Aggregator[S, V, V] =
     Aggregator.prepareMonoid(v)
@@ -178,10 +178,10 @@ object AggregationFeature {
     AveragedValue.aggregator.composePrepare[T](t)
   def avgBigDec[T](t: T => BigDecimal): Aggregator[T, BigDAveragedValue, BigDecimal] =
     BigDAverager.composePrepare[T](t)
-  def maxBy[T, O : Ordering, V](o: T => O)(v: T => V): Aggregator[T, T, V] =
-    Aggregator.maxBy[T, O](o).andThenPresent[V](v)
-  def minBy[T, O : Ordering, V](o: T => O)(v: T => V): Aggregator[T, T, V] =
-    Aggregator.minBy[T, O](o).andThenPresent[V](v)
+  def maxBy[T, O : Ordering, V : Ordering](o: T => O)(v: T => V): Aggregator[T, T, V] =
+    Aggregator.maxBy[T, (O, V)](t => (o(t), v(t))).andThenPresent[V](v)
+  def minBy[T, O : Ordering, V : Ordering](o: T => O)(v: T => V): Aggregator[T, T, V] =
+    Aggregator.minBy[T, (O, V)](t => (o(t), v(t))).andThenPresent[V](v)
 
   def max[T, V : Ordering](v: T => V): Aggregator[T, V, V]        = Aggregator.max[V].composePrepare[T](v)
   def min[T, V : Ordering](v: T => V): Aggregator[T, V, V]        = Aggregator.min[V].composePrepare[T](v)

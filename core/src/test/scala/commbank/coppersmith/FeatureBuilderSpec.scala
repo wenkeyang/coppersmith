@@ -140,6 +140,9 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val maxBigDF: CAF = select(max(bigD(_.age)))          .asFeature(Continuous, "maxBigD", "Agg feature")
     val avgBigDF: CAF = select(avgBigDec(_.age))          .asFeature(Continuous, "avgBigD", "Agg feature")
     val ucbF:     CAF = select(uniqueCountBy(_.age % 10)) .asFeature(Continuous, "ucb",     "Agg feature")
+    // Ensure that generated value is deterministic (based on order of value) when discriminators are equal
+    val maxVByF:  CAF = select(maxBy(_ => "")(_.height))  .asFeature(Continuous, "maxVBy",  "Agg feature")
+    val minVByF:  CAF = select(minBy(_ => "")(_.age))     .asFeature(Continuous, "minVBy",  "Agg feature")
 
     import com.twitter.algebird.Aggregator
 
@@ -162,7 +165,9 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
       maxBigDF,
       avgBigDF,
       ucbF,
-      collectF
+      collectF,
+      maxVByF,
+      minVByF
     )
   }
 
@@ -184,7 +189,9 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
       Metadata[(EntityId, Iterable[Customer]), Decimal]      (namespace, "maxBigD", "Agg feature", Continuous),
       Metadata[(EntityId, Iterable[Customer]), Decimal]      (namespace, "avgBigD", "Agg feature", Continuous),
       Metadata[(EntityId, Iterable[Customer]), Integral]     (namespace, "ucb",     "Agg feature", Continuous),
-      Metadata[(EntityId, Iterable[Customer]), FloatingPoint](namespace, "collect", "Agg feature", Continuous)
+      Metadata[(EntityId, Iterable[Customer]), FloatingPoint](namespace, "collect", "Agg feature", Continuous),
+      Metadata[(EntityId, Iterable[Customer]), FloatingPoint](namespace, "maxVBy",  "Agg feature", Continuous),
+      Metadata[(EntityId, Iterable[Customer]), Integral]     (namespace, "minVBy",  "Agg feature", Continuous)
     )
   }
 
@@ -199,8 +206,8 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
     val groupedAges = cs.map(_.age).list.groupBy(_ % 10)
     val credit      = cs.map(_.credit).list.collect { case Some(c) => c }.toNel.map(_.list.min)
     val time        = dateTime.getMillis
-    val maxCById    = cs.list.maxBy(_.id)
-    val minCById    = cs.list.minBy(_.id)
+    val maxCById    = cs.list.maxBy(c => (c.id, c.height))
+    val minCById    = cs.list.minBy(c => (c.id, c.age))
     val expectBig   = cs.size > 5
 
     val expected = List(
@@ -217,7 +224,9 @@ object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is 
                   Some((c.id, "maxBigD", ages.map(BigDecimal(_)).max:        Decimal,       time)),
                   Some((c.id, "avgBigD", (ages.sum / BigDecimal(ages.size)): Decimal,       time)),
                   Some((c.id, "ucb",     groupedAges.size:                   Integral,      time)),
-      credit.map(d =>  (c.id, "collect", d:                                  FloatingPoint, time))
+      credit.map(d =>  (c.id, "collect", d:                                  FloatingPoint, time)),
+                  Some((c.id, "maxVBy",  heights.max:                        FloatingPoint, time)),
+                  Some((c.id, "minVBy",  ages.min:                           Integral,      time))
     ).flatten
 
     eavtValues.toList must matchEavts(expected)
