@@ -248,6 +248,7 @@ object FeatureSetExecution {
 
       keyed.aggregateByKey(monoid.zero)(agg.append _, monoid.plus _)
     }
+    //Try union
     ???
 
   }
