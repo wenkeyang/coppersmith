@@ -14,6 +14,8 @@
 
 package commbank.coppersmith.scalding
 
+import scala.collection.JavaConversions._
+
 import com.twitter.scalding.{Execution, TypedPipe}
 
 import org.joda.time.DateTime
@@ -24,6 +26,9 @@ import scalaz.Scalaz._
 import scalaz.NonEmptyList
 
 import org.apache.hadoop.fs.Path
+
+import uk.org.lidalia.slf4jtest.TestLoggerFactory
+import uk.org.lidalia.slf4jtest.LoggingEvent.info
 
 import au.com.cba.omnia.maestro.api._, Maestro._
 import au.com.cba.omnia.maestro.test.Records
@@ -91,18 +96,22 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
     forAll { (vs: NonEmptyList[FeatureValue[Value]], sinkAndTime: SinkAndTime) => {
       val (sink, dateTime) = sinkAndTime
       val expected = vs.map(v => eavtEnc.encode((v, dateTime.getMillis))).list
+      val expectedLogs = List(
+        info("Coppersmith counters:"),
+        info(f"    ${statName}%-30s ${expected.size}%10d")
+      )
       clearData(sink)
+      TestLoggerFactory.clearAll()
 
       withEnvironment(path(getClass.getResource("/").toString)) {
-        val (_, counters) = executesSuccessfully(
+        executesSuccessfully(
           sink.write(valuePipe(vs, dateTime), RegularFeatures).getCounters
         )
         facts(
           path(s"${tablePath(sink)}/*/*/*/[^_]*") ==> records(eavtReader, expected)
         )
-        CoppersmithStats.fromCounters(counters) must_== List(
-          (statName, expected.size)
-        )
+        TestLoggerFactory.getTestLogger("commbank.coppersmith.scalding.CoppersmithStats")
+          .getAllLoggingEvents().toList must_== expectedLogs
       }
     }}.set(minTestsOk = 5)
 

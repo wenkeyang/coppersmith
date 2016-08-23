@@ -36,7 +36,14 @@ object CoppersmithStats {
 
   implicit def fromTypedPipe[T](typedPipe: TypedPipe[T]) = new CoppersmithStats(typedPipe)
 
-  /** Run the [[com.twitter.scalding.Execution]], logging coppersmith counters after completion. */
+  /** Run the [[com.twitter.scalding.Execution]], logging coppersmith counters after completion.
+    *
+    * In theory, for composite Executions this should be able to get the counters from any of the
+    * sub-Executions (assuming that [[com.twitter.scalding.Execution.resetCounters]] was never called).
+    * But scalding's preservation of counters seems to be unreliable. As a workaround, instead of
+    * calling this in one central place, it is instead **the responsibility of each sink implementation**
+    * to log the counters immediately after the `features` pipe is run.
+    */
   def logCountersAfter[T](exec: Execution[T]): Execution[T] = {
     val tryExecution: Execution[Try[T]] =
       exec.map{ Success(_) }.recoverWith{ case throwable: Throwable => Execution.from[Try[T]](Failure(throwable)) }

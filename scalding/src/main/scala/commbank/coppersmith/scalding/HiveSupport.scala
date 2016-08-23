@@ -78,7 +78,9 @@ object HiveSupport {
         for {
                          // Ensure part files have unique names, because the default "part-nnnnn" is not
                          // suitable for moving multiple feature set outputs into a single destination.
-          written     <- partitioned.writeThrough(sink).withSubConfig(createUniqueFilenames(_))
+          written     <- CoppersmithStats.logCountersAfter(
+                           partitioned.writeThrough(sink).withSubConfig(createUniqueFilenames(_))
+                         )
                          // Performance note: writeThrough works by returning the sink as a new source.
                          // Unfortunately, this means an extra MapReduce step involving a scan of all the
                          // data just written in order to obtain a list of partitions, which cascading

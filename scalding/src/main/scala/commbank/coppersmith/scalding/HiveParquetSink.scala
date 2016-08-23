@@ -40,8 +40,8 @@ case class HiveParquetSink[T <: ThriftStruct : Manifest : FeatureValueEnc, P : T
         Execution.from(Left(AttemptedWriteToCommitted(partitionPath)))
       } else {
         val eavts = features.map(implicitly[FeatureValueEnc[T]].encode).withCounter("write.parquet")
-
-        table.writeExecution(eavts).flatMap { _ =>
+        table.writeExecution(eavts).flatMap { counters =>
+          CoppersmithStats.logCounters(counters)
           writeMetadata(metadataSet, Set(partitionPath))
         }
       }
