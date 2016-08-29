@@ -22,6 +22,8 @@ import scalaz.syntax.std.list.ToListOpsFromList
 
 import org.apache.hadoop.fs.Path
 
+import org.apache.commons.lang3.StringEscapeUtils
+
 import org.slf4j.LoggerFactory
 
 import au.com.cba.omnia.ebenezer.scrooge.ParquetScroogeSource
@@ -30,6 +32,8 @@ import au.com.cba.omnia.maestro.api._
 import au.com.cba.omnia.maestro.core.codec.{DecodeOk, DecodeError, ParseError, NotEnoughInput, TooMuchInput}
 
 import commbank.coppersmith.DataSource
+
+import CoppersmithStats.fromTypedPipe
 
 /** Scalding data sources should extend this (rather than `DataSource` directly).
   * It provides some high level utility methods, such as filtering.
@@ -42,11 +46,11 @@ trait ScaldingDataSource[S] extends DataSource[S, TypedPipe] {
     * especially when the data source will be joined to another,
     * since the filter will be applied before rather than after the join.
     */
-  def where(condition: S => Boolean) = TypedPipeSource(load.filter(condition))
+  def where(condition: S => Boolean) = TypedPipeSource(load.filter(condition).withCounter("where"))
 
-  def distinct(implicit ord: Ordering[_ >: S]) = TypedPipeSource(load.distinct)
+  def distinct(implicit ord: Ordering[_ >: S]) = TypedPipeSource(load.distinct.withCounter("distinct"))
 
-  def distinctBy[O : Ordering](fn: S => O) = TypedPipeSource(load.distinctBy(fn))
+  def distinctBy[O : Ordering](fn: S => O) = TypedPipeSource(load.distinctBy(fn).withCounter("distinctBy"))
 }
 
 case class DataSourceView[T, S](underlying: DataSource[T, TypedPipe])(implicit tToS: T => S)
@@ -58,10 +62,11 @@ case class HiveTextSource[S <: ThriftStruct : Decode](
   paths:     List[Path],
   delimiter: String
 ) extends ScaldingDataSource[S] {
-  val log = LoggerFactory.getLogger(getClass())
+  // Avoid serializing this, as a workaround when using slf4j-test (only a concern in tests)
+  @transient lazy val log = LoggerFactory.getLogger(getClass())
 
   def load = {
-    log.info("Loading from " + paths.mkString(","))
+    log.info(s"Loading '${StringEscapeUtils.escapeJava(delimiter)}' delimited text from " + paths.mkString(","))
     val decoder = implicitly[Decode[S]]
     val input: TextLineScheme = MultipleTextLineFiles(paths.map(_.toString): _*)
     input.map { raw =>
@@ -70,7 +75,7 @@ case class HiveTextSource[S <: ThriftStruct : Decode](
       case DecodeOk(row)            => row
       case e @ DecodeError(_, _, _) =>
         throw new Exception("Cannot decode input to HiveTextSource: " + errorMessage(e))
-    }
+    }.withCounter("load.text")
   }
 
   def errorMessage(e: DecodeError[_]): String = e.reason match {
@@ -96,8 +101,8 @@ case class HiveParquetSource[S <: ThriftStruct : Manifest : TupleConverter : Tup
   val log = LoggerFactory.getLogger(getClass())
 
   def load = {
-    log.info("Loading from " + paths.mkString(","))
-    ParquetScroogeSource[S](paths.map(_.toString): _*)
+    log.info("Loading parquet from " + paths.mkString(","))
+    TypedPipe.from(ParquetScroogeSource[S](paths.map(_.toString): _*)).withCounter("load.parquet")
   }
 }
 
@@ -111,5 +116,10 @@ object HiveParquetSource {
 
 /** Akin to an SQL view, allow features to be derived from an arbitrary `TypedPipe`. */
 case class TypedPipeSource[S](pipe: TypedPipe[S]) extends ScaldingDataSource[S] {
-  def load = pipe
+  val log = LoggerFactory.getLogger(getClass())
+
+  def load = {
+    log.info(s"Loading from a TypedPipeSource")
+    pipe.withCounter("load.typedpipe")
+  }
 }

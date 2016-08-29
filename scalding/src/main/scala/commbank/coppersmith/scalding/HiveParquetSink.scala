@@ -23,6 +23,7 @@ import au.com.cba.omnia.maestro.api._
 import commbank.coppersmith._, Feature._
 import Partitions.PathComponents
 import FeatureSink.{AttemptedWriteToCommitted, MetadataWriter}
+import CoppersmithStats.fromTypedPipe
 
 /**
   * Parquet FeatureSink implementation - create using HiveParquetSink.apply in companion object.
@@ -38,11 +39,12 @@ case class HiveParquetSink[T <: ThriftStruct : Manifest : FeatureValueEnc, P : T
       if (committed) {
         Execution.from(Left(AttemptedWriteToCommitted(partitionPath)))
       } else {
-        val eavts = features.map(implicitly[FeatureValueEnc[T]].encode)
-
-        table.writeExecution(eavts).flatMap { _ =>
-          writeMetadata(metadataSet, Set(partitionPath))
-        }
+        val eavts = features.map(implicitly[FeatureValueEnc[T]].encode).withCounter("write.parquet")
+        for {
+          counters <- table.writeExecution(eavts)
+          _        <- Execution.from(CoppersmithStats.logCounters(counters))
+          result   <- writeMetadata(metadataSet, Set(partitionPath))
+        } yield result
       }
     )
   }

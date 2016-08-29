@@ -14,6 +14,8 @@
 
 package commbank.coppersmith.scalding
 
+import scala.collection.JavaConversions._
+
 import com.twitter.scalding.{Execution, TypedPipe}
 
 import org.joda.time.DateTime
@@ -24,6 +26,9 @@ import scalaz.Scalaz._
 import scalaz.NonEmptyList
 
 import org.apache.hadoop.fs.Path
+
+import uk.org.lidalia.slf4jtest.TestLoggerFactory
+import uk.org.lidalia.slf4jtest.LoggingEvent.info
 
 import au.com.cba.omnia.maestro.api._, Maestro._
 import au.com.cba.omnia.maestro.test.Records
@@ -64,6 +69,8 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
   def databaseName(t: T): String
   def tableName(t: T):    String
 
+  val statName: String
+
   def valuePipe(vs: NonEmptyList[FeatureValue[Value]], dateTime: DateTime) =
     TypedPipe.from(vs.list.map(v => v -> dateTime.getMillis))
 
@@ -89,13 +96,20 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
     forAll { (vs: NonEmptyList[FeatureValue[Value]], sinkAndTime: SinkAndTime) => {
       val (sink, dateTime) = sinkAndTime
       val expected = vs.map(v => eavtEnc.encode((v, dateTime.getMillis))).list
+      val expectedLogs = List(
+        info("Coppersmith counters:"),
+        info(f"    ${statName}%-30s ${expected.size}%10d")
+      )
       clearData(sink)
+      TestLoggerFactory.clearAll()
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         executesSuccessfully(sink.write(valuePipe(vs, dateTime), RegularFeatures))
         facts(
           path(s"${tablePath(sink)}/*/*/*/[^_]*") ==> records(eavtReader, expected)
         )
+        TestLoggerFactory.getTestLogger("commbank.coppersmith.scalding.CoppersmithStats")
+          .getAllLoggingEvents().toList must_== expectedLogs
       }
     }}.set(minTestsOk = 5)
 
@@ -306,6 +320,7 @@ class HiveTextSinkSpec extends ScaldingSinkSpec[HiveTextSink[Eavt]] {
   def tablePath(sink: HiveTextSink[Eavt]) = sink.tablePath.toString
   def databaseName(sink: HiveTextSink[Eavt]) = sink.dbName
   def tableName(sink: HiveTextSink[Eavt]) = sink.tableName
+  val statName = "write.text"
 }
 
 class HiveParquetSinkSpec extends ScaldingSinkSpec[HiveParquetSink[Eavt, (String, String, String)]] {
@@ -359,4 +374,5 @@ class HiveParquetSinkSpec extends ScaldingSinkSpec[HiveParquetSink[Eavt, (String
   def tablePath(sink: HiveParquetSink[Eavt, (String, String, String)]) = sink.table.tablePath.toString
   def databaseName(sink: HiveParquetSink[Eavt, (String, String, String)]) = sink.table.database
   def tableName(sink: HiveParquetSink[Eavt, (String, String, String)]) = sink.table.table
+  val statName = "write.parquet"
 }

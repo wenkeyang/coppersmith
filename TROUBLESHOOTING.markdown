@@ -73,25 +73,68 @@ them as transient can also fix the problem. More information can be
 found in [this scalding FAQ](https://github.com/twitter/scalding/wiki/Frequently-asked-questions#q-im-getting-a-notserializableexception-on-hadoop-job-submission).
 
 
-### Empty source data
+### Empty output
 
-If the expected features from a job are not being generated, it can be
-helpful to confirm that the `FeatureSource` bindings are configured
-correctly. Both the `HiveTextSource` and `HiveParquetSource`
-implementations will log the absolute path from which data is loaded.
-Enabling logging and searching for the following text in the output
-will reveal where data is being read from:
-> `INFO  commbank.coppersmith.scalding.HiveParquetSource  - Loading from /` ...
+If the job runs successfully, but the expected features are not generated,
+some common causes to consider include:
 
-(or `HiveTextSource` for data in text format).
+* Incorrect path to source data (misconfigured `FeatureSource` bindings)
+* Incorrect join or filter conditions
 
-The following is a simple logging configuration that will enable logging:
+Coppersmith produces diagnostic logging that can help identify these problems.
+
+Firstly, both the `HiveTextSource` and `HiveParquetSource`
+implementations will log the absolute path from which data is loaded, e.g.:
+
+```
+INFO  commbank.coppersmith.scalding.HiveParquetSource  - Loading '|' delimited text from /path/to/data
+```
+
+Secondly, the "Coppersmith counters" logged at the end of the job
+show the number of records read from each data source, and also the
+number of rows remaining after joining each table.
+For example, the `DirectorsFeaturesJob` from the user guide logs:
+
+```
+INFO commbank.coppersmith.scalding.CoppersmithStats: Coppersmith counters:
+INFO commbank.coppersmith.scalding.CoppersmithStats:     load.typedpipe                    2465882
+INFO commbank.coppersmith.scalding.CoppersmithStats:     load.text                            1682
+INFO commbank.coppersmith.scalding.CoppersmithStats:     join.level1                          1023
+INFO commbank.coppersmith.scalding.CoppersmithStats:     load.text                          100000
+INFO commbank.coppersmith.scalding.CoppersmithStats:     join.level2                         67145
+INFO commbank.coppersmith.scalding.CoppersmithStats:     write.text                            732
+```
+
+Just be aware that counters with zero counts are *omitted* from the log.
+So, if you are joining three tables (as above), but only see this:
+
+```
+INFO commbank.coppersmith.scalding.CoppersmithStats: Coppersmith counters:
+INFO commbank.coppersmith.scalding.CoppersmithStats:     load.typedpipe                    2465882
+INFO commbank.coppersmith.scalding.CoppersmithStats:     load.text                            1682
+INFO commbank.coppersmith.scalding.CoppersmithStats:     join.level1                          1023
+INFO commbank.coppersmith.scalding.CoppersmithStats:     load.text                          100000
+```
+
+Then it could indicate that `join.level2` is zero,
+i.e. no records remain after joining the third table.
+
+**NOTE: The reliability of Coppersmith counters is not well understood,
+and they should not be used when accurate record counts are required.**
+They are only intended for diagnosing large problems and trends,
+and in the case of minor discrepancies ("14 records are missing!")
+the data on disk should be treated as the only authorative source of statistics.
+
+You may need to explicitly enable logging in order to see the log messages.
+For example, to see these logs when running Thermometer tests,
+create a file called `src/test/resources/log4j.properties` containing:
 
 ```properties
 log4j.rootLogger=ERROR,stdout
 
 log4j.logger.commbank.coppersmith.scalding.HiveTextSource=INFO
 log4j.logger.commbank.coppersmith.scalding.HiveParquetSource=INFO
+log4j.logger.commbank.coppersmith.scalding.CoppersmithStats=INFO
 
 log4j.appender.stdout=org.apache.log4j.ConsoleAppender
 log4j.appender.stdout.layout=org.apache.log4j.PatternLayout

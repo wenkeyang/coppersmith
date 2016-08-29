@@ -327,6 +327,7 @@ object MultiwayJoinGenerator {
       |import com.twitter.scalding.TypedPipe
       |
       |import commbank.coppersmith.generated._
+      |import commbank.coppersmith.scalding.CoppersmithStats.fromTypedPipe
       |
       |trait GeneratedScaldingLift {
       |${content}
@@ -338,6 +339,7 @@ object MultiwayJoinGenerator {
     genLiftMethodSig(level, permutation, "TypedPipe") + " = {\n" +
       permutation.zipWithIndex.foldRight(List[String]()){ case ((jt, idx), joins) => {
         val level = idx + 1
+        val counter = s"join.level${level}"
         val joinType = jt match {
           case Inner => "join"
           case Left => "leftJoin"
@@ -349,7 +351,7 @@ object MultiwayJoinGenerator {
 
         val init = if (level == 1) "    s1" else "  "
 
-        val group = s".groupBy(joined.${joinSrc}${join}${tupled}).${joinType}(${nextSrc}.groupBy(joined.${nextSrc}${join})).values"
+        val group = s""".groupBy(joined.${joinSrc}${join}${tupled}).${joinType}(${nextSrc}.groupBy(joined.${nextSrc}${join})).values.withCounter("${counter}")"""
 
         val map = if (level == 1) "" else {
           val sources = 1.to(level).map(l => s"s$l").mkString(", ")

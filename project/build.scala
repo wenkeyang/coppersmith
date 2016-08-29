@@ -16,6 +16,8 @@ import au.com.cba.omnia.uniform.dependency.UniformDependencyPlugin.depend.versio
 import sbt._
 import sbt.Keys._
 
+import sbtunidoc.Plugin._, UnidocKeys._
+
 import au.com.cba.omnia.uniform.core.standard.StandardProjectPlugin._
 import au.com.cba.omnia.uniform.core.version.UniqueVersionPlugin._
 import au.com.cba.omnia.uniform.dependency.UniformDependencyPlugin._
@@ -83,6 +85,13 @@ object build extends Build {
         }
       }
     )
+   ++ unidocSettings
+   ++ uniform.docSettings("http://not yet published (this fake link is unset by apiURL below)")
+   ++ Seq(
+        apiURL := None,
+        unidocProjectFilter in (ScalaUnidoc, unidoc) := inAnyProject -- inProjects(plugin),
+        libraryDependencies in (ScalaUnidoc, unidoc) ++= depend.scalding()  // otherwise unidoc won't link to it
+   )
   ).configs( IntegrationTest )
 
   lazy val scalding = Project(
@@ -94,7 +103,6 @@ object build extends Build {
         ++ uniformThriftSettings
         ++ Seq(
           libraryDependencies ++= depend.hadoopClasspath,
-          libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
           libraryDependencies ++= depend.parquet()
         )
         ++ Seq(
@@ -103,6 +111,15 @@ object build extends Build {
             IO.write(genFile, MultiwayJoinGenerator.generateLiftScalding(joins))
             Seq(genFile)
           }
+        )
+        ++ Seq(
+          // test settings
+          libraryDependencies ++= depend.omnia("maestro-test", maestroVersion, "test"),
+          libraryDependencies += "uk.org.lidalia" % "slf4j-test" % "1.1.0" % "test" exclude("joda-time", "joda-time"),
+          dependencyOverrides += "com.google.guava" % "guava" % "14.0.1",  // required by slf4j-test,
+          // move hive-exec to the end of the classpath, so its guava classes don't shadow the above ones
+          (managedClasspath in Test) := (managedClasspath in Test).value
+            .sortBy(_.get(moduleID.key).map(_.name) == Some("hive-exec"))
         )
   ).dependsOn(core % "compile->compile;test->test", tools)
 

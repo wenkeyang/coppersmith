@@ -17,6 +17,7 @@ package commbank.coppersmith.scalding
 import com.twitter.scalding._
 
 import commbank.coppersmith.{BoundFeatureSource, FeatureSource, SourceBinder}
+import commbank.coppersmith.scalding.CoppersmithStats.fromTypedPipe
 
 case class ScaldingBoundFeatureSource[S, U <: FeatureSource[S, U]](
   underlying: U,
@@ -25,6 +26,6 @@ case class ScaldingBoundFeatureSource[S, U <: FeatureSource[S, U]](
 ) extends BoundFeatureSource[S, TypedPipe] {
   def load: TypedPipe[S] = {
     val pipe = binder.bind(underlying)
-    filter.map(f => pipe.filter(f)).getOrElse(pipe)
+    filter.map(f => pipe.filter(f).withCounter("filter")).getOrElse(pipe)
   }
 }
