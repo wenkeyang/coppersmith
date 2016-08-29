@@ -53,21 +53,7 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
       writes feature values for par sets $multiFeatureSetJobPar ${tag("slow")}
   """
 
-  {
-    import java.util.logging.Logger
-    // Suppress parquet logging (which wraps java.util.logging) in tests. Loading the parquet.Log
-    // class forces its static initialiser block to be run prior to removing the root logger
-    // handlers, which needs to be done to avoid the Log's default handler being re-added. Disabling
-    // log output specific to the parquet logger would be more ideal, however, this has proven to be
-    // non-trivial due to what appears to be a result of configuration via static initialisers and
-    // the order in which the initialisers are called.
-    // FIXME: This can be replaced by TestUtil.withoutLogging when slf4j is available in parquet
-    // via https://github.com/apache/parquet-mr/pull/290
-    Logger.getLogger(getClass.getName).info("Suppressing further java.util.logging log output")
-    Class.forName("parquet.Log")
-    val rootLogger = Logger.getLogger("")
-    rootLogger.getHandlers.foreach(rootLogger.removeHandler)
-  }
+  TestUtil.withoutJavaLogging  // suppress parquet logs
 
   def prepareData(
     custAccts:  CustomerAccounts,
