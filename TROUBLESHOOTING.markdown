@@ -105,20 +105,6 @@ INFO commbank.coppersmith.scalding.CoppersmithStats:     join.level2            
 INFO commbank.coppersmith.scalding.CoppersmithStats:     write.text                            732
 ```
 
-Just be aware that counters with zero counts are *omitted* from the log.
-So, if you are joining three tables (as above), but only see this:
-
-```
-INFO commbank.coppersmith.scalding.CoppersmithStats: Coppersmith counters:
-INFO commbank.coppersmith.scalding.CoppersmithStats:     load.typedpipe                    2465882
-INFO commbank.coppersmith.scalding.CoppersmithStats:     load.text                            1682
-INFO commbank.coppersmith.scalding.CoppersmithStats:     join.level1                          1023
-INFO commbank.coppersmith.scalding.CoppersmithStats:     load.text                          100000
-```
-
-Then it could indicate that `join.level2` is zero,
-i.e. no records remain after joining the third table.
-
 **NOTE: The reliability of Coppersmith counters is not well understood,
 and they should not be used when accurate record counts are required.**
 They are only intended for diagnosing large problems and trends,

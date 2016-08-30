@@ -22,7 +22,8 @@ import com.twitter.scalding.{Execution, ExecutionCounters}
 
 import cascading.tuple.Fields
 import cascading.pipe.Each
-import cascading.operation.state.Counter
+import cascading.operation.{BaseOperation, Filter, FilterCall, OperationCall}
+import cascading.flow.FlowProcess
 
 object CoppersmithStats {
   val group = "Coppersmith"
@@ -83,4 +84,16 @@ class CoppersmithStats[T](typedPipe: TypedPipe[T]) extends {
     val newPipe = new Each(oldPipe, new Counter(CoppersmithStats.group, s"$id.$name"))
     TypedPipe.fromSingleField[T](newPipe)(fd, mode)
   })
+}
+
+// Similar to cascading.operation.state.Counter, with the addition of a prepare() method.
+class Counter[C](val group: String, val name: String) extends BaseOperation[C] with Filter[C] {
+  override def isRemove(fp: FlowProcess[_], fc: FilterCall[C]) = {
+    fp.increment(group, name, 1)
+    false
+  }
+
+  override def prepare(fp: FlowProcess[_], oc: OperationCall[C]) = {
+    fp.increment(group, name, 0)  // ensure the counter exists, even if isRemove is never called
+  }
 }

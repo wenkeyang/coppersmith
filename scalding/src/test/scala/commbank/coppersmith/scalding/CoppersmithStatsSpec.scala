@@ -29,6 +29,7 @@ import CoppersmithStats.fromTypedPipe
 object CoppersmithStatsSpec extends ThermometerSpec { def is = s2"""
   CoppersmithStats
     should log stats in a sensible order    $orderedLogs
+    should log (at least some) zero stats   $zeros
     behaves like this when execution fails  $failedExecution
   """
 
@@ -54,6 +55,28 @@ object CoppersmithStatsSpec extends ThermometerSpec { def is = s2"""
       info("    a.2                                     4"),
       info("    b.1                                     5"),
       info("    c                                       2")
+    )
+  }
+
+  def zeros = {
+    // Same example logic as orderedLogs test, but everything except a1 is an empty pipe.
+    val a1 = TypedPipe.from(List(1, 2, 3, 4, 2, 1)).withCounter("a.1")
+    val b1 = TypedPipe.empty.withCounter("b.1").groupBy((x: Int) => x)
+    val a2 = a1.filter(_ > 10).withCounter("a.2")
+    val c  = a2.groupBy((x: Int) => x).join(b1).aggregate(Aggregator.size).toTypedPipe.withCounter("c")
+
+    val exec = CoppersmithStats.logCountersAfter(c.toIterableExecution)
+    executesSuccessfully(exec) must be empty
+
+    val logger = TestLoggerFactory.getTestLogger("commbank.coppersmith.scalding.CoppersmithStats")
+    logger.getAllLoggingEvents().toList must_== List(
+      info("Coppersmith counters:"                        ),
+      info("    a.1                                     6"),
+      info("    a.2                                     0"),
+      info("    b.1                                     0")
+      // Note that 'c' is not logged. I suspect this is because the mapper creates no files,
+      // and so no reducer is even initialised. Unfortunate, but as long as the last reported
+      // count is zero, it should be obvious to the user why the subsequent ones are missing.
     )
   }
 
