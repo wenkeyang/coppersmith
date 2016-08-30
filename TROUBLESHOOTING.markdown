@@ -125,18 +125,21 @@ They are only intended for diagnosing large problems and trends,
 and in the case of minor discrepancies ("14 records are missing!")
 the data on disk should be treated as the only authorative source of statistics.
 
-You may need to explicitly enable logging in order to see the log messages.
-For example, to see these logs when running Thermometer tests,
-create a file called `src/test/resources/log4j.properties` containing:
+If you do not see any of the above log messages,
+you may need to modify your logging configuration to display them.
+In particular, [thermometer] tests will not output these logs by default.
+To enable them, create a file called `src/test/resources/log4j.properties` containing:
 
 ```properties
 log4j.rootLogger=ERROR,stdout
 
-log4j.logger.commbank.coppersmith.scalding.HiveTextSource=INFO
-log4j.logger.commbank.coppersmith.scalding.HiveParquetSource=INFO
-log4j.logger.commbank.coppersmith.scalding.CoppersmithStats=INFO
+log4j.logger.commbank.coppersmith=INFO
+log4j.logger.au.com.cba.omnia.thermometer=INFO
 
 log4j.appender.stdout=org.apache.log4j.ConsoleAppender
 log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
 log4j.appender.stdout.layout.ConversionPattern=%-5p %c %x - %m%n
 ```
+
+
+[thermometer]: https://github.com/CommBank/thermometer
