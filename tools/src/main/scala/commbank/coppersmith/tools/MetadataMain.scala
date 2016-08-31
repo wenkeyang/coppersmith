@@ -15,7 +15,7 @@
 package commbank.coppersmith.tools
 
 import commbank.coppersmith.{MetadataOutput, MetadataSet}
-import commbank.coppersmith.Feature.{Value, Type, Conforms}, Conforms.conforms_?
+import commbank.coppersmith.Feature.Conforms
 import commbank.coppersmith.tools.util.ObjectFinder
 
 object MetadataMain {

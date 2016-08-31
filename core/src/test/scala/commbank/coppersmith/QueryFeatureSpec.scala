@@ -14,10 +14,6 @@
 
 package commbank.coppersmith
 
-import scala.reflect.runtime.universe.TypeTag
-
-import scalaz.syntax.std.boolean.ToBooleanOpsFromBoolean
-
 import org.scalacheck.Prop.forAll
 
 import org.specs2._

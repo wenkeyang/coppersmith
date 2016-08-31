@@ -101,7 +101,6 @@ abstract class QueryFeatureSet[S : TypeTag, V <: Value : TypeTag] extends Featur
 
 import scalaz.syntax.foldable1.ToFoldable1Ops
 import scalaz.syntax.std.list.ToListOpsFromList
-import scalaz.syntax.std.option.ToOptionIdOps
 
 import com.twitter.algebird.{Aggregator, AveragedValue, Monoid, Semigroup}
 

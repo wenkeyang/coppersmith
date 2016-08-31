@@ -25,7 +25,7 @@ import au.com.cba.omnia.uniform.thrift.UniformThriftPlugin._
 import au.com.cba.omnia.uniform.assembly.UniformAssemblyPlugin._
 
 object build extends Build {
-  val maestroVersion = "2.20.0-20160520031836-e06bc75"
+  val maestroVersion = "2.22.0-20160719093316-aa9146e"
 
   // Number of levels of joins supported
   val maxGeneratedJoinSize = 7
@@ -39,8 +39,12 @@ object build extends Build {
       // because thermometer tests cannot run in parallel
       concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
       scalacOptions += "-Xfatal-warnings",
-      scalacOptions in (Compile, console) ~= (_.filterNot(Set("-Xfatal-warnings", "-Ywarn-unused-import"))),
-      scalacOptions in (Compile, doc) ~= (_ filterNot (_ == "-Xfatal-warnings")),
+      // Drop default -Ywarn-unused-import, as the files generated from thrift structs by
+      // scrooge contain unused imports, which causes the build to fail when combined with
+      // -Xfatal-warnings
+      scalacOptions in (Compile)          ~= (_.filterNot(_ == "-Ywarn-unused-import")),
+      scalacOptions in (Compile, console) ~= (_.filterNot(_ == "-Xfatal-warnings")),
+      scalacOptions in (Compile, doc)     ~= (_ filterNot(_ == "-Xfatal-warnings")),
       scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value
     )
 
@@ -201,7 +205,8 @@ object build extends Build {
         ++ Seq(
             libraryDependencies ++= Seq(
              "io.github.lukehutch" % "fast-classpath-scanner" % "1.9.7",
-             "org.specs2"         %% "specs2-matcher-extra"   % versions.specs % "test"
+             "org.specs2"         %% "specs2-matcher-extra"   % versions.specs     % "test",
+             "org.scala-lang"      % "scala-compiler"         % scalaVersion.value % "test"
            ) ++ depend.testing(configuration = "test"),
           fork in Test := true,
           resources in Test += file("tools/METADATA_JSON.markdown"),
