@@ -19,6 +19,8 @@ import scalaz.syntax.std.option.ToOptionIdOps
 abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => Boolean] = None) {
   self: FS =>
 
+  val filterValue = filter
+
   def filter(p: S => Boolean): FS = copyWithFilter(filter.map(f => (s: S) => f(s) && p(s)).orElse(p.some))
 
   def copyWithFilter(filter: Option[S => Boolean]): FS

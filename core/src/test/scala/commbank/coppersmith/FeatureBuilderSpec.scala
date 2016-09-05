@@ -38,6 +38,7 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
   An example feature set
     must generate expected metadata       $generateMetadata
     must generate expected feature values $generateFeatureValues
+    must filter correctly  $filters
 """
 
   object CustomerFeatureSet extends AbstractFeatureSet[Customer] {
@@ -102,7 +103,28 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
       expectIsVerified.option(FeatureValue[Bool]         (c.id, "youngIsVerified", c.isVerified))
     ).flatten
   }}
-}
+
+  object CustomerFeatureSetWithFilter extends AbstractFeatureSet[Customer] {
+    val namespace           = "test.namespace"
+    def entity(c: Customer) = c.id
+    def time(c: Customer, ctx: FeatureContext)   = c.time
+
+    val source  = From[Customer]().filter(_.age > 18)
+    val select = source.featureSetBuilder(namespace, entity)
+
+    type CF = Feature[Customer, Value]
+    val age = select(_.age).asFeature(Ordinal, "age", "Age")
+
+    def features = List(age)
+  }
+
+  // Since we have filtered out everything under 18, there should be either nothing
+  // or a value over 18
+  def filters = forAll { (c: Customer) => {
+    val featureValues = CustomerFeatureSetWithFilter.generate(c)
+    featureValues.isEmpty || featureValues.head.value.asInstanceOf[Integral].value.get > 18
+  }
+}}
 
 object AggregationFeatureSetSpec extends Specification with ScalaCheck { def is = s2"""
   AggregationFeatureSet - Test an example set of features based on aggregating records
