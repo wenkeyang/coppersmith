@@ -163,7 +163,7 @@ object build extends Build {
           fragFiles ++ jobFiles
         }
       )
-  ).dependsOn(core, scalding, testProject)
+  ).dependsOn(core, scalding, testProject % "test")
 
   lazy val testProject = Project(
     id = "test"
