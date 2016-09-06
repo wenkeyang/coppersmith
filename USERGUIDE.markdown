@@ -146,6 +146,8 @@ object UserFeatures extends BasicFeatureSet[User] {
   val namespace          = "userguide.examples"
   def entity(user: User) = user.id
 
+  val source = From[User]()
+
   val userAge = basicFeature[Integral](
     "USER_AGE", "Age of user in years", Continuous, Some(MinMaxRange[Integral](0, 130))
   )((user) => user.age)
@@ -223,7 +225,7 @@ case class UserFeaturesConfig(conf: Config) extends FeatureJobConfig[User] {
   val partitions     = Partitions.unpartitioned
   val users          = HiveTextSource[User, Nothing](new Path("data/users"), partitions)
 
-  val featureSource  = From[User]().bind(from(users))
+  val featureSource  = UserFeatures.source.bind(from(users))
 
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 
@@ -272,7 +274,7 @@ case class PartitionedUserFeaturesConfig(conf: Config) extends FeatureJobConfig[
   val partitions     = Partitions(partition, userZipcode)
   val users          = HiveTextSource[User, String](new Path("data/users"), partitions)
 
-  val featureSource  = From[User]().bind(from(users))
+  val featureSource  = UserFeatures.source.bind(from(users))
 
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 
@@ -610,14 +612,14 @@ case class AggregationFeaturesConfig(conf: Config)
 
   val partitions     = Partitions.unpartitioned
   val ratings        = HiveTextSource[Rating, Nothing](new Path("data/ratings"), partitions, "\t")
-  val featureSource  = From[Rating]().bind(from(ratings))
+  val featureSource  = AggregationFeatures.source.bind(from(ratings))
 }
 
 case class NonAggregationFeaturesConfig(conf: Config)
     extends FeatureJobConfig[Movie] with CommonConfig {
   val partitions     = Partitions.unpartitioned
   val movies         = HiveTextSource[Movie, Nothing](new Path("data/movies"), partitions)
-  val featureSource  = From[Movie]().bind(from(movies))
+  val featureSource  = NonAggregationFeatures.source.bind(from(movies))
 }
 
 object AggregationFeaturesJob extends SimpleFeatureJob {
@@ -1149,7 +1151,7 @@ case class DistinctUserFeaturesConfig(conf: Config) extends FeatureJobConfig[Use
   val users          = HiveTextSource[User, Nothing](new Path("data/users"), Partitions.unpartitioned)
                        .distinctBy(_.id)
 
-  val featureSource  = From[User]().bind(from(users))
+  val featureSource  = UserFeatures.source.bind(from(users))
   val featureSink    = HiveTextSink[Eavt]("userguide", new Path("dev/users"), "users", eavtByDay)
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 }
@@ -1280,7 +1282,7 @@ case class AlternativeSinkUserFeaturesConfig(conf: Config) extends FeatureJobCon
   val partitions     = Partitions.unpartitioned
   val users          = HiveTextSource[User, Nothing](new Path("data/users"), partitions)
 
-  val featureSource  = From[User]().bind(from(users))
+  val featureSource  = UserFeatures.source.bind(from(users))
 
   val featureContext = ExplicitGenerationTime(new DateTime(2015, 1, 1, 0, 0))
 
