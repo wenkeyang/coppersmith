@@ -16,10 +16,10 @@ package commbank.coppersmith
 
 import scalaz.syntax.std.option.ToOptionIdOps
 
-abstract class FeatureSource[S, FS <: FeatureSource[S, FS]](filter: Option[S => Boolean] = None) {
+abstract class FeatureSource[S, FS <: FeatureSource[S, FS]] {
   self: FS =>
 
-  val filterValue = filter
+  def filter: Option[S => Boolean]
 
   def filter(p: S => Boolean): FS = copyWithFilter(filter.map(f => (s: S) => f(s) && p(s)).orElse(p.some))
 

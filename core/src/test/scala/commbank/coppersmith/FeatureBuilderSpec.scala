@@ -38,7 +38,7 @@ object SelectFeatureSetSpec extends Specification with ScalaCheck { def is = s2"
   An example feature set
     must generate expected metadata       $generateMetadata
     must generate expected feature values $generateFeatureValues
-    must filter correctly  $filters
+    must filter correctly                 $filters
 """
 
   object CustomerFeatureSet extends AbstractFeatureSet[Customer] {

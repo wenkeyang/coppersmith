@@ -23,26 +23,20 @@ import com.twitter.algebird.Aggregator
 
 import Feature.{Conforms, Description, EntityId, Name, Namespace, Type, Value}
 
-abstract class FeatureBuilderSource[S] {
-  val filterValue: Option[S => Boolean]
-
-  def featureSetBuilder(namespace: Namespace, entity: S => EntityId): FeatureSetBuilder[S, S] =
-    FeatureSetBuilder[S, S](namespace, entity, filterValue match {
-      case Some(p) => {case s if p(s) => s }
-      case None    => {case s => s}
-    })
+sealed class FeatureBuilderSource[S](filter: Option[S => Boolean]) {
+  def featureSetBuilder(namespace: Namespace, entity: S => EntityId): FeatureSetBuilder[S, S] = {
+    val f: S => Boolean = filter.getOrElse((_: S) => true)
+    FeatureSetBuilder[S, S](namespace, entity, { case s if f(s) => s })
+  }
 }
 
 object FeatureBuilderSource extends FeatureBuilderSourceInstances
 
 trait FeatureBuilderSourceInstances {
-  implicit def fromFS[S](fs: FeatureSource[S, _]) = new FeatureBuilderSource[S] {
-    val filterValue = fs.filterValue
-  }
+  implicit def fromFS[S](fs: FeatureSource[S, _]) =
+    new FeatureBuilderSource[S](fs.filter)
   implicit def fromCFS[S, C : TypeTag](fs: ContextFeatureSource[S, C, _]) =
-    new FeatureBuilderSource[(S, C)] {
-      val filterValue = fs.filter
-    }
+    new FeatureBuilderSource[(S, C)](fs.filter)
 }
 
 object FeatureSetBuilder {

@@ -20,7 +20,7 @@ object From {
   def apply[S](): From[S] = From(None)
 }
 
-case class From[S](filter: Option[S => Boolean] = None) extends FeatureSource[S, From[S]](filter) {
+case class From[S](filter: Option[S => Boolean] = None) extends FeatureSource[S, From[S]] {
   type FS = From[S]
 
   def copyWithFilter(filter: Option[S => Boolean]) = copy(filter)

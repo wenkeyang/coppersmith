@@ -126,7 +126,7 @@ object MultiwayJoinGenerator {
       |](
       |  ${joinFunctionsAndTypes},
       |  filter: Option[(${srcTypeParam}) => Boolean]
-      |) extends FeatureSource[${srcTypeParam}, Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}]](filter) {
+      |) extends FeatureSource[${srcTypeParam}, Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}]] {
       |
       |  type FS = Joined${level}[${srcTypeParams}, ${joinTypeParams}, ${joinedSrcParams}]
       |
