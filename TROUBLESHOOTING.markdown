@@ -1,6 +1,11 @@
 Troubleshooting Coppersmith
 ===========================
 
+* [Missing imports](#missing-imports)
+* [Serialisation issues](#serialisation-issues)
+* [Empty output](#empty-output)
+* [Filter is ignored](#filter-is-ignored)
+
 ### Missing imports
 Symptom: Code fails to comile with one of the following messages:
 ```log
@@ -126,6 +131,34 @@ log4j.appender.stdout=org.apache.log4j.ConsoleAppender
 log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
 log4j.appender.stdout.layout.ConversionPattern=%-5p %c %x - %m%n
 ```
+
+
+### Filter is ignored
+
+If you have applied a filter on the feature set source,
+such as this example from the user guide:
+
+```scala
+val source = From[Movie]().filter(c => c.releaseYear.exists(Range(1920, 1965).contains(_)))
+```
+
+then when you define `featureSource` in the config,
+you *must* directly reference the `source` member in the feature set:
+
+```scala
+val featureSource = HollywoodGoldenEraMovieFeatures.source.bind(from(movies))
+```
+
+In particular, do not write this:
+
+```scala
+// BAD - any source filters applied in the feature set will be ignored
+val featureSource = From[Movie]().bind(from(movies))
+```
+
+A known (and difficult to eliminate) issue with the coppersmith API
+is that the code above will compile successfully,
+but the behaviour is undefined.
 
 
 [thermometer]: https://github.com/CommBank/thermometer
