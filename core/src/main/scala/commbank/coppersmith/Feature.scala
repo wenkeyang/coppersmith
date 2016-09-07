@@ -144,8 +144,15 @@ object Feature {
   // Legal type/value combinations
   @implicitNotFound("Features with value type ${V} cannot be ${T}")
   abstract class Conforms[T <: Type : TypeTag, V <: Value : TypeTag] {
-    def typeTag: TypeTag[T] = implicitly
-    def valueType: Metadata.ValueType = Metadata.valueType[V]
+    // This typeTagClass lookup needs to be done at initialisation time (ie, as a val, not a
+    // def) to avoid an apparent race condition that occurs when writing metadata for multiple
+    // feature sets that are executed in parallel. For more context, see:
+    // https://github.com/CommBank/coppersmith/pull/80
+    val typeTagClass: Class[_] = {
+      val tag: TypeTag[T] = implicitly
+      tag.mirror.runtimeClass(tag.tpe.typeSymbol.asClass)
+    }
+    val valueType: Metadata.ValueType = Metadata.valueType[V]
   }
   implicit object NominalStr              extends Conforms[Type.Nominal.type,    Value.Str]
   implicit object OrdinalStr              extends Conforms[Type.Ordinal.type,    Value.Str]
@@ -169,17 +176,27 @@ object Feature {
   object Conforms {
 
     def conforms_?(conforms: Conforms[_, _], metadata: Metadata[_, _]) = {
-      def getClazz(tag: TypeTag[_]) = tag.mirror.runtimeClass(tag.tpe.typeSymbol.asClass)
-      metadata.featureType.getClass == getClazz(conforms.typeTag) &&
+      metadata.featureType.getClass == conforms.typeTagClass &&
         metadata.valueType == conforms.valueType
     }
 
     // A dynamic ObjectFinder driven approach would be better here, but fails to find any objects
     // in thermometer tests
-    def allConforms: Set[Conforms[_, _]] =
-      Set(ContinuousDecimal, ContinuousFloatingPoint, ContinuousIntegral, DiscreteIntegral,
-        OrdinalDecimal, OrdinalFloatingPoint, OrdinalIntegral, OrdinalStr, NominalBool, NominalIntegral,
-        NominalStr)
+    def allConforms: Set[Conforms[_, _]] = Set(
+      NominalStr,
+      OrdinalStr,
+      OrdinalDecimal,
+      ContinuousDecimal,
+      OrdinalFloatingPoint,
+      ContinuousFloatingPoint,
+      NominalIntegral,
+      OrdinalIntegral,
+      ContinuousIntegral,
+      DiscreteIntegral,
+      InstantDate,
+      InstantTime,
+      NominalBool
+    )
   }
 
   implicit class RichFeature[S : TypeTag, V <: Value : TypeTag](f: Feature[S, V]) {
