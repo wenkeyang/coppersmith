@@ -1414,6 +1414,7 @@ More about typedsql at: https://github.com/laurencer/typedsql
 An example:
 
 ```scala
+package commbank.coppersmith.examples.userguide
 
 import commbank.coppersmith.api._, Coppersmith._
 import commbank.coppersmith.TypedSqlFeatureSet

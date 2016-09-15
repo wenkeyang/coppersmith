@@ -134,9 +134,9 @@ object build extends Build {
       standardSettings ++
       uniform.project("coppersmith-typedsql", "commbank.coppersmith.typedsql") ++
       Seq(
-        libraryDependencies += "com.rouesnel" %% "typedsql-core" % "0.3.0",
-        libraryDependencies += "com.rouesnel" %% "typedsql-macro" % "0.3.0",
-        libraryDependencies += "com.rouesnel" %% "typedsql-core-macros" % "0.3.0"
+        libraryDependencies += "com.rouesnel" %% "typedsql-core" % "0.3.1",
+        libraryDependencies += "com.rouesnel" %% "typedsql-macro" % "0.3.1",
+        libraryDependencies += "com.rouesnel" %% "typedsql-core-macros" % "0.3.1"
       )
   ).dependsOn(core)
 
@@ -169,11 +169,13 @@ object build extends Build {
             newFile
           }.toSeq
 
-          val jobFiles = FeatureJobGenerator.gen(fragFiles).map { case (name, job) =>
-            val newFile = outdir / s"${name}Job.scala"
-            IO.write(newFile, job)
-            newFile
-          }
+          //TODO: Bring back
+          val jobFiles = List()
+          // val jobFiles = FeatureJobGenerator.gen(fragFiles).map { case (name, job) =>
+          //   val newFile = outdir / s"${name}Job.scala"
+          //   IO.write(newFile, job)
+          //   newFile
+          // }
 
           fragFiles ++ jobFiles
         }
