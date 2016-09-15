@@ -34,10 +34,10 @@ object build extends Build {
   lazy val standardSettings =
     Defaults.coreDefaultSettings ++
     uniformPublicDependencySettings ++
-    strictDependencySettings ++
+  //  strictDependencySettings ++
     Seq(
       // because thermometer tests cannot run in parallel
-      concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
+      //concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
       scalacOptions += "-Xfatal-warnings",
       // Drop default -Ywarn-unused-import, as the files generated from thrift structs by
       // scrooge contain unused imports, which causes the build to fail when combined with
@@ -125,7 +125,20 @@ object build extends Build {
           (managedClasspath in Test) := (managedClasspath in Test).value
             .sortBy(_.get(moduleID.key).map(_.name) == Some("hive-exec"))
         )
-  ).dependsOn(core % "compile->compile;test->test", tools)
+  ).dependsOn(core % "compile->compile;test->test", tools, typedSql)
+
+  lazy val typedSql = Project(
+    id = "typedsql",
+    base = file("typedsql"),
+    settings =
+      standardSettings ++
+      uniform.project("coppersmith-typedsql", "commbank.coppersmith.typedsql") ++
+      Seq(
+        libraryDependencies += "com.rouesnel" %% "typedsql-core" % "0.3.0",
+        libraryDependencies += "com.rouesnel" %% "typedsql-macro" % "0.3.0",
+        libraryDependencies += "com.rouesnel" %% "typedsql-core-macros" % "0.3.0"
+      )
+  ).dependsOn(core)
 
   lazy val examples = Project(
     id = "examples"
@@ -136,6 +149,8 @@ object build extends Build {
         ++ uniformThriftSettings
         ++ uniformAssemblySettings
         ++ Seq(
+        addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
+        scalacOptions in Compile += "-Xlint:-missing-interpolator",
         watchSources <++= baseDirectory map(path => (path / "../USERGUIDE.markdown").get),
         libraryDependencies ++= depend.scalding(),
         libraryDependencies ++= depend.hadoopClasspath,

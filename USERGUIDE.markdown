@@ -1404,6 +1404,54 @@ object DirectorFeaturesJob extends SimpleFeatureJob {
 }
 ```
 
+### TypedSQL Features (experimental)
+
+Experimental. Attempting to use will result in death. You have been warned.
+
+More about typedsql at: https://github.com/laurencer/typedsql
+
+
+An example:
+
+```scala
+
+import commbank.coppersmith.api._, Coppersmith._
+import commbank.coppersmith.TypedSqlFeatureSet
+import commbank.coppersmith.examples.thrift._
+import com.rouesnel.typedsql.{DataSource => TypedSqlDataSource, _}, core._
+
+@SqlQuery
+object MoviesWithHighRating {
+  def query(minRating: Int)
+           (ratings: TypedSqlDataSource[Rating, Partitions.None]) =
+    """
+      SELECT r.movie_id FROM ${ratings} r WHERE r.rating > ${minRating}
+    """
+}
+
+object MoviesWithHighRatingFeatureSet extends TypedSqlFeatureSet[MoviesWithHighRating.type](MoviesWithHighRating) {
+  def namespace = "userguide.examples"
+
+  type Row = MoviesWithHighRating.Row
+
+  def entity(row: Row) = row.movieId
+
+  val source = From[Row]()
+  val select = source.featureSetBuilder(namespace, entity)
+
+  val outputFeature: Feature[MoviesWithHighRating.Row, Value] =
+    select(_ => true).asFeature(Nominal, "HIGH_RATING", "true if rating is high")
+
+
+  def features = List(outputFeature)
+}
+
+
+
+```
+
+
+
 ### Blank Features
 
 Quite often, you may have an existing feature job implemented outside of
