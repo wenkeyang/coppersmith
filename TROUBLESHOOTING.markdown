@@ -1,12 +1,16 @@
 Troubleshooting Coppersmith
 ===========================
 
-* [Missing imports](#missing-imports)
+* [Compiler errors](#compiler-errors)
+  * [value *x* is not a member of *y*](#value-x-is-not-a-member-of-y)
+  * [ambiguous implicit values](#ambiguous-implicit-values)
 * [Serialisation issues](#serialisation-issues)
 * [Empty output](#empty-output)
 * [Filter is ignored](#filter-is-ignored)
 
-### Missing imports
+### Compiler errors
+
+#### value *x* is not a member of *y*
 Symptom: Code fails to comile with one of the following messages:
 ```log
 value featureSetBuilder is not a member of commbank.coppersmith.From
@@ -20,6 +24,33 @@ import commbank.coppersmith.api.Coppersmith._
 or
 ```scala
 import commbank.coppersmith.api._, Coppersmith._
+```
+
+#### ambiguous implicit values
+
+Symptom: Type of `joinMulti` cannot be inferred:
+
+```log
+ambiguous implicit values:
+  both method typeInnerInnerInnerInnerInnerInner in trait GeneratedJoinTypeInstances of type [S1, S2, S3, S4, S5, S6, S7, P[_]](implicit evidence$348: commbank.coppersmith.Lift[P])commbank.coppersmith.generated.Join7Type[S1,S2,S3,S4,S5,S6,S7,S1,S2,S3,S4,S5,S6,S7,P]
+  and method typeLeftInnerInnerInnerInnerInner in trait GeneratedJoinTypeInstances of type [S1, S2, S3, S4, S5, S6, S7, P[_]](implicit evidence$355: commbank.coppersmith.Lift[P])commbank.coppersmith.generated.Join7Type[S1,S2,S3,S4,S5,S6,S7,S1,Option[S2],S3,S4,S5,S6,S7,P]
+  match expected type commbank.coppersmith.generated.Join7Type[Rec1,Rec2,Rec3,Rec4,Rec5,String,Rec6,T1,T2,T3,T4,T5,T6,T7,com.twitter.scalding.typed.TypedPipe]
+   private val joined = joinMulti(
+                                 ^
+```
+
+Cause: `joinMulti` is used in a context where the feature set source is not available to constrain the return type. The ambiguity comes about because, without knowing the source to bind, the compiler cannot tell whether the joins are inner joins or left joins. E.g.:
+
+```scala
+val joined = joinMulti(src1, src2, src3, src4, src5, src6, src7)
+
+override def featureSource = MyFeatures.source.bind(joined)
+```
+
+Solution: Only use `joinMulti` inside the call to `.bind`:
+
+```scala
+override def featureSource = MyFeatures.source.bind(joinMulti(src1, src2, src3, src4, src5, src6, src7))
 ```
 
 ### Serialisation issues
