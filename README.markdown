@@ -51,6 +51,11 @@ The [change log](CHANGELOG.markdown) lists all backwards-incompatible changes to
 the library (i.e. changes which might break existing client code).
 Any such changes require bumping the second number in the version.
 
+Contributing
+------------
+If you'd like to contribute to Coppersmith, please consult the
+[contributing guide](CONTRIBUTING.markdown)
+
 Contributors
 ------------
 
