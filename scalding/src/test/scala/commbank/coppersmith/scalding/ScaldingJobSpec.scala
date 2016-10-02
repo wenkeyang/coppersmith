@@ -42,15 +42,6 @@ import TestFeatureSets.{RegularFeatures, AggregationFeatures}
 class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
     Running a regular feature set job
       writes all regular feature values $regularFeaturesJob ${tag("slow")}
-
-    Running an aggregation feature set job
-      writes all aggregation feature values $aggregationFeaturesJob ${tag("slow")}
-
-    Running a multi feature set job
-      writes feature values for seq sets $multiFeatureSetJobSeq ${tag("slow")}
-
-    Running a multi feature set job
-      writes feature values for par sets $multiFeatureSetJobPar ${tag("slow")}
   """
 
   {
@@ -126,7 +117,7 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
         facts(path(s"${sink.tablePath}/*/*/*/[^_]*") ==> records(eavtReader, expected))
 
       }
-    }}.set(minTestsOk = 5)
+    }}.set(minTestsOk = 1)
 
   def aggregationFeaturesJob =
     forAll { (custAccts: CustomerAccounts, jobTime: DateTime) => {

@@ -36,6 +36,8 @@ import CoppersmithStats.fromTypedPipe
 // Maestro's HiveTable currently assumes the underlying format to be Parquet. This code generalises
 // code from different feature gen projects, which supports storing the final EAVT records as text.
 object HiveSupport {
+  private val log = org.slf4j.LoggerFactory.getLogger(getClass())
+
   trait DelimiterConflictStrategy[T] {
     def handle(row: T, result: String, sep: String): Option[String]
   }
@@ -95,6 +97,7 @@ object HiveSupport {
                            Partitions(conf.partition, pValues.head, pValues.tail: _*)
                          )
           result      <- moveToTarget(tempDir, conf.path, oPartitions)
+          _           <- Execution.from(logResult(result, conf.delimiter))
           _           <- Execution.fromHive(ensureTextTableExists(conf))
         } yield result
       }.ensure(Execution.fromHdfs(Hdfs.delete(tempDir, recDelete = true)))
@@ -130,6 +133,16 @@ object HiveSupport {
         }
       }
     )
+  }
+
+  def logResult(result: WriteResult, delimiter: String): Unit = result match {
+    case Right(paths) =>
+      if (paths.isEmpty) {
+        log.warn("No records to write")
+      } else {
+        log.info(s"Wrote $delimiter separated text to ${paths.toList.sorted.mkString(", ")}")
+      }
+    case Left(_) => ()
   }
 
   def ensureTextTableExists[T <: ThriftStruct : Manifest](conf: HiveConfig[T, _]): Hive[Unit] =
