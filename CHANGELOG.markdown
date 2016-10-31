@@ -1,6 +1,17 @@
 Change log
 ==========
 
+## 0.24.0
+Upgrade dependencies (via maestro) to scalding 0.16.0 and algebird 0.12.0.
+This has no known affect on coppersmith itself.
+However, we have observed the following change in algebird
+which may affect the output of features if they rely on algebird:
+
+  * Statistical measures including variance, stddev, skewness, and kurtosis
+    now return NaN when undefined (instead of e.g. 0.0 for variance and stddev).
+    (See [algebird#434](https://github.com/twitter/algebird/pull/434))
+
+
 ## 0.23.0
 `HiveParquetSink` and `HiveTextSink` now write metadata alongside features.
 The metadata will be output in `_feature_metadata/` with the name
