@@ -18,21 +18,27 @@ import com.twitter.scalding.{Execution, TupleSetter, TypedPipe}
 
 import org.apache.hadoop.fs.Path
 
+import argonaut.Json
+
 import au.com.cba.omnia.maestro.api._
 
-import commbank.coppersmith._, Feature._
+import commbank.coppersmith._, Feature._, MetadataOutput.MetadataOut
 import Partitions.PathComponents
-import FeatureSink.{AttemptedWriteToCommitted, MetadataWriter}
+import FeatureSink.{AttemptedWriteToCommitted, MetadataAdjuster, MetadataWriter}
 import CoppersmithStats.fromTypedPipe
 
 /**
   * Parquet FeatureSink implementation - create using HiveParquetSink.apply in companion object.
   */
 case class HiveParquetSink[T <: ThriftStruct : Manifest : FeatureValueEnc, P : TupleSetter] private(
-  table:         HiveTable[T, (P, T)],
-  partitionPath: Path,
-  metadataWriter: MetadataWriter
+  table:            HiveTable[T, (P, T)],
+  partitionPath:    Path,
+  metadataOut:      MetadataOut { type OutType = HiveParquetSink.MetadataOutType },
+  metadataWriter:   MetadataWriter[HiveParquetSink.MetadataOutType],
+  metadataAdjuster: Option[MetadataAdjuster[HiveParquetSink.MetadataOutType]]
 ) extends FeatureSink {
+  type MetadataOutType = HiveParquetSink.MetadataOutType
+
   def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)],
             metadataSet: MetadataSet[Any]): FeatureSink.WriteResult = {
     FeatureSink.isCommitted(partitionPath).flatMap(committed =>
@@ -43,7 +49,7 @@ case class HiveParquetSink[T <: ThriftStruct : Manifest : FeatureValueEnc, P : T
         for {
           counters <- table.writeExecution(eavts)
           _        <- Execution.from(CoppersmithStats.logCounters(counters))
-          result   <- writeMetadata(metadataSet, Set(partitionPath))
+          result   <- writeMetadata(metadataSet, Set(partitionPath), metadataAdjuster)
         } yield result
       }
     )
@@ -51,18 +57,21 @@ case class HiveParquetSink[T <: ThriftStruct : Manifest : FeatureValueEnc, P : T
 }
 
 object HiveParquetSink {
-  type DatabaseName = String
-  type TableName    = String
+  type DatabaseName    = String
+  type TableName       = String
+  type MetadataOutType = Json
 
   def apply[
     T <: ThriftStruct : Manifest : FeatureValueEnc,
     P : Manifest : PathComponents
   ](
-    dbName:    DatabaseName,
-    tableName: TableName,
-    tablePath: Path,
-    partition: FixedSinkPartition[T, P],
-    writeMetadata: MetadataWriter = FeatureSink.defaultMetadataWriter
+     dbName:           DatabaseName,
+     tableName:        TableName,
+     tablePath:        Path,
+     partition:        FixedSinkPartition[T, P],
+     metadataOut:      MetadataOut { type OutType = MetadataOutType } = MetadataOutput.Json1,
+     metadataWriter:   MetadataWriter[MetadataOutType] = FeatureSink.defaultMetadataWriter[MetadataOutType],
+     metadataAdjuster: Option[MetadataAdjuster[MetadataOutType]] = None
   ): HiveParquetSink[T, P] = {
     // Note: This needs to be explicitly specified so that the TupleSetter.singleSetter
     // instance isn't used (causing a failure at runtime).
@@ -77,6 +86,6 @@ object HiveParquetSink {
     val pathComponents = implicitly[PathComponents[P]].toComponents(partition.partitionValue)
     val partitionRelPath = new Path(partition.underlying.pattern.format(pathComponents: _*))
 
-    HiveParquetSink[T, P](hiveTable, new Path(tablePath, partitionRelPath), writeMetadata)
+    HiveParquetSink[T, P](hiveTable, new Path(tablePath, partitionRelPath), metadataOut, metadataWriter, metadataAdjuster)
   }
 }

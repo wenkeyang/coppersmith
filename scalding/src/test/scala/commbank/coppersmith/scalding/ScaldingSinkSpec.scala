@@ -18,6 +18,8 @@ import scala.collection.JavaConversions._
 
 import com.twitter.scalding.{Execution, TypedPipe}
 
+import argonaut._, Argonaut._
+
 import org.joda.time.DateTime
 
 import org.scalacheck.{Arbitrary, Prop}, Arbitrary._, Prop.forAll
@@ -39,7 +41,7 @@ import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
 import commbank.coppersmith._, Arbitraries._, Feature._, MetadataOutput.MetadataOut
 import ScaldingArbitraries.arbHivePath
-import FeatureSink.MetadataWriter
+import FeatureSink.{MetadataAdjuster, MetadataWriter}
 import thrift.Eavt
 
 import TestFeatureSets.RegularFeatures
@@ -51,6 +53,8 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
       exposes features through hive         $featureValuesInHiveMatch        ${tag("slow")}
       writes metadata                       $metadataOnDiskMatch             ${tag("slow")}
       writes metadata with alternate writer $json0MetadataOnDiskMatch        ${tag("slow")}
+      writes adjusted metadata              $adjustedMetadataOnDiskMatch     ${tag("slow")}
+      uses latest json output               $metadataOutIsLatest
       commits all partitions with SUCCESS   $expectedPartitionsMarkedSuccess ${tag("slow")}
       fails if sink is committed            $writeFailsIfSinkCommitted       ${tag("slow")}
       fails to commit if sink is committed  $commitFailsIfSinkCommitted      ${tag("slow")}
@@ -64,7 +68,9 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
 
   def eavtReader: ThermometerRecordReader[Eavt]
 
-  def json0MetadataSink(t: T): T
+  def json0MetadataSink(t: T):    T
+  def adjustedMetadataSink(t: T): T
+
   def tablePath(t: T):    String
   def databaseName(t: T): String
   def tableName(t: T):    String
@@ -80,16 +86,22 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
     executesOk(Execution.fromHdfs(Hdfs.delete(path(s"${tablePath(sink)}"), true)))
   }
 
-  val json0MetadataWriter: MetadataWriter = (metadataSet, paths) => {
-    val metadataOut = MetadataOutput.Json0
-    val metadata = metadataOut.stringify(metadataOut.doOutput(List(metadataSet), Conforms.allConforms))
-    val metadataFileName = s"_feature_metadata/_${metadataSet.name}_METADATA.V${metadataOut.version}.json"
+  val json0MetadataWriter: MetadataWriter[Json] = (_, metadataSet, paths, _) => {
+    val json0MetadataOut = MetadataOutput.Json0
+    val metadata = json0MetadataOut.stringify(json0MetadataOut.doOutput(List(metadataSet), Conforms.allConforms))
+    val metadataFileName = s"_feature_metadata/_${metadataSet.name}_METADATA.V${json0MetadataOut.version}.json"
 
     val writes: Execution[List[Unit]] = paths.map { p =>
       val f = new Path(p, metadataFileName)
       Execution.fromHdfs(Hdfs.write(f, metadata))
     }.toList.sequence
     writes.map(_ => Right(paths))
+  }
+
+  val metadataAdjuster: MetadataAdjuster[Json] = (metadataOut, json) => {
+    metadataOut match {
+      case MetadataOutput.Json0 | MetadataOutput.Json1 => json.withObject(_ + ("test", jString("test")))
+    }
   }
 
   def featureValuesOnDiskMatch =
@@ -191,6 +203,22 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
       }
     }}.set(minTestsOk = 5)
 
+  def adjustedMetadataOnDiskMatch =
+    forAll { (vs: NonEmptyList[FeatureValue[Value]], sinkAndTime: SinkAndTime) =>  {
+      val (s, dateTime)      = sinkAndTime
+      val sink               = adjustedMetadataSink(s)
+      val (year, month, day) = FixedSinkPartition.byDay(dateTime).partitionValue
+      clearData(sink)
+
+      withEnvironment(path(getClass.getResource("/").toString)) {
+        executesSuccessfully(sink.write(valuePipe(vs, dateTime), RegularFeatures))
+        facts(
+          adjustedMetadataWritten(path(s"${tablePath(sink)}/year=$year/month=$month/day=$day/"),
+            RegularFeatures)
+        )
+      }
+    }}.set(minTestsOk = 5)
+
   def expectedPartitionsMarkedSuccess =
     forAll { (vs: NonEmptyList[FeatureValue[Value]], sinkAndTime: SinkAndTime) =>  {
       val (sink, dateTime) = sinkAndTime
@@ -268,11 +296,40 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
       }
     }}.set(minTestsOk = 5)
 
+  import scala.reflect.runtime.{universe => u, currentMirror}
+  def metadataOutIsLatest = forAll { sinkAndTime: SinkAndTime => {
+    // Get the latest MetadataOut with OutType of Json
+    val metadataOutName = u.typeOf[MetadataOut].typeSymbol.name
+    val outer = u.typeOf[MetadataOutput.type]
+    val jsonMetadataOuts = for {
+      field <- outer.decls
+      if field.isModule
+      if field.typeSignature.baseClasses.exists(_.name == metadataOutName)
+      mo = currentMirror.reflectModule(field.asModule).instance.asInstanceOf[MetadataOut]
+      if mo.getClass.getMethods.filter(_.getName == "doOutput").exists(_.getReturnType == classOf[Json])
+    } yield {
+      (mo, mo.version)
+    }
+
+    val latest = jsonMetadataOuts.maxBy(_._2)._1
+    latest == sinkAndTime._1.metadataOut
+  }}
+
   private def metadataWritten(path: Path,
                               ems: MetadataSet[Any],
                               metadataOut: MetadataOut = MetadataOutput.Json1): Fact = {
     val em = metadataOut.stringify(metadataOut.doOutput(List(ems), Conforms.allConforms))
     new Path(path, s"_feature_metadata/_${ems.name}_METADATA.V${metadataOut.version}.json") ==>
+      lines(em.split("\n").toList)
+  }
+
+  private def adjustedMetadataWritten(path: Path,
+                                      ems: MetadataSet[Any]): Fact = {
+    val metadataOut = MetadataOutput.Json1
+    val json = metadataOut.doOutput(List(ems), Conforms.allConforms)
+    val adjustedJson = json.withObject(_ + ("test", jString("test")))
+    val em = metadataOut.stringify(adjustedJson)
+    new Path(path, s"_feature_metadata/_${ems.name}_METADATA.V1.json") ==>
       lines(em.split("\n").toList)
   }
 }
@@ -317,6 +374,7 @@ class HiveTextSinkSpec extends ScaldingSinkSpec[HiveTextSink[Eavt]] {
   implicit def eavtEnc = EavtText.EavtEnc
   def eavtReader = delimitedThermometerRecordReader[Eavt]('|', "\\N", implicitly[Decode[Eavt]])
   def json0MetadataSink(sink: HiveTextSink[Eavt]) = sink.copy(metadataWriter = json0MetadataWriter)
+  def adjustedMetadataSink(sink: HiveTextSink[Eavt]) = sink.copy(metadataAdjuster = Some(metadataAdjuster))
   def tablePath(sink: HiveTextSink[Eavt]) = sink.tablePath.toString
   def databaseName(sink: HiveTextSink[Eavt]) = sink.dbName
   def tableName(sink: HiveTextSink[Eavt]) = sink.tableName
@@ -371,6 +429,8 @@ class HiveParquetSinkSpec extends ScaldingSinkSpec[HiveParquetSink[Eavt, (String
   def eavtReader = ParquetThermometerRecordReader[Eavt]
   def json0MetadataSink(sink: HiveParquetSink[Eavt, (String, String, String)]) =
     sink.copy(metadataWriter = json0MetadataWriter)
+  def adjustedMetadataSink(sink: HiveParquetSink[Eavt, (String, String, String)]) =
+    sink.copy(metadataAdjuster = Some(metadataAdjuster))
   def tablePath(sink: HiveParquetSink[Eavt, (String, String, String)]) = sink.table.tablePath.toString
   def databaseName(sink: HiveParquetSink[Eavt, (String, String, String)]) = sink.table.database
   def tableName(sink: HiveParquetSink[Eavt, (String, String, String)]) = sink.table.table

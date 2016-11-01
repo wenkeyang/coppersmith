@@ -20,6 +20,8 @@ import com.twitter.util.Encoder
 
 import org.apache.hadoop.fs.Path
 
+import argonaut.Json
+
 import scalaz.Scalaz._
 import scalaz.NonEmptyList
 import scalaz.std.list.listInstance
@@ -30,25 +32,32 @@ import org.joda.time.DateTime
 
 import au.com.cba.omnia.maestro.api._, Maestro._
 
-import commbank.coppersmith._, Feature._
+import commbank.coppersmith._, Feature._, MetadataOutput.MetadataOut
 
 import Partitions.PathComponents
 import HiveSupport.{DelimiterConflictStrategy, FailJob}
 
-import FeatureSink.{MetadataWriter, WriteResult}
+import FeatureSink.{MetadataAdjuster, MetadataWriter, WriteResult}
 
 trait FeatureSink {
   /**
     * Persist feature values, returning the list of paths written (for committing at the
     * end of the job) or an error if trying to write to a path that is already committed
     */
+  type MetadataOutType
+
   def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)],
             metadataSet: MetadataSet[Any]): WriteResult
 
-  def metadataWriter: MetadataWriter
+  def metadataWriter: MetadataWriter[MetadataOutType]
 
-  def writeMetadata(metadataSet: MetadataSet[Any], paths: Set[Path]) =
-    metadataWriter(metadataSet, paths)
+
+  def metadataOut: MetadataOut { type OutType = MetadataOutType}
+
+  def writeMetadata(metadataSet: MetadataSet[Any],
+                    paths: Set[Path],
+                    metadataAdjuster: Option[MetadataAdjuster[MetadataOutType]]) =
+    metadataWriter(metadataOut, metadataSet, paths, metadataAdjuster)
 }
 
 object FeatureSink {
@@ -57,11 +66,16 @@ object FeatureSink {
   case class AttemptedWriteToCommitted(path: Path) extends WriteError
 
   type WriteResult = Execution[Either[WriteError, Set[Path]]]
-  type MetadataWriter = (MetadataSet[Any], Set[Path]) => WriteResult
+  type MetadataAdjuster[O] = (MetadataOut {type OutType = O}, O) => O
+  type MetadataWriter[O] = (MetadataOut {type OutType = O},
+                            MetadataSet[Any],
+                            Set[Path],
+                            Option[MetadataAdjuster[O]]) => WriteResult
 
-  val defaultMetadataWriter: MetadataWriter = (metadataSet, paths) => {
-    val metadataOut = MetadataOutput.Json1
-    val metadata = metadataOut.stringify(metadataOut.doOutput(List(metadataSet), Conforms.allConforms))
+  def defaultMetadataWriter[O]: MetadataWriter[O] = (metadataOut, metadataSet, paths, metadataAdjuster) => {
+    val output = metadataOut.doOutput(List(metadataSet), Conforms.allConforms)
+    val adjustedOutput = metadataAdjuster.map(ma => ma(metadataOut, output)).getOrElse(output)
+    val metadata = metadataOut.stringify(adjustedOutput)
     val metadataFileName = s"_feature_metadata/_${metadataSet.name}_METADATA.V${metadataOut.version}.json"
 
     val writes: Execution[List[Unit]] = paths.map { p =>
@@ -139,8 +153,9 @@ trait FeatureValueEnc[T] extends Encoder[(FeatureValue[Value], FeatureTime), T] 
 }
 
 object HiveTextSink {
-  type DatabaseName = String
-  type TableName    = String
+  type DatabaseName    = String
+  type TableName       = String
+  type MetadataOutType = Json
 
   val NullValue = "\\N"
   val Delimiter = "|"
@@ -149,14 +164,19 @@ object HiveTextSink {
 case class HiveTextSink[
   T <: ThriftStruct with Product : FeatureValueEnc : Manifest
 ](
-   dbName:        HiveTextSink.DatabaseName,
-   tablePath:     Path,
-   tableName:     HiveTextSink.TableName,
-   partition:     SinkPartition[T],
-   delimiter:     String = HiveTextSink.Delimiter,
-   dcs:           DelimiterConflictStrategy[T] = FailJob[T](),
-   metadataWriter: MetadataWriter = FeatureSink.defaultMetadataWriter
+   dbName:           HiveTextSink.DatabaseName,
+   tablePath:        Path,
+   tableName:        HiveTextSink.TableName,
+   partition:        SinkPartition[T],
+   delimiter:        String = HiveTextSink.Delimiter,
+   dcs:              DelimiterConflictStrategy[T] = FailJob[T](),
+   metadataOut:      MetadataOut { type OutType = HiveTextSink.MetadataOutType } = MetadataOutput.Json1,
+   metadataWriter:   MetadataWriter[HiveTextSink.MetadataOutType] =
+     FeatureSink.defaultMetadataWriter[HiveTextSink.MetadataOutType],
+   metadataAdjuster: Option[MetadataAdjuster[HiveTextSink.MetadataOutType]] = None
 ) extends FeatureSink {
+  type MetadataOutType = HiveTextSink.MetadataOutType
+
   def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)], metadataSet: MetadataSet[Any]) = {
     val textPipe = features.map(implicitly[FeatureValueEnc[T]].encode)
 
@@ -180,7 +200,7 @@ case class HiveTextSink[
     result.flatMap {
       case Left(x) => Execution.from(Left(x))
       case Right(ps : Set[Path]) => {
-        writeMetadata(metadataSet, ps)
+        writeMetadata(metadataSet, ps, metadataAdjuster)
       }
     }
   }

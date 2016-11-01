@@ -1,6 +1,32 @@
 Change log
 ==========
 
+## 0.25.0
+Subclassing `FeatureSink` now requires setting the metadata `OutType`.
+The `MetadataWriter` signature has changed to accept a `MetadataAdjuster`,
+so that customisations to the metadata output can be implemented without
+override the entire `MetadataWriter`.
+
+### Upgrading
+  - Custom sink implementations will need to define `MetadataOutType`
+
+  - The `MetadataWriter` signature has changed from:
+
+    ```scala
+    (MetadataSet[Any], Set[Path]) => WriteResult
+    ```
+
+    to
+
+    ```scala
+    (
+      MetadataOut {type OutType = O},
+      MetadataSet[Any],
+      Set[Path],
+      Option[MetadataAdjuster[O]]
+    ) => WriteResult
+    ```
+
 ## 0.24.0
 Upgrade dependencies (via maestro) to scalding 0.16.0 and algebird 0.12.0.
 This has no known affect on coppersmith itself.
@@ -10,7 +36,6 @@ which may affect the output of features if they rely on algebird:
   * Statistical measures including variance, stddev, skewness, and kurtosis
     now return NaN when undefined (instead of e.g. 0.0 for variance and stddev).
     (See [algebird#434](https://github.com/twitter/algebird/pull/434))
-
 
 ## 0.23.0
 `HiveParquetSink` and `HiveTextSink` now write metadata alongside features.
