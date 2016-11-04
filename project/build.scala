@@ -36,6 +36,8 @@ object build extends Build {
     uniformPublicDependencySettings ++
     strictDependencySettings ++
     Seq(
+      dependencyOverrides += "com.twitter" %% "scalding-core" % "0.16.1-RC3",
+      dependencyOverrides += "com.twitter" %% "algebird-core" % "0.12.1",
       // because thermometer tests cannot run in parallel
       concurrentRestrictions in Global += Tags.limit(Tags.Test, 1),
       scalacOptions += "-Xfatal-warnings",
