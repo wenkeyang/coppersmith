@@ -1,6 +1,28 @@
 Change log
 ==========
 
+## 0.25.0
+Decouple writing of feature metadata from actual concrete sink
+implementations. By default, the `HiveTextSink` and `HiveParquetSink`
+implementations will *no longer* write metadata alongside the
+features. To write metadata, the concrete sink needs to be wrapped in
+the new `MetadataSink` class.
+
+### Upgrading
+  - If you want to continue writing metadata at the time features are
+    written to the sink, create a `MetadataSink` instance that wraps
+    the existing sink. For example,
+
+    ```scala
+    MetadataSink(existingSink)
+    ```
+    to use default metadata writer, or
+    ```scala
+    new MetadataSink(customWriter)(existingSink)
+    ```
+    to provide a custom metadata writer (and remove the custom writer
+    from the previous sink constructor calls).
+
 ## 0.24.0
 Upgrade dependencies (via maestro) to scalding 0.16.0 and algebird 0.12.0.
 This has no known affect on coppersmith itself.

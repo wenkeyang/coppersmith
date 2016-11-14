@@ -35,7 +35,8 @@ import commbank.coppersmith._, Feature._
 import Partitions.PathComponents
 import HiveSupport.{DelimiterConflictStrategy, FailJob}
 
-import FeatureSink.{MetadataWriter, WriteResult}
+import FeatureSink.WriteResult
+import MetadataSink.MetadataWriter
 
 trait FeatureSink {
   /**
@@ -44,11 +45,6 @@ trait FeatureSink {
     */
   def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)],
             metadataSet: MetadataSet[Any]): WriteResult
-
-  def metadataWriter: MetadataWriter
-
-  def writeMetadata(metadataSet: MetadataSet[Any], paths: Set[Path]) =
-    metadataWriter(metadataSet, paths)
 }
 
 object FeatureSink {
@@ -57,19 +53,6 @@ object FeatureSink {
   case class AttemptedWriteToCommitted(path: Path) extends WriteError
 
   type WriteResult = Execution[Either[WriteError, Set[Path]]]
-  type MetadataWriter = (MetadataSet[Any], Set[Path]) => WriteResult
-
-  val defaultMetadataWriter: MetadataWriter = (metadataSet, paths) => {
-    val metadataOut = MetadataOutput.Json1
-    val metadata = metadataOut.stringify(metadataOut.doOutput(List(metadataSet), Conforms.allConforms))
-    val metadataFileName = s"_feature_metadata/_${metadataSet.name}_METADATA.V${metadataOut.version}.json"
-
-    val writes: Execution[List[Unit]] = paths.map { p =>
-      val f = new Path(p, metadataFileName)
-      Execution.fromHdfs(Hdfs.write(f, metadata))
-    }.toList.sequence
-    writes.map(_ => Right(paths))
-  }
 
   def commitFlag(path: Path) = new Path(path, "_SUCCESS")
   def isCommitted(path: Path): Execution[Boolean] = Execution.fromHdfs(Hdfs.exists(commitFlag(path)))
@@ -94,6 +77,35 @@ object FeatureSink {
       )
     })
   }
+}
+
+class MetadataSink(metadataWriter: MetadataWriter)(underlying: FeatureSink) extends FeatureSink {
+  def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)], metadataSet: MetadataSet[Any]) = {
+    underlying.write(features, metadataSet).flatMap(_ match {
+      case Left(x) => Execution.from(Left(x))
+      case Right(paths) => {
+        metadataWriter(metadataSet, paths)
+      }
+    })
+  }
+}
+
+object MetadataSink {
+  type MetadataWriter = (MetadataSet[Any], Set[Path]) => WriteResult
+
+  val defaultMetadataWriter: MetadataWriter = (metadataSet, paths) => {
+    val metadataOut = MetadataOutput.Json1
+    val metadata = metadataOut.stringify(metadataOut.doOutput(List(metadataSet), Conforms.allConforms))
+    val metadataFileName = s"_feature_metadata/_${metadataSet.name}_METADATA.V${metadataOut.version}.json"
+
+    val writes: Execution[List[Unit]] = paths.map { p =>
+      val f = new Path(p, metadataFileName)
+      Execution.fromHdfs(Hdfs.write(f, metadata))
+    }.toList.sequence
+    writes.map(_ => Right(paths))
+  }
+
+  def apply(underlying: FeatureSink): MetadataSink = new MetadataSink(defaultMetadataWriter)(underlying)
 }
 
 sealed trait SinkPartition[T] {
@@ -154,8 +166,7 @@ case class HiveTextSink[
    tableName:     HiveTextSink.TableName,
    partition:     SinkPartition[T],
    delimiter:     String = HiveTextSink.Delimiter,
-   dcs:           DelimiterConflictStrategy[T] = FailJob[T](),
-   metadataWriter: MetadataWriter = FeatureSink.defaultMetadataWriter
+   dcs:           DelimiterConflictStrategy[T] = FailJob[T]()
 ) extends FeatureSink {
   def write(features: TypedPipe[(FeatureValue[Value], FeatureTime)], metadataSet: MetadataSet[Any]) = {
     val textPipe = features.map(implicitly[FeatureValueEnc[T]].encode)
@@ -176,12 +187,6 @@ case class HiveTextSink[
     implicit val tupleSetter: TupleSetter[partition.P] = partition.tupleSetter
     implicit val tupleConverter: TupleConverter[partition.P] = partition.tupleConverter
 
-    val result = HiveSupport.writeTextTable(hiveConfig, textPipe)
-    result.flatMap {
-      case Left(x) => Execution.from(Left(x))
-      case Right(ps : Set[Path]) => {
-        writeMetadata(metadataSet, ps)
-      }
-    }
+    HiveSupport.writeTextTable(hiveConfig, textPipe)
   }
 }

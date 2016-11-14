@@ -98,7 +98,7 @@ class ScaldingJobSpec extends ThermometerHiveSpec with Records { def is = s2"""
     new FeatureJobConfig[Account] {
       val featureContext = ExplicitGenerationTime(jobTime)
       val featureSource  = From[Account].bind(SourceBinder.from(accountDataSource))
-      val featureSink    = sink
+      val featureSink    = MetadataSink(sink)
     }
   }
 

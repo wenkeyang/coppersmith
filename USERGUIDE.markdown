@@ -1422,14 +1422,14 @@ import commbank.coppersmith.api._
 import commbank.coppersmith.examples.thrift._
 
 object BlankCustomerFeatureSet extends MetadataSet[Customer] {
-    def name = "BlankCustomerFeatureSet"
+  def name = "BlankCustomerFeatureSet"
 
-    val customerLoyalty = Metadata[Customer, Integral](
-      "userguide.examples",
-      "cust_loyalty",
-      "A measure of the customer's loyalty, provided by external system",
-      Discrete
-    )
+  val customerLoyalty = Metadata[Customer, Integral](
+    "userguide.examples",
+    "cust_loyalty",
+    "A measure of the customer's loyalty, provided by external system",
+    Discrete
+  )
 
   def metadata = List(customerLoyalty)
 }
@@ -1459,6 +1459,21 @@ will be logged at `info` level. Typically it will be found under the
 `target` directory as a `.json` file prefixed with the project name
 and version.
 
+#### MetadataSink
+If you wish to write metadata at the time features are written to
+their respective sink, you can wrap the sink with the `MetadataSink`
+class, providing an appropriate `MetadataWriter`, eg
+```
+  val metadataWritingSink = MetadataSink(existingSink)
+```
+to use the `MetadataSink.defaultMetadataWriter`, or
+```
+  val metadataWritingSink = new MetadataSink(customWriter)(existingSink)
+```
+to use a custom writer.
+
+The writer will only be invoked if features are successfully written
+to the underlying sink.
 
 ### Testing
 

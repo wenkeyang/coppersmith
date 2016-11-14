@@ -39,7 +39,7 @@ import au.com.cba.omnia.thermometer.hive.ThermometerHiveSpec
 
 import commbank.coppersmith._, Arbitraries._, Feature._, MetadataOutput.MetadataOut
 import ScaldingArbitraries.arbHivePath
-import FeatureSink.MetadataWriter
+import MetadataSink.MetadataWriter
 import thrift.Eavt
 
 import TestFeatureSets.RegularFeatures
@@ -64,7 +64,6 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
 
   def eavtReader: ThermometerRecordReader[Eavt]
 
-  def json0MetadataSink(t: T): T
   def tablePath(t: T):    String
   def databaseName(t: T): String
   def tableName(t: T):    String
@@ -162,14 +161,15 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
 
   def metadataOnDiskMatch =
     forAll { (vs: NonEmptyList[FeatureValue[Value]], sinkAndTime: SinkAndTime) =>  {
-      val (sink, dateTime)   = sinkAndTime
+      val (s, dateTime)      = sinkAndTime
+      val sink               = MetadataSink(s)
       val (year, month, day) = FixedSinkPartition.byDay(dateTime).partitionValue
-      clearData(sink)
+      clearData(s)
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         executesSuccessfully(sink.write(valuePipe(vs, dateTime), RegularFeatures))
         facts(
-          metadataWritten(path(s"${tablePath(sink)}/year=$year/month=$month/day=$day/"),
+          metadataWritten(path(s"${tablePath(s)}/year=$year/month=$month/day=$day/"),
             RegularFeatures)
         )
       }
@@ -178,14 +178,14 @@ abstract class ScaldingSinkSpec[T <: FeatureSink] extends ThermometerHiveSpec wi
   def json0MetadataOnDiskMatch =
     forAll { (vs: NonEmptyList[FeatureValue[Value]], sinkAndTime: SinkAndTime) =>  {
       val (s, dateTime)      = sinkAndTime
-      val sink               = json0MetadataSink(s)
+      val sink               = new MetadataSink(json0MetadataWriter)(s)
       val (year, month, day) = FixedSinkPartition.byDay(dateTime).partitionValue
-      clearData(sink)
+      clearData(s)
 
       withEnvironment(path(getClass.getResource("/").toString)) {
         executesSuccessfully(sink.write(valuePipe(vs, dateTime), RegularFeatures))
         facts(
-          metadataWritten(path(s"${tablePath(sink)}/year=$year/month=$month/day=$day/"),
+          metadataWritten(path(s"${tablePath(s)}/year=$year/month=$month/day=$day/"),
             RegularFeatures, MetadataOutput.Json0)
         )
       }
@@ -316,7 +316,6 @@ class HiveTextSinkSpec extends ScaldingSinkSpec[HiveTextSink[Eavt]] {
 
   implicit def eavtEnc = EavtText.EavtEnc
   def eavtReader = delimitedThermometerRecordReader[Eavt]('|', "\\N", implicitly[Decode[Eavt]])
-  def json0MetadataSink(sink: HiveTextSink[Eavt]) = sink.copy(metadataWriter = json0MetadataWriter)
   def tablePath(sink: HiveTextSink[Eavt]) = sink.tablePath.toString
   def databaseName(sink: HiveTextSink[Eavt]) = sink.dbName
   def tableName(sink: HiveTextSink[Eavt]) = sink.tableName
@@ -369,8 +368,6 @@ class HiveParquetSinkSpec extends ScaldingSinkSpec[HiveParquetSink[Eavt, (String
 
   import au.com.cba.omnia.ebenezer.test.ParquetThermometerRecordReader
   def eavtReader = ParquetThermometerRecordReader[Eavt]
-  def json0MetadataSink(sink: HiveParquetSink[Eavt, (String, String, String)]) =
-    sink.copy(metadataWriter = json0MetadataWriter)
   def tablePath(sink: HiveParquetSink[Eavt, (String, String, String)]) = sink.table.tablePath.toString
   def databaseName(sink: HiveParquetSink[Eavt, (String, String, String)]) = sink.table.database
   def tableName(sink: HiveParquetSink[Eavt, (String, String, String)]) = sink.table.table

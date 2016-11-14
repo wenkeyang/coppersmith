@@ -24,6 +24,7 @@ package object scalding {
   type FeatureSetExecutions = commbank.coppersmith.scalding.FeatureSetExecutions
   type FeatureSink = commbank.coppersmith.scalding.FeatureSink
   type FixedSinkPartition[T, P] = commbank.coppersmith.scalding.FixedSinkPartition[T, P]
+  type MetadataSink = commbank.coppersmith.scalding.MetadataSink
   type Partitions[P] = commbank.coppersmith.scalding.Partitions[P]
   type PathComponents[P] = commbank.coppersmith.scalding.Partitions.PathComponents[P]
   type SimpleFeatureJob = commbank.coppersmith.scalding.SimpleFeatureJob
@@ -41,6 +42,7 @@ package object scalding {
   val DerivedSinkPartition = commbank.coppersmith.scalding.DerivedSinkPartition
   val HiveTextSink = commbank.coppersmith.scalding.HiveTextSink
   val HiveParquetSink = commbank.coppersmith.scalding.HiveParquetSink
+  val MetadataSink = commbank.coppersmith.scalding.MetadataSink
   val EavtText = commbank.coppersmith.scalding.EavtText
 
   implicit val framework: Lift[TypedPipe] = commbank.coppersmith.scalding.lift.scalding
