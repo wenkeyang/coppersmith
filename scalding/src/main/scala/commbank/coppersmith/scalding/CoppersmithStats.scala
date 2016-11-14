@@ -14,86 +14,17 @@
 
 package commbank.coppersmith.scalding
 
-import scala.util.{Try, Success, Failure}
-
-import com.twitter.scalding.typed.{TypedPipe, TypedPipeFactory}
-import com.twitter.scalding.TupleSetter.singleSetter
+import com.twitter.scalding.typed.TypedPipe
 import com.twitter.scalding.{Execution, ExecutionCounters}
 
-import cascading.tuple.Fields
-import cascading.pipe.Each
-import cascading.operation.{BaseOperation, Filter, FilterCall, OperationCall}
-import cascading.flow.FlowProcess
-
 object CoppersmithStats {
-  val group = "Coppersmith"
-
-  // Don't use getLogger(getClass()) pattern, as the class name is ugly ("$" suffix for companion object)
-  val log = org.slf4j.LoggerFactory.getLogger("commbank.coppersmith.scalding.CoppersmithStats")
-
-  // Prepending a unique ID to each counter name prevents name clashes, and provides a somewhat sensible ordering.
-  // Even if we create a million counters per second, it will take 290,000+ years to overflow a Long.
-  val nextId = new java.util.concurrent.atomic.AtomicLong(1)
-
   implicit def fromTypedPipe[T](typedPipe: TypedPipe[T]) = new CoppersmithStats(typedPipe)
 
-  /** Run the [[com.twitter.scalding.Execution]], logging coppersmith counters after completion.
-    *
-    * In theory, for composite Executions this should be able to get the counters from any of the
-    * sub-Executions (assuming that [[com.twitter.scalding.Execution.resetCounters]] was never called).
-    * But scalding's preservation of counters seems to be unreliable. As a workaround, instead of
-    * calling this in one central place, it is instead **the responsibility of each sink implementation**
-    * to log the counters immediately after the `features` pipe is run.
-    */
-  def logCountersAfter[T](exec: Execution[T]): Execution[T] = {
-    val tryExecution: Execution[Try[T]] =
-      exec.map{ Success(_) }.recoverWith{ case throwable: Throwable => Execution.from[Try[T]](Failure(throwable)) }
+  def logCountersAfter[T](exec: Execution[T]): Execution[T] = exec
 
-    for {
-      (result, counters) <- tryExecution.getCounters
-      _                  <- Execution.from(logCounters(counters))
-    } yield result.get  // any exception caught by the above recoverWith is rethrown here
-  }
-
-  /** Log (at INFO level) all coppersmith counters found in the passed [[com.twitter.scalding.ExecutionCounters]]. */
-  def logCounters(counters: ExecutionCounters): Unit = {
-    if (counters.keys.isEmpty) {
-      log.warn("Hadoop counters not available (usually caused by job failure)")
-    } else {
-      log.info("Coppersmith counters:")
-      fromCounters(counters).foreach { case (name, value) =>
-        log.info(f"    ${name}%-30s ${value}%10d")
-      }
-    }
-  }
-
-  def fromCounters(counters: ExecutionCounters): List[(String, Long)] =
-    counters.keys.filter(_.group == group).map { key =>
-      val Array(id, name) = key.counter.split(raw"\.", 2)
-      (id.toLong, name, key)
-    }.toList.sortBy(_._1).map { case (_, name, key) => (name, counters(key)) }
+  def logCounters(counters: ExecutionCounters): Unit = {}
 }
 
 class CoppersmithStats[T](typedPipe: TypedPipe[T]) extends {
-  /** Calling this on any [[com.twitter.scalding.typed.TypedPipe]] will cause a counter with the given name
-    * to be incremented for every tuple that is read from the pipe. */
-  def withCounter(name: String) = TypedPipeFactory({ (fd, mode) =>
-    // The logic to drop down to cascading duplicates the (unfortunately private) method TypedPipe.onRawSingle
-    val oldPipe = typedPipe.toPipe(new Fields(java.lang.Integer.valueOf(0)))(fd, mode, singleSetter)
-    val id = CoppersmithStats.nextId.getAndIncrement()
-    val newPipe = new Each(oldPipe, new Counter(CoppersmithStats.group, s"$id.$name"))
-    TypedPipe.fromSingleField[T](newPipe)(fd, mode)
-  })
-}
-
-// Similar to cascading.operation.state.Counter, with the addition of a prepare() method.
-class Counter[C](val group: String, val name: String) extends BaseOperation[C] with Filter[C] {
-  override def isRemove(fp: FlowProcess[_], fc: FilterCall[C]) = {
-    fp.increment(group, name, 1)
-    false
-  }
-
-  override def prepare(fp: FlowProcess[_], oc: OperationCall[C]) = {
-    fp.increment(group, name, 0)  // ensure the counter exists, even if isRemove is never called
-  }
+  def withCounter(name: String) = typedPipe
 }
